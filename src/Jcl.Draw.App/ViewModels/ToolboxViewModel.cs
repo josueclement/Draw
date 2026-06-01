@@ -10,6 +10,9 @@ public sealed record ShapeToolItem(string Name, ShapeKind Kind);
 /// <summary>A selectable connector (relationship) entry in the toolbox palette.</summary>
 public sealed record ConnectorToolItem(string Name, RelationshipKind Kind);
 
+/// <summary>A selectable class-diagram node entry in the toolbox palette.</summary>
+public sealed record ClassNodeToolItem(string Name, ClassNodeKind Kind);
+
 /// <summary>
 /// Tracks the active drawing tool: the select tool (both null), a shape to place
 /// (<see cref="SelectedShape"/>), or a connector to draw (<see cref="SelectedConnector"/>).
@@ -39,6 +42,13 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ConnectorToolItem("Dependency", RelationshipKind.Dependency),
     };
 
+    public ObservableCollection<ClassNodeToolItem> ClassNodes { get; } = new()
+    {
+        new ClassNodeToolItem("Class", ClassNodeKind.Class),
+        new ClassNodeToolItem("Interface", ClassNodeKind.Interface),
+        new ClassNodeToolItem("Enum", ClassNodeKind.Enum),
+    };
+
     public ShapeToolItem? SelectedShape
     {
         get;
@@ -49,6 +59,7 @@ public sealed class ToolboxViewModel : ViewModelBase
                 if (value is not null)
                 {
                     SelectedConnector = null;
+                    SelectedClassNode = null;
                 }
 
                 RaiseModes();
@@ -66,6 +77,7 @@ public sealed class ToolboxViewModel : ViewModelBase
                 if (value is not null)
                 {
                     SelectedShape = null;
+                    SelectedClassNode = null;
                 }
 
                 RaiseModes();
@@ -73,19 +85,41 @@ public sealed class ToolboxViewModel : ViewModelBase
         }
     }
 
-    public bool IsSelectTool => SelectedShape is null && SelectedConnector is null;
+    public ClassNodeToolItem? SelectedClassNode
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                if (value is not null)
+                {
+                    SelectedShape = null;
+                    SelectedConnector = null;
+                }
+
+                RaiseModes();
+            }
+        }
+    }
+
+    public bool IsSelectTool => SelectedShape is null && SelectedConnector is null && SelectedClassNode is null;
 
     public bool IsConnectorMode => SelectedConnector is not null;
+
+    public bool IsClassNodeMode => SelectedClassNode is not null;
 
     public void ActivateSelectTool()
     {
         SelectedShape = null;
         SelectedConnector = null;
+        SelectedClassNode = null;
     }
 
     private void RaiseModes()
     {
         OnPropertyChanged(nameof(IsSelectTool));
         OnPropertyChanged(nameof(IsConnectorMode));
+        OnPropertyChanged(nameof(IsClassNodeMode));
     }
 }
