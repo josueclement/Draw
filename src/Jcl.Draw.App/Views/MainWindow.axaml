@@ -116,6 +116,15 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                        <TextBlock Text="Use case" Opacity="0.7" Margin="0,6,0,0" />
+                        <ListBox ItemsSource="{Binding Toolbox.UseCaseNodes}"
+                                 SelectedItem="{Binding Toolbox.SelectedUseCaseNode, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:UseCaseToolItem">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
@@ -150,8 +159,8 @@
                         <TextBlock Text="No selection" Opacity="0.6"
                                    IsVisible="{Binding Inspector.HasNoSelection}" />
 
-                        <!-- Text (shapes only) -->
-                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsShapeSelected}">
+                        <!-- Label (all label-bearing nodes) -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsLabelNodeSelected}">
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Text" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.Text, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" />

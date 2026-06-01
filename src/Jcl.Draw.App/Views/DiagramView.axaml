@@ -162,6 +162,87 @@
                                        IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
+
+                    <DataTemplate DataType="vm:ActorNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Path Data="{Binding Geometry}"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}" />
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{Binding Foreground}"
+                                       FontFamily="{Binding FontFamily}"
+                                       FontSize="{Binding FontSize}"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Bottom"
+                                       HorizontalAlignment="Stretch"
+                                       IsVisible="{Binding !IsEditing}" />
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     VerticalAlignment="Bottom"
+                                     Background="Transparent"
+                                     IsVisible="{Binding IsEditing}" />
+                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
+                                       StrokeDashArray="3,2" Fill="Transparent"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding IsSelected}" />
+                        </Panel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:UseCaseNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Path Data="{Binding Geometry}"
+                                  Fill="{Binding Fill}"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}" />
+                            <TextBlock Text="{Binding Text}"
+                                       Foreground="{Binding Foreground}"
+                                       FontFamily="{Binding FontFamily}"
+                                       FontSize="{Binding FontSize}"
+                                       FontWeight="{Binding FontWeight}"
+                                       FontStyle="{Binding FontStyle}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"
+                                       Margin="10"
+                                       IsVisible="{Binding !IsEditing}" />
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalAlignment="Center" Background="Transparent"
+                                     IsVisible="{Binding IsEditing}" />
+                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
+                                       StrokeDashArray="3,2" Fill="Transparent"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding IsSelected}" />
+                        </Panel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:SystemBoundaryNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Border Background="Transparent"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding StrokeThickness}" />
+                            <TextBlock Text="{Binding Title}"
+                                       Foreground="{Binding Foreground}"
+                                       FontFamily="{Binding FontFamily}"
+                                       FontSize="{Binding FontSize}"
+                                       FontWeight="Bold"
+                                       Margin="6,4"
+                                       HorizontalAlignment="Left"
+                                       VerticalAlignment="Top"
+                                       IsVisible="{Binding !IsEditing}" />
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     Margin="4,2"
+                                     HorizontalAlignment="Left" VerticalAlignment="Top"
+                                     Background="Transparent"
+                                     IsVisible="{Binding IsEditing}" />
+                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
+                                       StrokeDashArray="3,2" Fill="Transparent"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding IsSelected}" />
+                        </Panel>
+                    </DataTemplate>
                 </ItemsControl.DataTemplates>
             </ItemsControl>
 
