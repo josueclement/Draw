@@ -12,6 +12,7 @@ namespace Jcl.Draw.Model.Nodes;
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(ShapeNode), "shape")]
+[JsonDerivedType(typeof(ClassNode), "class")]
 public abstract class NodeBase
 {
     public Guid Id { get; set; } = Guid.NewGuid();
