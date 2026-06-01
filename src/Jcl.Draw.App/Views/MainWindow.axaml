@@ -150,44 +150,111 @@
                         <TextBlock Text="No selection" Opacity="0.6"
                                    IsVisible="{Binding Inspector.HasNoSelection}" />
 
-                        <!-- Shape properties (text fields commit on focus-loss so each edit is one undo step) -->
+                        <!-- Text (shapes only) -->
                         <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsShapeSelected}">
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Text" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.Text, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" />
                             </StackPanel>
+                        </StackPanel>
 
+                        <!-- Shared node style (shapes and class nodes) -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsNodeSelected}">
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Fill (#AARRGGBB)" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.FillHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
-
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.StrokeHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
-
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke thickness" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.StrokeThickness, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
-
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Font size" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.FontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
-
                             <StackPanel Orientation="Horizontal" Spacing="14">
                                 <CheckBox Content="Bold" IsChecked="{Binding Inspector.Bold, Mode=TwoWay}" />
                                 <CheckBox Content="Italic" IsChecked="{Binding Inspector.Italic, Mode=TwoWay}" />
                             </StackPanel>
-
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Text alignment" Opacity="0.7" />
                                 <ComboBox HorizontalAlignment="Stretch"
                                           ItemsSource="{x:Static vm:InspectorViewModel.AlignmentOptions}"
                                           SelectedItem="{Binding Inspector.Alignment, Mode=TwoWay}" />
                             </StackPanel>
+                        </StackPanel>
+
+                        <!-- Class node properties -->
+                        <StackPanel IsVisible="{Binding Inspector.IsClassNodeSelected}">
+                        <StackPanel Spacing="10" DataContext="{Binding Inspector.SelectedClassNode}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Name" Opacity="0.7" />
+                                <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                            <CheckBox Content="Abstract" IsChecked="{Binding IsAbstract, Mode=TwoWay}" />
+
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Members" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Content="+ Field/Literal"
+                                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddPrimaryMemberCommand}" />
+                                <Button Content="+ Operation" IsVisible="{Binding HasOperations}"
+                                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddOperationCommand}" />
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding PrimaryMembers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                        <StackPanel Spacing="2" Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
+                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
+                                                <TextBox Width="90" Watermark="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <AutoCompleteBox Width="120" Watermark="type"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <CheckBox Content="stat" IsChecked="{Binding IsStatic, Mode=TwoWay}" />
+                                                <Button Content="✕"
+                                                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Operations" Opacity="0.7" IsVisible="{Binding HasOperations}" />
+                            <ItemsControl ItemsSource="{Binding Operations}" IsVisible="{Binding HasOperations}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                        <StackPanel Spacing="2" Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
+                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
+                                                <TextBox Width="90" Watermark="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBox Width="86" Watermark="params"
+                                                         Text="{Binding Parameters, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                <AutoCompleteBox Width="80" Watermark="ret"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <Button Content="✕"
+                                                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                         </StackPanel>
 
                         <!-- Connector properties -->
