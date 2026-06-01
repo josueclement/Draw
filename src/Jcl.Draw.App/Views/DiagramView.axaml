@@ -140,6 +140,7 @@
                                             <DataTemplate x:DataType="vm:ClassMemberViewModel">
                                                 <Panel>
                                                     <TextBlock Text="{Binding DisplayText}" FontSize="11"
+                                                               Foreground="{Binding $parent[ItemsControl].((vm:ClassNodeViewModel)DataContext).Foreground}"
                                                                FontStyle="{Binding RowFontStyle}"
                                                                TextDecorations="{Binding RowDecorations}"
                                                                IsVisible="{Binding !IsEditing}"
