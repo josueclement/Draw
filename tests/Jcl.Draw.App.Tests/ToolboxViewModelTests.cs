@@ -87,4 +87,55 @@ public class ToolboxViewModelTests
         Assert.Null(toolbox.SelectedUseCaseNode);
         Assert.False(toolbox.IsUseCaseNodeMode);
     }
+
+    [Fact]
+    public void ActiveToolHint_IsNull_WhenSelectTool()
+    {
+        ToolboxViewModel toolbox = new();
+        Assert.True(toolbox.IsSelectTool);
+        Assert.Null(toolbox.ActiveToolHint);
+    }
+
+    [Fact]
+    public void ActiveToolHint_MentionsShape_WhenShapeArmed()
+    {
+        ToolboxViewModel toolbox = new();
+        ShapeToolItem rectangle = toolbox.Shapes.First();
+
+        toolbox.SelectedShape = rectangle;
+
+        Assert.NotNull(toolbox.ActiveToolHint);
+        Assert.Contains(rectangle.Name, toolbox.ActiveToolHint);
+    }
+
+    [Fact]
+    public void ActiveToolHint_DescribesDragging_WhenConnectorArmed()
+    {
+        ToolboxViewModel toolbox = new();
+        ConnectorToolItem connector = toolbox.Connectors.First();
+
+        toolbox.SelectedConnector = connector;
+
+        Assert.NotNull(toolbox.ActiveToolHint);
+        Assert.Contains(connector.Name, toolbox.ActiveToolHint);
+        Assert.Contains("Drag", toolbox.ActiveToolHint);
+    }
+
+    [Fact]
+    public void ActiveToolHint_RaisesPropertyChanged_OnModeChange()
+    {
+        ToolboxViewModel toolbox = new();
+        bool raised = false;
+        toolbox.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ToolboxViewModel.ActiveToolHint))
+            {
+                raised = true;
+            }
+        };
+
+        toolbox.SelectedShape = toolbox.Shapes.First();
+
+        Assert.True(raised);
+    }
 }

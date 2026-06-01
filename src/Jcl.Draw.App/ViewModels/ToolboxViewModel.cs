@@ -146,6 +146,37 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public bool IsUseCaseNodeMode => SelectedUseCaseNode is not null;
 
+    /// <summary>
+    /// Status-bar hint describing how to use the armed tool; <c>null</c> when the select tool is active.
+    /// </summary>
+    public string? ActiveToolHint
+    {
+        get
+        {
+            if (SelectedShape is { } shape)
+            {
+                return $"Click on the canvas to place {shape.Name}.";
+            }
+
+            if (SelectedClassNode is { } classNode)
+            {
+                return $"Click on the canvas to place {classNode.Name}.";
+            }
+
+            if (SelectedUseCaseNode is { } useCaseNode)
+            {
+                return $"Click on the canvas to place {useCaseNode.Name}.";
+            }
+
+            if (SelectedConnector is { } connector)
+            {
+                return $"Drag from one node to another to draw {connector.Name}.";
+            }
+
+            return null;
+        }
+    }
+
     public void ActivateSelectTool()
     {
         SelectedShape = null;
@@ -160,5 +191,6 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsConnectorMode));
         OnPropertyChanged(nameof(IsClassNodeMode));
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
+        OnPropertyChanged(nameof(ActiveToolHint));
     }
 }

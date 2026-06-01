@@ -44,6 +44,7 @@ public partial class DiagramView : UserControl
     private NodeViewModelBase? _resizeTarget;
     private NodeViewModelBase? _connectSource;
     private Line? _connectPreview;
+    private ToolboxViewModel? _toolbox;
 
     public DiagramView()
     {
@@ -60,6 +61,37 @@ public partial class DiagramView : UserControl
     }
 
     private double Zoom => _vm?.Zoom ?? 1d;
+
+    // Reflect the armed-tool state as a crosshair cursor so it's clear the next canvas click places a shape.
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _toolbox = GetToolbox();
+        if (_toolbox is not null)
+        {
+            _toolbox.PropertyChanged += OnToolboxPropertyChanged;
+        }
+
+        UpdateCursor();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        if (_toolbox is not null)
+        {
+            _toolbox.PropertyChanged -= OnToolboxPropertyChanged;
+            _toolbox = null;
+        }
+
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnToolboxPropertyChanged(object? sender, PropertyChangedEventArgs e) => UpdateCursor();
+
+    private void UpdateCursor()
+        => Viewport.Cursor = _toolbox is { IsSelectTool: false }
+            ? new Cursor(StandardCursorType.Cross)
+            : Cursor.Default;
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {

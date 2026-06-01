@@ -1,0 +1,89 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Threading;
+using Jcl.Draw.App.Configuration;
+using Jcl.Draw.App.Services;
+using Jcl.Draw.App.ViewModels;
+using Jcl.Draw.App.Views;
+using Jcl.Draw.Diagramming.Routing;
+using Jcl.Draw.Diagramming.Undo;
+using Jcl.Draw.Model.Serialization;
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using Xunit;
+
+namespace Jcl.Draw.App.Tests;
+
+/// <summary>
+/// End-to-end view test: arming a shape tool and clicking the canvas must add a node.
+/// Runs on Avalonia's headless backend (no GPU/fonts needed) using the real App resources.
+/// </summary>
+public class CanvasPlacementHeadlessTests
+{
+    // Entry point discovered by HeadlessUnitTestSession; uses the real App so App.axaml
+    // resources (FluentTheme + editor brushes) are loaded exactly as in production.
+    private static AppBuilder BuildAvaloniaApp()
+        => AppBuilder.Configure<global::Jcl.Draw.App.App>()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+
+    private static ShellViewModel CreateShell()
+    {
+        IDocumentFileService files = Substitute.For<IDocumentFileService>();
+        IFileDialogService fileDialogs = Substitute.For<IFileDialogService>();
+        IRecentFilesService recent = Substitute.For<IRecentFilesService>();
+        recent.Files.Returns(new List<string>());
+        IDialogService dialogs = Substitute.For<IDialogService>();
+        IThemeService theme = Substitute.For<IThemeService>();
+
+        DiagramDocumentViewModelFactory factory = new(
+            new JsonDocumentSerializer(),
+            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
+            Options.Create(new EditorOptions()),
+            Options.Create(new UndoOptions()));
+
+        return new ShellViewModel(factory, files, fileDialogs, recent, dialogs, theme, new ToolboxViewModel(), new InspectorViewModel());
+    }
+
+    [Fact]
+    public async Task ClickingCanvas_WithShapeArmed_AddsNode()
+    {
+        using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(typeof(CanvasPlacementHeadlessTests));
+
+        await session.Dispatch(() =>
+        {
+            ShellViewModel shell = CreateShell();
+            DiagramDocumentViewModel doc = shell.ActiveDocument!;
+
+            DiagramView view = new() { DataContext = doc };
+            Window window = new()
+            {
+                DataContext = shell,
+                Content = view,
+                Width = 800,
+                Height = 600,
+            };
+
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            // Arm a shape tool, exactly as clicking the palette does.
+            shell.Toolbox.SelectedShape = shell.Toolbox.Shapes.First();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Empty(doc.Nodes);
+
+            // Click in the middle of the canvas.
+            window.MouseDown(new Point(400, 300), MouseButton.Left);
+            window.MouseUp(new Point(400, 300), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Single(doc.Nodes);
+        }, CancellationToken.None);
+    }
+}

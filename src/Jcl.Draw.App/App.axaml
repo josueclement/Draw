@@ -3,6 +3,24 @@
              x:Class="Jcl.Draw.App.App"
              RequestedThemeVariant="Default">
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <!-- Editor brushes. These replace Avalonia 0.10-era theme keys (ThemeBackgroundBrush /
+                 ThemeBorderLowBrush) that no longer exist in Avalonia 12's Fluent theme and so resolved
+                 to null at runtime — which, on the canvas Border, made it non-hit-testable. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FFFAFAFA" />
+                    <SolidColorBrush x:Key="EditorBorderBrush" Color="#22000000" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FF1F1F1F" />
+                    <SolidColorBrush x:Key="EditorBorderBrush" Color="#22FFFFFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>

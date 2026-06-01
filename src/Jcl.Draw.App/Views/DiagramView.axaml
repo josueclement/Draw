@@ -6,7 +6,7 @@
              Background="Transparent"
              Focusable="True">
 
-    <Border x:Name="Viewport" ClipToBounds="True" Background="{DynamicResource ThemeBackgroundBrush}">
+    <Border x:Name="Viewport" ClipToBounds="True" Background="{DynamicResource CanvasBackgroundBrush}">
         <Canvas x:Name="World" RenderTransformOrigin="0,0">
 
             <Rectangle x:Name="GridBackground"

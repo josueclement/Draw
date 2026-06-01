@@ -24,14 +24,18 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_New" Command="{Binding NewCommand}" InputGesture="Ctrl+N" />
                 <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGesture="Ctrl+O" />
-                <MenuItem Header="Open _Recent" ItemsSource="{Binding RecentFiles}">
+                <MenuItem x:Name="OpenRecentMenu" Header="Open _Recent" ItemsSource="{Binding RecentFiles}">
                     <MenuItem.ItemTemplate>
                         <DataTemplate x:DataType="x:String">
                             <TextBlock Text="{Binding}" />
                         </DataTemplate>
                     </MenuItem.ItemTemplate>
                     <MenuItem.Styles>
-                        <Style Selector="MenuItem > MenuItem">
+                        <!-- Target only the generated child items, not the "Open Recent" container itself.
+                             A bare "MenuItem > MenuItem" also matches this container (it is a child of the
+                             File MenuItem), which would bind the string-typed OpenRecentCommand to it with the
+                             ShellViewModel as parameter and throw when the File menu opens. -->
+                        <Style Selector="MenuItem#OpenRecentMenu > MenuItem">
                             <Setter Property="Command" Value="{Binding $parent[Menu].((vm:ShellViewModel)DataContext).OpenRecentCommand}" />
                             <Setter Property="CommandParameter" Value="{ReflectionBinding}" />
                         </Style>
@@ -58,32 +62,33 @@
             </MenuItem>
         </Menu>
 
-        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource EditorBorderBrush}" BorderThickness="0,0,0,1" Padding="6,4">
             <StackPanel Orientation="Horizontal" Spacing="4">
                 <Button Content="New" Command="{Binding NewCommand}" />
                 <Button Content="Open" Command="{Binding OpenCommand}" />
                 <Button Content="Save" Command="{Binding SaveCommand}" />
-                <Rectangle Width="1" Fill="{DynamicResource ThemeBorderLowBrush}" Margin="4,2" />
+                <Rectangle Width="1" Fill="{DynamicResource EditorBorderBrush}" Margin="4,2" />
                 <Button Content="Undo" Command="{Binding UndoCommand}" />
                 <Button Content="Redo" Command="{Binding RedoCommand}" />
                 <Button Content="Delete" Command="{Binding DeleteCommand}" />
-                <Rectangle Width="1" Fill="{DynamicResource ThemeBorderLowBrush}" Margin="4,2" />
+                <Rectangle Width="1" Fill="{DynamicResource EditorBorderBrush}" Margin="4,2" />
                 <Button Content="Export PNG" Command="{Binding ExportPngCommand}" />
                 <Button Content="Copy Image" Command="{Binding CopyImageCommand}" />
             </StackPanel>
         </Border>
 
-        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,1,0,0" Padding="8,3">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource EditorBorderBrush}" BorderThickness="0,1,0,0" Padding="8,3">
             <StackPanel Orientation="Horizontal" Spacing="16">
                 <TextBlock Text="{Binding ActiveDocument.DisplayName, FallbackValue='No document'}" />
                 <TextBlock Text="{Binding ActiveDocument.Zoom, StringFormat='Zoom: {0:P0}', FallbackValue=''}" />
+                <TextBlock Text="{Binding Toolbox.ActiveToolHint}" FontWeight="SemiBold" />
             </StackPanel>
         </Border>
 
         <Grid ColumnDefinitions="190,*,260">
 
             <!-- Toolbox -->
-            <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,1,0" Padding="8">
+            <Border Grid.Column="0" BorderBrush="{DynamicResource EditorBorderBrush}" BorderThickness="0,0,1,0" Padding="8">
                 <ScrollViewer>
                     <StackPanel Spacing="6">
                         <TextBlock Text="Tools" FontWeight="SemiBold" />
@@ -152,7 +157,7 @@
             </TabControl>
 
             <!-- Inspector -->
-            <Border Grid.Column="2" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1,0,0,0" Padding="10">
+            <Border Grid.Column="2" BorderBrush="{DynamicResource EditorBorderBrush}" BorderThickness="1,0,0,0" Padding="10">
                 <ScrollViewer>
                     <StackPanel Spacing="10">
                         <TextBlock Text="Properties" FontWeight="SemiBold" />
