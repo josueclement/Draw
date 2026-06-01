@@ -200,4 +200,43 @@ public class DiagramDocumentViewModelTests
         ClassNodeViewModel node = Assert.IsType<ClassNodeViewModel>(Assert.Single(doc.Nodes));
         Assert.Equal(ClassNodeKind.Class, node.Kind);
     }
+
+    [Fact]
+    public void AddUseCaseNode_Actor_AddsSelectedActor_AndMarksModified()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+
+        NodeViewModelBase node = doc.AddUseCaseNode(UseCaseNodeKind.Actor, new Point2D(100, 100));
+
+        Assert.IsType<ActorNodeViewModel>(node);
+        Assert.Same(node, Assert.Single(doc.Nodes));
+        Assert.True(node.IsSelected);
+        Assert.True(doc.IsModified);
+    }
+
+    [Fact]
+    public void AddUseCaseNode_SystemBoundary_GoesBehind_WithLowestZIndex()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
+
+        NodeViewModelBase boundary = doc.AddUseCaseNode(UseCaseNodeKind.SystemBoundary, new Point2D(150, 150));
+
+        Assert.IsType<SystemBoundaryNodeViewModel>(boundary);
+        Assert.Same(boundary, doc.Nodes[0]); // inserted at front -> renders behind
+        Assert.True(boundary.Model.ZIndex < doc.Nodes[1].Model.ZIndex);
+    }
+
+    [Fact]
+    public void AddUseCaseNode_SurvivesUndoRedo_AsCorrectType()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        doc.AddUseCaseNode(UseCaseNodeKind.UseCase, new Point2D(200, 150));
+
+        doc.Undo();
+        Assert.Empty(doc.Nodes);
+
+        doc.Redo();
+        Assert.IsType<UseCaseNodeViewModel>(Assert.Single(doc.Nodes));
+    }
 }

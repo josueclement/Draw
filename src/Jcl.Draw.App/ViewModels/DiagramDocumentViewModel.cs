@@ -204,6 +204,67 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         _ => "Class",
     };
 
+    private const double ActorDefaultWidth = 48d;
+    private const double ActorDefaultHeight = 84d;
+    private const double UseCaseDefaultWidth = 130d;
+    private const double UseCaseDefaultHeight = 72d;
+    private const double BoundaryDefaultWidth = 320d;
+    private const double BoundaryDefaultHeight = 220d;
+
+    public NodeViewModelBase AddUseCaseNode(UseCaseNodeKind kind, Point2D center)
+    {
+        CaptureUndo();
+
+        (double w, double h) = kind switch
+        {
+            UseCaseNodeKind.Actor => (ActorDefaultWidth, ActorDefaultHeight),
+            UseCaseNodeKind.SystemBoundary => (BoundaryDefaultWidth, BoundaryDefaultHeight),
+            _ => (UseCaseDefaultWidth, UseCaseDefaultHeight),
+        };
+
+        Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
+        if (SnapEnabled)
+        {
+            bounds = bounds.PositionSnappedToGrid(GridSize);
+        }
+
+        NodeBase node = kind switch
+        {
+            UseCaseNodeKind.Actor => new ActorNode
+            {
+                Name = "Actor", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = NextZIndex(),
+            },
+            UseCaseNodeKind.SystemBoundary => new SystemBoundaryNode
+            {
+                Title = "System", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = LowestZIndex() - 1,
+            },
+            _ => new UseCaseNode
+            {
+                Text = "Use case", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = NextZIndex(),
+            },
+        };
+
+        _document.Nodes.Add(node);
+        NodeViewModelBase vm = CreateNodeViewModel(node);
+
+        // A boundary renders behind everything: it gets the lowest z-index AND goes to the
+        // front of the (insertion-ordered) collection so it draws first even before a rebuild.
+        if (node is SystemBoundaryNode)
+        {
+            Nodes.Insert(0, vm);
+        }
+        else
+        {
+            Nodes.Add(vm);
+        }
+
+        SelectOnly(vm);
+        MarkModified();
+        return vm;
+    }
+
+    private int LowestZIndex() => _document.Nodes.Count == 0 ? 0 : _document.Nodes.Min(n => n.ZIndex);
+
     public ConnectorViewModel? AddConnector(Guid sourceId, Guid targetId, RelationshipKind kind)
     {
         if (sourceId == targetId)
@@ -463,6 +524,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
     private NodeViewModelBase CreateNodeViewModel(NodeBase node) => node switch
     {
         ClassNode @class => new ClassNodeViewModel(@class, this),
+        ActorNode actor => new ActorNodeViewModel(actor),
+        UseCaseNode useCase => new UseCaseNodeViewModel(useCase),
+        SystemBoundaryNode boundary => new SystemBoundaryNodeViewModel(boundary),
         ShapeNode shape => new ShapeNodeViewModel(shape),
         _ => throw new NotSupportedException($"Unsupported node type: {node.GetType().Name}"),
     };
