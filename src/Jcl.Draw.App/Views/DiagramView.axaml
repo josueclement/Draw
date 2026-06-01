@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Jcl.Draw.App.ViewModels"
+             x:Class="Jcl.Draw.App.Views.DiagramView"
+             x:DataType="vm:DiagramDocumentViewModel"
+             Background="Transparent"
+             Focusable="True">
+
+    <Border x:Name="Viewport" ClipToBounds="True" Background="{DynamicResource ThemeBackgroundBrush}">
+        <Canvas x:Name="World" RenderTransformOrigin="0,0">
+
+            <Rectangle x:Name="GridBackground"
+                       Canvas.Left="-2000" Canvas.Top="-2000"
+                       Width="6000" Height="6000"
+                       IsHitTestVisible="False" />
+
+            <ItemsControl ItemsSource="{Binding Nodes}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                    <Style Selector="ContentPresenter">
+                        <Setter Property="Canvas.Left" Value="{ReflectionBinding X}" />
+                        <Setter Property="Canvas.Top" Value="{ReflectionBinding Y}" />
+                    </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:ShapeNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Path Data="{Binding Geometry}"
+                                  Fill="{Binding Fill}"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}"
+                                  StrokeDashArray="{Binding StrokeDashArray}" />
+                            <TextBlock Text="{Binding Text}"
+                                       Foreground="{Binding Foreground}"
+                                       FontFamily="{Binding FontFamily}"
+                                       FontSize="{Binding FontSize}"
+                                       FontWeight="{Binding FontWeight}"
+                                       FontStyle="{Binding FontStyle}"
+                                       TextAlignment="{Binding TextAlignment}"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"
+                                       Margin="6"
+                                       IsVisible="{Binding !IsEditing}" />
+                            <TextBox x:Name="EditBox"
+                                     Text="{Binding Text, Mode=TwoWay}"
+                                     FontFamily="{Binding FontFamily}"
+                                     FontSize="{Binding FontSize}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Background="Transparent"
+                                     IsVisible="{Binding IsEditing}" />
+                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
+                                       StrokeDashArray="3,2"
+                                       Fill="Transparent"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding IsSelected}" />
+                        </Panel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Canvas x:Name="Overlay" IsHitTestVisible="False" />
+        </Canvas>
+    </Border>
+</UserControl>

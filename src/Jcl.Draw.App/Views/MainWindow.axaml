@@ -1,0 +1,177 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Jcl.Draw.App.ViewModels"
+        xmlns:v="using:Jcl.Draw.App.Views"
+        x:Class="Jcl.Draw.App.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="{Binding Title}"
+        Width="1200" Height="780"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
+    </Window.KeyBindings>
+
+    <DockPanel>
+
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewCommand}" InputGesture="Ctrl+N" />
+                <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGesture="Ctrl+O" />
+                <MenuItem Header="Open _Recent" ItemsSource="{Binding RecentFiles}">
+                    <MenuItem.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                    </MenuItem.ItemTemplate>
+                    <MenuItem.Styles>
+                        <Style Selector="MenuItem > MenuItem">
+                            <Setter Property="Command" Value="{Binding $parent[Menu].((vm:ShellViewModel)DataContext).OpenRecentCommand}" />
+                            <Setter Property="CommandParameter" Value="{ReflectionBinding}" />
+                        </Style>
+                    </MenuItem.Styles>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Save" Command="{Binding SaveCommand}" InputGesture="Ctrl+S" />
+                <MenuItem Header="Save _As…" Command="{Binding SaveAsCommand}" InputGesture="Ctrl+Shift+S" />
+                <Separator />
+                <MenuItem Header="_Export PNG…" Command="{Binding ExportPngCommand}" />
+                <MenuItem Header="_Copy as Image" Command="{Binding CopyImageCommand}" />
+                <Separator />
+                <MenuItem Header="_Close" Command="{Binding CloseDocumentCommand}" InputGesture="Ctrl+W" />
+                <MenuItem Header="E_xit" Click="OnExitClick" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z" />
+                <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y" />
+                <Separator />
+                <MenuItem Header="_Delete" Command="{Binding DeleteCommand}" InputGesture="Delete" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Toggle _Theme" Command="{Binding ToggleThemeCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1" Padding="6,4">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Content="New" Command="{Binding NewCommand}" />
+                <Button Content="Open" Command="{Binding OpenCommand}" />
+                <Button Content="Save" Command="{Binding SaveCommand}" />
+                <Rectangle Width="1" Fill="{DynamicResource ThemeBorderLowBrush}" Margin="4,2" />
+                <Button Content="Undo" Command="{Binding UndoCommand}" />
+                <Button Content="Redo" Command="{Binding RedoCommand}" />
+                <Button Content="Delete" Command="{Binding DeleteCommand}" />
+                <Rectangle Width="1" Fill="{DynamicResource ThemeBorderLowBrush}" Margin="4,2" />
+                <Button Content="Export PNG" Command="{Binding ExportPngCommand}" />
+                <Button Content="Copy Image" Command="{Binding CopyImageCommand}" />
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,1,0,0" Padding="8,3">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="{Binding ActiveDocument.DisplayName, FallbackValue='No document'}" />
+                <TextBlock Text="{Binding ActiveDocument.Zoom, StringFormat='Zoom: {0:P0}', FallbackValue=''}" />
+            </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="190,*,260">
+
+            <!-- Toolbox -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,1,0" Padding="8">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Tools" FontWeight="SemiBold" Margin="0,0,0,8" />
+                    <Button DockPanel.Dock="Top" Content="Select / Move"
+                            HorizontalAlignment="Stretch" Margin="0,0,0,8"
+                            Command="{Binding ActivateSelectToolCommand}" />
+                    <TextBlock DockPanel.Dock="Top" Text="Shapes" Opacity="0.7" Margin="0,0,0,4" />
+                    <ListBox ItemsSource="{Binding Toolbox.Shapes}"
+                             SelectedItem="{Binding Toolbox.SelectedTool, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShapeToolItem">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- Document tabs -->
+            <TabControl Grid.Column="1"
+                        ItemsSource="{Binding Documents}"
+                        SelectedItem="{Binding ActiveDocument, Mode=TwoWay}">
+                <TabControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DiagramDocumentViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                            <Button Content="✕" Padding="4,0" FontSize="10"
+                                    Background="Transparent" BorderThickness="0"
+                                    Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).CloseDocumentCommand}"
+                                    CommandParameter="{Binding}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+                <TabControl.ContentTemplate>
+                    <DataTemplate x:DataType="vm:DiagramDocumentViewModel">
+                        <v:DiagramView />
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+            </TabControl>
+
+            <!-- Inspector -->
+            <Border Grid.Column="2" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1,0,0,0" Padding="10">
+                <ScrollViewer>
+                    <StackPanel Spacing="10" IsEnabled="{Binding Inspector.HasSelection}">
+                        <TextBlock Text="Properties" FontWeight="SemiBold" />
+                        <TextBlock Text="No selection" Opacity="0.6"
+                                   IsVisible="{Binding !Inspector.HasSelection}" />
+
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.HasSelection}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Text" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.Text, Mode=TwoWay}" AcceptsReturn="True" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Fill (#AARRGGBB)" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.FillHex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.StrokeHex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke thickness" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.StrokeThickness, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Font size" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.FontSize, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="14">
+                                <CheckBox Content="Bold" IsChecked="{Binding Inspector.Bold, Mode=TwoWay}" />
+                                <CheckBox Content="Italic" IsChecked="{Binding Inspector.Italic, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Text alignment" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.AlignmentOptions}"
+                                          SelectedItem="{Binding Inspector.Alignment, Mode=TwoWay}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
