@@ -257,47 +257,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/Jcl.Draw.App/Rendering/ActorGeometry.cs`
-- Test: `tests/Jcl.Draw.App.Tests/ActorGeometryTests.cs`
 
-- [ ] **Step 1: Write the failing test**
+`ActorGeometry` is rendering-layer code (it builds an Avalonia `Geometry` using `StreamGeometry`/`EllipseGeometry`), exactly like `ShapeGeometryBuilder`. The repo does NOT unit-test geometry builders: the test harness has no Avalonia render backend, so `StreamGeometry.Open()` and `Geometry.Bounds` throw `Unable to locate 'IPlatformRenderInterface'` when run headless, and no existing test touches `.Geometry`/`.Bounds`. So this task is **build-verified** (the App compiles it) and exercised by the manual run in Task 9 — there is no unit test. Do NOT add a unit test for it and do NOT add Avalonia.Headless.
 
-`tests/Jcl.Draw.App.Tests/ActorGeometryTests.cs`:
-```csharp
-using Avalonia.Media;
-using Jcl.Draw.App.Rendering;
-using Xunit;
-
-namespace Jcl.Draw.App.Tests;
-
-public class ActorGeometryTests
-{
-    [Fact]
-    public void Build_ProducesNonEmptyGeometry_WithinNodeBounds()
-    {
-        Geometry g = ActorGeometry.Build(48, 84);
-
-        Assert.NotNull(g);
-        Avalonia.Rect b = g.Bounds;
-        Assert.True(b.Width > 0 && b.Height > 0);
-        // Figure stays within the node box (with a little tolerance for stroke).
-        Assert.True(b.Right <= 49 && b.Bottom <= 85 && b.X >= -1 && b.Y >= -1);
-    }
-
-    [Fact]
-    public void Build_HandlesDegenerateSize()
-    {
-        Geometry g = ActorGeometry.Build(0, 0);
-        Assert.NotNull(g);
-    }
-}
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
-Expected: FAIL — `ActorGeometry` not defined.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Create `ActorGeometry`**
 
 `src/Jcl.Draw.App/Rendering/ActorGeometry.cs`:
 ```csharp
@@ -352,16 +315,16 @@ public static class ActorGeometry
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build (the App compiles the new builder)**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded, 0 errors (the 5 pre-existing AVLN5001 Watermark warnings are unrelated).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit** (ActorGeometry.cs only — no test file)
 
 ```bash
 sed -i 's/\r$//' src/Jcl.Draw.App/Rendering/ActorGeometry.cs
-git add src/Jcl.Draw.App/Rendering/ActorGeometry.cs tests/Jcl.Draw.App.Tests/ActorGeometryTests.cs
+git add src/Jcl.Draw.App/Rendering/ActorGeometry.cs
 git commit -m "Add actor stick-figure geometry builder
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -402,7 +365,6 @@ public class UseCaseNodeViewModelTests
         Assert.Equal("Customer", vm.Label);
         vm.Label = "Admin";
         Assert.Equal("Admin", model.Name);
-        Assert.NotNull(vm.Geometry);
     }
 
     [Fact]
@@ -416,7 +378,6 @@ public class UseCaseNodeViewModelTests
         Assert.Equal("Place order", vm.Label);
         vm.Label = "Cancel order";
         Assert.Equal("Cancel order", model.Text);
-        Assert.NotNull(vm.Geometry);
     }
 
     [Fact]
