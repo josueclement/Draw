@@ -6,6 +6,7 @@ using System.Linq;
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.Diagramming.Geometry;
 using Jcl.Draw.Diagramming.Routing;
+using Jcl.Draw.Diagramming.Uml;
 using Jcl.Draw.Diagramming.Undo;
 using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Documents;
@@ -16,7 +17,7 @@ using Jcl.Draw.Model.Serialization;
 namespace Jcl.Draw.App.ViewModels;
 
 /// <summary>Editor state and mutating operations for one open diagram (one tab).</summary>
-public sealed class DiagramDocumentViewModel : ViewModelBase
+public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
@@ -377,6 +378,23 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         => IsModified = !string.Equals(_serializer.Serialize(_document), _cleanSnapshot, StringComparison.Ordinal);
 
     public void NotifyStyleEditStarting() => CaptureUndo();
+
+    void INodeEditContext.BeginMemberEdit() => CaptureUndo();
+
+    void INodeEditContext.EndMemberEdit() => MarkModified();
+
+    public IReadOnlyList<string> GetTypeSuggestions()
+    {
+        IEnumerable<string> names = _document.Nodes
+            .OfType<ClassNode>()
+            .Select(c => c.Name)
+            .Where(n => !string.IsNullOrWhiteSpace(n));
+
+        return PrimitiveTypes.All
+            .Concat(names)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
 
     public NodeViewModelBase? FindNode(Guid id) => Nodes.FirstOrDefault(n => n.Id == id);
 

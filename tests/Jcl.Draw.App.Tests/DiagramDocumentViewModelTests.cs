@@ -163,4 +163,16 @@ public class DiagramDocumentViewModelTests
         Assert.Empty(doc.Connectors);
         Assert.Single(doc.Nodes);
     }
+
+    [Fact]
+    public void GetTypeSuggestions_OnEmptyDocument_ReturnsDistinctPrimitives()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+
+        var suggestions = doc.GetTypeSuggestions();
+
+        Assert.Contains("string", suggestions);
+        Assert.Contains("int", suggestions);
+        Assert.Equal(suggestions.Count, suggestions.Distinct().Count());
+    }
 }
