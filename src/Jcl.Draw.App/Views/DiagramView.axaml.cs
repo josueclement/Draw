@@ -7,6 +7,7 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using Jcl.Draw.App.ViewModels;
@@ -438,6 +439,41 @@ public partial class DiagramView : UserControl
         }
     }
 
+    private void OnMemberDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        if ((sender as Control)?.DataContext is ClassMemberViewModel member)
+        {
+            _vm.CaptureUndo();
+            member.BeginEdit();
+            e.Handled = true;
+
+            // Focus the sibling editor so typing starts immediately.
+            if ((sender as Control)?.Parent is Panel panel)
+            {
+                panel.Children.OfType<TextBox>().FirstOrDefault()?.Focus();
+            }
+        }
+    }
+
+    private void OnMemberEditCommitted(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        if ((sender as Control)?.DataContext is ClassMemberViewModel { IsEditing: true } member)
+        {
+            member.CommitEdit();
+            _vm.MarkModified();
+        }
+    }
+
     private void EndEditing()
     {
         if (_vm is null)
@@ -445,9 +481,20 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        foreach (NodeViewModelBase node in _vm.Nodes.Where(n => n.IsEditing))
+        foreach (ShapeNodeViewModel node in _vm.Nodes.OfType<ShapeNodeViewModel>().Where(n => n.IsEditing))
         {
             node.IsEditing = false;
+        }
+
+        bool committed = false;
+        foreach (ClassNodeViewModel klass in _vm.Nodes.OfType<ClassNodeViewModel>())
+        {
+            committed |= klass.CommitPendingEdits();
+        }
+
+        if (committed)
+        {
+            _vm.MarkModified();
         }
     }
 

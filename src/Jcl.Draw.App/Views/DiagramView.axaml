@@ -64,7 +64,7 @@
                         <Setter Property="Canvas.Top" Value="{ReflectionBinding Y}" />
                     </Style>
                 </ItemsControl.Styles>
-                <ItemsControl.ItemTemplate>
+                <ItemsControl.DataTemplates>
                     <DataTemplate DataType="vm:ShapeNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
                             <Path Data="{Binding Geometry}"
@@ -98,7 +98,70 @@
                                        IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
+
+                    <DataTemplate DataType="vm:ClassNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Border Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding StrokeThickness}">
+                                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+                                    <StackPanel Grid.Row="0" Margin="6,4" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding Stereotype}" FontSize="10" FontStyle="Italic"
+                                                   HorizontalAlignment="Center"
+                                                   IsVisible="{Binding HasStereotype}" />
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold"
+                                                   Foreground="{Binding Foreground}"
+                                                   HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                    <Rectangle Grid.Row="1" Height="1" Fill="{Binding Stroke}" />
+                                    <ItemsControl Grid.Row="2" ItemsSource="{Binding PrimaryMembers}" Margin="6,2">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                                <Panel>
+                                                    <TextBlock Text="{Binding DisplayText}" FontSize="11"
+                                                               Foreground="{Binding $parent[ItemsControl].((vm:ClassNodeViewModel)DataContext).Foreground}"
+                                                               FontStyle="{Binding RowFontStyle}"
+                                                               TextDecorations="{Binding RowDecorations}"
+                                                               IsVisible="{Binding !IsEditing}"
+                                                               DoubleTapped="OnMemberDoubleTapped" />
+                                                    <TextBox Text="{Binding RawText, Mode=TwoWay}" FontSize="11"
+                                                             Background="Transparent" Padding="0"
+                                                             IsVisible="{Binding IsEditing}"
+                                                             LostFocus="OnMemberEditCommitted" />
+                                                </Panel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Rectangle Grid.Row="3" Height="1" Fill="{Binding Stroke}"
+                                               IsVisible="{Binding HasOperations}" />
+                                    <ItemsControl Grid.Row="4" ItemsSource="{Binding Operations}" Margin="6,2"
+                                                  IsVisible="{Binding HasOperations}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                                <Panel>
+                                                    <TextBlock Text="{Binding DisplayText}" FontSize="11"
+                                                               FontStyle="{Binding RowFontStyle}"
+                                                               TextDecorations="{Binding RowDecorations}"
+                                                               IsVisible="{Binding !IsEditing}"
+                                                               DoubleTapped="OnMemberDoubleTapped" />
+                                                    <TextBox Text="{Binding RawText, Mode=TwoWay}" FontSize="11"
+                                                             Background="Transparent" Padding="0"
+                                                             IsVisible="{Binding IsEditing}"
+                                                             LostFocus="OnMemberEditCommitted" />
+                                                </Panel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Border>
+                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
+                                       StrokeDashArray="3,2"
+                                       Fill="Transparent"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding IsSelected}" />
+                        </Panel>
+                    </DataTemplate>
+                </ItemsControl.DataTemplates>
             </ItemsControl>
 
             <Canvas x:Name="Overlay" IsHitTestVisible="False" />
