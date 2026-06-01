@@ -75,4 +75,54 @@ public class InspectorViewModelTests
 
         Assert.True(inspector.HasNoSelection);
     }
+
+    private static DiagramDocumentViewModel CreateDocumentWithClass(out ClassNodeViewModel node)
+    {
+        DiagramDocumentViewModel doc = new(
+            DiagramDocument.CreateEmpty(DiagramType.Class),
+            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
+            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
+            new JsonDocumentSerializer(),
+            new EditorOptions { SnapToGrid = false },
+            filePath: null);
+        node = doc.AddClassNode(ClassNodeKind.Class, new Point2D(100, 100));
+        return doc;
+    }
+
+    [Fact]
+    public void SelectingClassNode_ReportsClassMode_AndLoadsSuggestions()
+    {
+        DiagramDocumentViewModel doc = CreateDocumentWithClass(out ClassNodeViewModel node);
+        InspectorViewModel inspector = new();
+        inspector.SetTarget(doc);
+
+        Assert.True(inspector.IsClassNodeSelected);
+        Assert.False(inspector.IsShapeSelected);
+        Assert.Same(node, inspector.SelectedClassNode);
+        Assert.Contains("string", inspector.TypeSuggestions);
+    }
+
+    [Fact]
+    public void AddPrimaryMemberCommand_AddsMemberToSelectedClass()
+    {
+        DiagramDocumentViewModel doc = CreateDocumentWithClass(out ClassNodeViewModel node);
+        InspectorViewModel inspector = new();
+        inspector.SetTarget(doc);
+
+        inspector.AddPrimaryMemberCommand.Execute(null);
+
+        Assert.Single(node.PrimaryMembers);
+    }
+
+    [Fact]
+    public void FillHex_AppliesToSelectedClassNode()
+    {
+        DiagramDocumentViewModel doc = CreateDocumentWithClass(out ClassNodeViewModel node);
+        InspectorViewModel inspector = new();
+        inspector.SetTarget(doc);
+
+        inspector.FillHex = "#FF112233";
+
+        Assert.Equal(ArgbColor.FromRgb(0x11, 0x22, 0x33), node.Model.Style.Fill);
+    }
 }

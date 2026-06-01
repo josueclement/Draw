@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CommunityToolkit.Mvvm.Input;
 using Jcl.Draw.Model.Connectors;
+using Jcl.Draw.Model.Nodes;
 using ModelStyle = Jcl.Draw.Model.Styling;
 
 namespace Jcl.Draw.App.ViewModels;
@@ -21,10 +23,20 @@ public sealed class InspectorViewModel : ViewModelBase
     public static IReadOnlyList<RouteStyle> RouteStyleOptions { get; } =
         Enum.GetValues<RouteStyle>();
 
+    public static IReadOnlyList<MemberVisibility> VisibilityOptions { get; } =
+        Enum.GetValues<MemberVisibility>();
+
     public bool IsShapeSelected
     {
         get;
-        private set { if (SetProperty(ref field, value)) OnPropertyChanged(nameof(HasNoSelection)); }
+        private set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(HasNoSelection));
+                OnPropertyChanged(nameof(IsNodeSelected));
+            }
+        }
     }
 
     public bool IsConnectorSelected
@@ -33,7 +45,34 @@ public sealed class InspectorViewModel : ViewModelBase
         private set { if (SetProperty(ref field, value)) OnPropertyChanged(nameof(HasNoSelection)); }
     }
 
-    public bool HasNoSelection => !IsShapeSelected && !IsConnectorSelected;
+    public bool IsClassNodeSelected
+    {
+        get;
+        private set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(HasNoSelection));
+                OnPropertyChanged(nameof(IsNodeSelected));
+            }
+        }
+    }
+
+    public bool IsNodeSelected => IsShapeSelected || IsClassNodeSelected;
+
+    public ClassNodeViewModel? SelectedClassNode
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    }
+
+    public IReadOnlyList<string> TypeSuggestions
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    } = System.Array.Empty<string>();
+
+    public bool HasNoSelection => !IsShapeSelected && !IsConnectorSelected && !IsClassNodeSelected;
 
     // --- Shape properties ---
 
@@ -129,6 +168,27 @@ public sealed class InspectorViewModel : ViewModelBase
         set { if (SetProperty(ref field, value)) ApplyConnector(c => c.TargetLabel = NullIfEmpty(TargetLabel)); }
     } = string.Empty;
 
+    // --- Class member-editor commands ---
+
+    public IRelayCommand AddPrimaryMemberCommand { get; }
+
+    public IRelayCommand AddOperationCommand { get; }
+
+    public IRelayCommand<ClassMemberViewModel> RemoveMemberCommand { get; }
+
+    public IRelayCommand<ClassMemberViewModel> MoveMemberUpCommand { get; }
+
+    public IRelayCommand<ClassMemberViewModel> MoveMemberDownCommand { get; }
+
+    public InspectorViewModel()
+    {
+        AddPrimaryMemberCommand = new RelayCommand(() => SelectedClassNode?.AddPrimaryMember());
+        AddOperationCommand = new RelayCommand(() => SelectedClassNode?.AddOperation());
+        RemoveMemberCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.RemoveMember(m); });
+        MoveMemberUpCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.MoveMember(m, -1); });
+        MoveMemberDownCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.MoveMember(m, +1); });
+    }
+
     public void SetTarget(DiagramDocumentViewModel? target)
     {
         if (_target is not null)
@@ -154,10 +214,14 @@ public sealed class InspectorViewModel : ViewModelBase
         try
         {
             ConnectorViewModel? connector = _target?.SelectedConnector;
-            ShapeNodeViewModel? node = connector is null ? _target?.SelectedNodes.OfType<ShapeNodeViewModel>().FirstOrDefault() : null;
+            NodeViewModelBase? node = connector is null ? _target?.SelectedNodes.FirstOrDefault() : null;
+            ShapeNodeViewModel? shape = node as ShapeNodeViewModel;
+            ClassNodeViewModel? klass = node as ClassNodeViewModel;
 
             IsConnectorSelected = connector is not null;
-            IsShapeSelected = node is not null;
+            IsShapeSelected = shape is not null;
+            IsClassNodeSelected = klass is not null;
+            SelectedClassNode = klass;
 
             if (connector is not null)
             {
@@ -173,7 +237,6 @@ public sealed class InspectorViewModel : ViewModelBase
             else if (node is not null)
             {
                 ModelStyle.ShapeStyle style = node.Model.Style;
-                Text = node.Model.Text;
                 FillHex = style.Fill.ToHex();
                 StrokeHex = style.Stroke.Color.ToHex();
                 StrokeThickness = style.Stroke.Thickness;
@@ -181,6 +244,16 @@ public sealed class InspectorViewModel : ViewModelBase
                 Bold = style.Font.Bold;
                 Italic = style.Font.Italic;
                 Alignment = style.TextAlignment;
+
+                if (shape is not null)
+                {
+                    Text = shape.Model.Text;
+                }
+
+                if (klass is not null)
+                {
+                    TypeSuggestions = _target!.GetTypeSuggestions();
+                }
             }
         }
         finally
@@ -234,14 +307,14 @@ public sealed class InspectorViewModel : ViewModelBase
             return;
         }
 
-        List<ShapeNodeViewModel> selected = _target.SelectedNodes.OfType<ShapeNodeViewModel>().ToList();
+        List<NodeViewModelBase> selected = _target.SelectedNodes.ToList();
         if (selected.Count == 0)
         {
             return;
         }
 
         _target.NotifyStyleEditStarting();
-        foreach (ShapeNodeViewModel node in selected)
+        foreach (NodeViewModelBase node in selected)
         {
             mutate(node.Model.Style);
             node.RaiseStyleChanged();
