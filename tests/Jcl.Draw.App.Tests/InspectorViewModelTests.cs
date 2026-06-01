@@ -125,4 +125,46 @@ public class InspectorViewModelTests
 
         Assert.Equal(ArgbColor.FromRgb(0x11, 0x22, 0x33), node.Model.Style.Fill);
     }
+
+    [Fact]
+    public void SelectingActor_ReportsLabelNode_AndLoadsName()
+    {
+        DiagramDocumentViewModel doc = new(
+            DiagramDocument.CreateEmpty(DiagramType.UseCase),
+            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
+            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
+            new JsonDocumentSerializer(),
+            new EditorOptions { SnapToGrid = false },
+            filePath: null);
+        ActorNodeViewModel actor = (ActorNodeViewModel)doc.AddUseCaseNode(UseCaseNodeKind.Actor, new Point2D(100, 100));
+        actor.Name = "Customer";
+
+        InspectorViewModel inspector = new();
+        inspector.SetTarget(doc);
+
+        Assert.True(inspector.IsLabelNodeSelected);
+        Assert.True(inspector.IsNodeSelected);     // shared style applies
+        Assert.False(inspector.IsShapeSelected);
+        Assert.False(inspector.HasNoSelection);
+        Assert.Equal("Customer", inspector.Text);
+    }
+
+    [Fact]
+    public void SettingText_AppliesToSelectedUseCaseNode()
+    {
+        DiagramDocumentViewModel doc = new(
+            DiagramDocument.CreateEmpty(DiagramType.UseCase),
+            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
+            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
+            new JsonDocumentSerializer(),
+            new EditorOptions { SnapToGrid = false },
+            filePath: null);
+        UseCaseNodeViewModel useCase = (UseCaseNodeViewModel)doc.AddUseCaseNode(UseCaseNodeKind.UseCase, new Point2D(100, 100));
+
+        InspectorViewModel inspector = new();
+        inspector.SetTarget(doc);
+        inspector.Text = "Place order";
+
+        Assert.Equal("Place order", useCase.Model.Text);
+    }
 }

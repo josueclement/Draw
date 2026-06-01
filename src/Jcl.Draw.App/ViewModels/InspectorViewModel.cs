@@ -58,7 +58,20 @@ public sealed class InspectorViewModel : ViewModelBase
         }
     }
 
-    public bool IsNodeSelected => IsShapeSelected || IsClassNodeSelected;
+    public bool IsLabelNodeSelected
+    {
+        get;
+        private set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(HasNoSelection));
+                OnPropertyChanged(nameof(IsNodeSelected));
+            }
+        }
+    }
+
+    public bool IsNodeSelected => IsLabelNodeSelected || IsClassNodeSelected;
 
     public ClassNodeViewModel? SelectedClassNode
     {
@@ -72,7 +85,7 @@ public sealed class InspectorViewModel : ViewModelBase
         private set => SetProperty(ref field, value);
     } = System.Array.Empty<string>();
 
-    public bool HasNoSelection => !IsShapeSelected && !IsConnectorSelected && !IsClassNodeSelected;
+    public bool HasNoSelection => !IsLabelNodeSelected && !IsConnectorSelected && !IsClassNodeSelected;
 
     // --- Shape properties ---
 
@@ -221,6 +234,7 @@ public sealed class InspectorViewModel : ViewModelBase
             IsConnectorSelected = connector is not null;
             IsShapeSelected = shape is not null;
             IsClassNodeSelected = klass is not null;
+            IsLabelNodeSelected = node is { HasInlineLabel: true };
             SelectedClassNode = klass;
 
             if (connector is not null)
@@ -245,9 +259,9 @@ public sealed class InspectorViewModel : ViewModelBase
                 Italic = style.Font.Italic;
                 Alignment = style.TextAlignment;
 
-                if (shape is not null)
+                if (node.HasInlineLabel)
                 {
-                    Text = shape.Model.Text;
+                    Text = node.Label;
                 }
 
                 if (klass is not null)
@@ -269,16 +283,16 @@ public sealed class InspectorViewModel : ViewModelBase
             return;
         }
 
-        List<ShapeNodeViewModel> selected = _target.SelectedNodes.OfType<ShapeNodeViewModel>().ToList();
+        List<NodeViewModelBase> selected = _target.SelectedNodes.Where(n => n.HasInlineLabel).ToList();
         if (selected.Count == 0)
         {
             return;
         }
 
         _target.NotifyStyleEditStarting();
-        foreach (ShapeNodeViewModel node in selected)
+        foreach (NodeViewModelBase node in selected)
         {
-            node.Text = Text;
+            node.Label = Text;
         }
 
         _target.MarkModified();
