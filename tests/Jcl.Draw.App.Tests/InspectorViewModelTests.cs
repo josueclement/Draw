@@ -1,5 +1,6 @@
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.App.ViewModels;
+using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Diagramming.Undo;
 using Jcl.Draw.Model.Documents;
 using Jcl.Draw.Model.Nodes;
@@ -17,6 +18,7 @@ public class InspectorViewModelTests
         DiagramDocumentViewModel doc = new(
             DiagramDocument.CreateEmpty(DiagramType.Freeform),
             new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
+            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
             new EditorOptions { SnapToGrid = false },
             filePath: null);
         node = doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
@@ -33,7 +35,7 @@ public class InspectorViewModelTests
         InspectorViewModel inspector = new();
         inspector.SetTarget(doc);
 
-        Assert.True(inspector.HasSelection);
+        Assert.True(inspector.IsShapeSelected);
         Assert.Equal("Hello", inspector.Text);
         Assert.Equal("#FF102030", inspector.FillHex);
     }
@@ -70,6 +72,6 @@ public class InspectorViewModelTests
 
         inspector.SetTarget(target: null);
 
-        Assert.False(inspector.HasSelection);
+        Assert.True(inspector.HasNoSelection);
     }
 }

@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.Diagramming.Geometry;
+using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Diagramming.Undo;
+using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Documents;
 using Jcl.Draw.Model.Nodes;
 using Jcl.Draw.Model.Primitives;
@@ -16,20 +18,30 @@ namespace Jcl.Draw.App.ViewModels;
 public sealed class DiagramDocumentViewModel : ViewModelBase
 {
     private readonly IUndoService _undo;
+    private readonly IConnectorRouter _router;
     private readonly EditorOptions _options;
     private DiagramDocument _document;
 
-    public DiagramDocumentViewModel(DiagramDocument document, IUndoService undo, EditorOptions options, string? filePath)
+    public DiagramDocumentViewModel(
+        DiagramDocument document,
+        IUndoService undo,
+        IConnectorRouter router,
+        EditorOptions options,
+        string? filePath)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
         _undo = undo ?? throw new ArgumentNullException(nameof(undo));
+        _router = router ?? throw new ArgumentNullException(nameof(router));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         RebuildNodes();
+        RebuildConnectors();
     }
 
     public ObservableCollection<ShapeNodeViewModel> Nodes { get; } = new();
+
+    public ObservableCollection<ConnectorViewModel> Connectors { get; } = new();
 
     public DiagramDocument Document => _document;
 
@@ -94,7 +106,21 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public bool CanRedo => _undo.CanRedo;
 
-    public bool HasSelection => Nodes.Any(n => n.IsSelected);
+    public bool HasSelection => Nodes.Any(n => n.IsSelected) || SelectedConnector is not null;
+
+    public bool HasConnectorSelection => SelectedConnector is not null;
+
+    public ConnectorViewModel? SelectedConnector
+    {
+        get;
+        private set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(HasConnectorSelection));
+            }
+        }
+    }
 
     public IEnumerable<ShapeNodeViewModel> SelectedNodes => Nodes.Where(n => n.IsSelected);
 
@@ -102,7 +128,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public event EventHandler? SelectionChanged;
 
-    /// <summary>Snapshots current state before a mutation. Call once at the start of a gesture.</summary>
     public void CaptureUndo() => _undo.Capture(_document);
 
     public ShapeNodeViewModel AddShape(ShapeKind kind, Point2D center)
@@ -133,19 +158,65 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         return vm;
     }
 
+    public ConnectorViewModel? AddConnector(Guid sourceId, Guid targetId, RelationshipKind kind)
+    {
+        if (sourceId == targetId)
+        {
+            return null;
+        }
+
+        ShapeNodeViewModel? source = FindNode(sourceId);
+        ShapeNodeViewModel? target = FindNode(targetId);
+        if (source is null || target is null)
+        {
+            return null;
+        }
+
+        CaptureUndo();
+        Connector connector = new()
+        {
+            SourceNodeId = sourceId,
+            TargetNodeId = targetId,
+            Kind = kind,
+            Route = RouteStyle.Straight,
+        };
+        _document.Connectors.Add(connector);
+        ConnectorViewModel vm = new(connector, source, target, _router);
+        Connectors.Add(vm);
+        SelectConnector(vm);
+        MarkModified();
+        return vm;
+    }
+
     public void DeleteSelected()
     {
-        List<ShapeNodeViewModel> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
+        List<ShapeNodeViewModel> selectedNodes = SelectedNodes.ToList();
+        ConnectorViewModel? selectedConnector = SelectedConnector;
+        if (selectedNodes.Count == 0 && selectedConnector is null)
         {
             return;
         }
 
         CaptureUndo();
-        foreach (ShapeNodeViewModel vm in selected)
+
+        if (selectedNodes.Count > 0)
         {
-            _document.Nodes.Remove(vm.Model);
-            Nodes.Remove(vm);
+            HashSet<Guid> removedIds = selectedNodes.Select(n => n.Id).ToHashSet();
+            foreach (ShapeNodeViewModel vm in selectedNodes)
+            {
+                _document.Nodes.Remove(vm.Model);
+                Nodes.Remove(vm);
+            }
+
+            _document.Connectors.RemoveAll(c => removedIds.Contains(c.SourceNodeId) || removedIds.Contains(c.TargetNodeId));
+            RebuildConnectors();
+        }
+        else if (selectedConnector is not null)
+        {
+            _document.Connectors.Remove(selectedConnector.Model);
+            selectedConnector.Detach();
+            Connectors.Remove(selectedConnector);
+            SelectedConnector = null;
         }
 
         MarkModified();
@@ -189,6 +260,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void SelectOnly(ShapeNodeViewModel vm)
     {
+        ClearConnectorSelection();
         foreach (ShapeNodeViewModel n in Nodes)
         {
             n.IsSelected = ReferenceEquals(n, vm);
@@ -199,12 +271,14 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void ToggleSelect(ShapeNodeViewModel vm)
     {
+        ClearConnectorSelection();
         vm.IsSelected = !vm.IsSelected;
         RaiseSelectionChanged();
     }
 
     public void ClearSelection()
     {
+        ClearConnectorSelection();
         foreach (ShapeNodeViewModel n in Nodes)
         {
             n.IsSelected = false;
@@ -215,6 +289,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void SelectInRect(Rect2D rect, bool additive)
     {
+        ClearConnectorSelection();
         foreach (ShapeNodeViewModel n in Nodes)
         {
             if (!additive)
@@ -231,10 +306,44 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         RaiseSelectionChanged();
     }
 
+    public void SelectConnector(ConnectorViewModel connector)
+    {
+        foreach (ShapeNodeViewModel n in Nodes)
+        {
+            n.IsSelected = false;
+        }
+
+        foreach (ConnectorViewModel c in Connectors)
+        {
+            c.IsSelected = ReferenceEquals(c, connector);
+        }
+
+        SelectedConnector = connector;
+        RaiseSelectionChanged();
+    }
+
+    public ConnectorViewModel? HitTestConnector(Point2D world, double tolerance)
+    {
+        ConnectorViewModel? best = null;
+        double bestDistance = tolerance;
+        foreach (ConnectorViewModel c in Connectors)
+        {
+            double distance = ConnectorDistance(c, world);
+            if (distance <= bestDistance)
+            {
+                bestDistance = distance;
+                best = c;
+            }
+        }
+
+        return best;
+    }
+
     public void Undo()
     {
         _document = _undo.Undo(_document);
         RebuildNodes();
+        RebuildConnectors();
         MarkModified();
         RaiseUndoState();
     }
@@ -243,6 +352,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
     {
         _document = _undo.Redo(_document);
         RebuildNodes();
+        RebuildConnectors();
         MarkModified();
         RaiseUndoState();
     }
@@ -257,6 +367,18 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void NotifyStyleEditStarting() => CaptureUndo();
 
+    public ShapeNodeViewModel? FindNode(Guid id) => Nodes.FirstOrDefault(n => n.Id == id);
+
+    private void ClearConnectorSelection()
+    {
+        foreach (ConnectorViewModel c in Connectors)
+        {
+            c.IsSelected = false;
+        }
+
+        SelectedConnector = null;
+    }
+
     private int NextZIndex() => _document.Nodes.Count == 0 ? 0 : _document.Nodes.Max(n => n.ZIndex) + 1;
 
     private void RebuildNodes()
@@ -268,6 +390,74 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         }
 
         RaiseSelectionChanged();
+    }
+
+    private void RebuildConnectors()
+    {
+        foreach (ConnectorViewModel existing in Connectors)
+        {
+            existing.Detach();
+        }
+
+        Connectors.Clear();
+        SelectedConnector = null;
+
+        Dictionary<Guid, ShapeNodeViewModel> byId = Nodes.ToDictionary(n => n.Id);
+        List<Connector> valid = new();
+        foreach (Connector connector in _document.Connectors)
+        {
+            if (byId.TryGetValue(connector.SourceNodeId, out ShapeNodeViewModel? source)
+                && byId.TryGetValue(connector.TargetNodeId, out ShapeNodeViewModel? target))
+            {
+                valid.Add(connector);
+                Connectors.Add(new ConnectorViewModel(connector, source, target, _router));
+            }
+        }
+
+        if (valid.Count != _document.Connectors.Count)
+        {
+            _document.Connectors.Clear();
+            _document.Connectors.AddRange(valid);
+        }
+    }
+
+    private double ConnectorDistance(ConnectorViewModel connector, Point2D world)
+    {
+        ConnectorRouteRequest request = new(
+            connector.Source.Model.Kind,
+            connector.Source.Model.Bounds,
+            connector.Target.Model.Kind,
+            connector.Target.Model.Bounds,
+            connector.Model.Route,
+            connector.Model.BendPoints);
+        ConnectorRoute route = _router.Route(request);
+
+        IReadOnlyList<Point2D> points = route.IsBezier
+            ? new[] { route.Start, route.Control1, route.Control2, route.End }
+            : route.Points;
+
+        double min = double.PositiveInfinity;
+        for (int i = 1; i < points.Count; i++)
+        {
+            min = Math.Min(min, DistanceToSegment(world, points[i - 1], points[i]));
+        }
+
+        return min;
+    }
+
+    private static double DistanceToSegment(Point2D p, Point2D a, Point2D b)
+    {
+        Point2D ab = b - a;
+        double lengthSquared = (ab.X * ab.X) + (ab.Y * ab.Y);
+        if (lengthSquared <= double.Epsilon)
+        {
+            return p.DistanceTo(a);
+        }
+
+        double t = (((p.X - a.X) * ab.X) + ((p.Y - a.Y) * ab.Y)) / lengthSquared;
+        t = Math.Clamp(t, 0d, 1d);
+        Point2D projection = new(a.X + (t * ab.X), a.Y + (t * ab.Y));
+        return p.DistanceTo(projection);
     }
 
     private void RaiseUndoState()

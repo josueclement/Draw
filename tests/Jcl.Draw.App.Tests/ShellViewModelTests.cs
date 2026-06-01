@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.App.Services;
 using Jcl.Draw.App.ViewModels;
+using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Diagramming.Undo;
 using Jcl.Draw.Model.Documents;
 using Jcl.Draw.Model.Nodes;
@@ -31,6 +32,7 @@ public class ShellViewModelTests
 
         DiagramDocumentViewModelFactory factory = new(
             new JsonDocumentSerializer(),
+            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
             Options.Create(new EditorOptions()),
             Options.Create(new UndoOptions()));
 

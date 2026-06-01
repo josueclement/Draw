@@ -1,7 +1,9 @@
 using System.Linq;
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.App.ViewModels;
+using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Diagramming.Undo;
+using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Documents;
 using Jcl.Draw.Model.Nodes;
 using Jcl.Draw.Model.Primitives;
@@ -12,11 +14,15 @@ namespace Jcl.Draw.App.Tests;
 
 public class DiagramDocumentViewModelTests
 {
-    private static DiagramDocumentViewModel CreateDocument()
+    private static IConnectorRouter Router()
+        => new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter(), new OrthogonalRouter(), new BezierRouter() });
+
+    private static DiagramDocumentViewModel CreateDocument(bool snap = false)
         => new(
             DiagramDocument.CreateEmpty(DiagramType.Freeform),
             new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
-            new EditorOptions { SnapToGrid = false, DefaultShapeWidth = 120, DefaultShapeHeight = 70 },
+            Router(),
+            new EditorOptions { SnapToGrid = snap, GridSize = 10, DefaultShapeWidth = 120, DefaultShapeHeight = 70 },
             filePath: null);
 
     [Fact]
@@ -92,11 +98,7 @@ public class DiagramDocumentViewModelTests
     [Fact]
     public void SnapSelectionToGrid_AlignsPositionsWhenEnabled()
     {
-        DiagramDocumentViewModel doc = new(
-            DiagramDocument.CreateEmpty(DiagramType.Freeform),
-            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
-            new EditorOptions { SnapToGrid = true, GridSize = 10 },
-            filePath: null);
+        DiagramDocumentViewModel doc = CreateDocument(snap: true);
         ShapeNodeViewModel node = doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
         doc.MoveSelectedBy(3, 4);
 
@@ -104,5 +106,47 @@ public class DiagramDocumentViewModelTests
 
         Assert.Equal(0, node.X % 10, 3);
         Assert.Equal(0, node.Y % 10, 3);
+    }
+
+    [Fact]
+    public void AddConnector_AddsAndSelectsConnector()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        ShapeNodeViewModel a = doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
+        ShapeNodeViewModel b = doc.AddShape(ShapeKind.Rectangle, new Point2D(400, 100));
+
+        ConnectorViewModel? connector = doc.AddConnector(a.Id, b.Id, RelationshipKind.Composition);
+
+        Assert.NotNull(connector);
+        Assert.Same(connector, Assert.Single(doc.Connectors));
+        Assert.True(doc.HasConnectorSelection);
+        Assert.True(connector!.IsSelected);
+    }
+
+    [Fact]
+    public void AddConnector_RejectsSelfLink()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        ShapeNodeViewModel a = doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
+
+        ConnectorViewModel? connector = doc.AddConnector(a.Id, a.Id, RelationshipKind.Association);
+
+        Assert.Null(connector);
+        Assert.Empty(doc.Connectors);
+    }
+
+    [Fact]
+    public void DeletingNode_RemovesAttachedConnectors()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        ShapeNodeViewModel a = doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
+        ShapeNodeViewModel b = doc.AddShape(ShapeKind.Rectangle, new Point2D(400, 100));
+        doc.AddConnector(a.Id, b.Id, RelationshipKind.Association);
+
+        doc.SelectOnly(a);
+        doc.DeleteSelected();
+
+        Assert.Empty(doc.Connectors);
+        Assert.Single(doc.Nodes);
     }
 }

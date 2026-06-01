@@ -1,4 +1,5 @@
 using Jcl.Draw.App.Configuration;
+using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Diagramming.Undo;
 using Jcl.Draw.Model.Documents;
 using Jcl.Draw.Model.Serialization;
@@ -17,21 +18,29 @@ public interface IDiagramDocumentViewModelFactory
 public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelFactory
 {
     private readonly IDocumentSerializer _serializer;
+    private readonly IConnectorRouter _router;
     private readonly IOptions<EditorOptions> _editorOptions;
     private readonly IOptions<UndoOptions> _undoOptions;
 
     public DiagramDocumentViewModelFactory(
         IDocumentSerializer serializer,
+        IConnectorRouter router,
         IOptions<EditorOptions> editorOptions,
         IOptions<UndoOptions> undoOptions)
     {
         _serializer = serializer;
+        _router = router;
         _editorOptions = editorOptions;
         _undoOptions = undoOptions;
     }
 
     public DiagramDocumentViewModel Create(DiagramDocument document, string? filePath)
-        => new(document, new MementoUndoService(_serializer, _undoOptions.Value), _editorOptions.Value, filePath);
+        => new(
+            document,
+            new MementoUndoService(_serializer, _undoOptions.Value),
+            _router,
+            _editorOptions.Value,
+            filePath);
 
     public DiagramDocumentViewModel CreateNew(DiagramType type)
         => Create(DiagramDocument.CreateEmpty(type), filePath: null);

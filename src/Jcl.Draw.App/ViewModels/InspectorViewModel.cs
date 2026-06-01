@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jcl.Draw.Model.Connectors;
 using ModelStyle = Jcl.Draw.Model.Styling;
 
 namespace Jcl.Draw.App.ViewModels;
 
-/// <summary>Edits text and per-shape styling for the active document's current selection.</summary>
+/// <summary>Edits text/styling for the active document's selection — a shape or a connector.</summary>
 public sealed class InspectorViewModel : ViewModelBase
 {
     private DiagramDocumentViewModel? _target;
@@ -14,11 +15,27 @@ public sealed class InspectorViewModel : ViewModelBase
     public static IReadOnlyList<ModelStyle.TextAlignment> AlignmentOptions { get; } =
         Enum.GetValues<ModelStyle.TextAlignment>();
 
-    public bool HasSelection
+    public static IReadOnlyList<RelationshipKind> RelationshipOptions { get; } =
+        Enum.GetValues<RelationshipKind>();
+
+    public static IReadOnlyList<RouteStyle> RouteStyleOptions { get; } =
+        Enum.GetValues<RouteStyle>();
+
+    public bool IsShapeSelected
     {
         get;
-        private set => SetProperty(ref field, value);
+        private set { if (SetProperty(ref field, value)) OnPropertyChanged(nameof(HasNoSelection)); }
     }
+
+    public bool IsConnectorSelected
+    {
+        get;
+        private set { if (SetProperty(ref field, value)) OnPropertyChanged(nameof(HasNoSelection)); }
+    }
+
+    public bool HasNoSelection => !IsShapeSelected && !IsConnectorSelected;
+
+    // --- Shape properties ---
 
     public string Text
     {
@@ -35,38 +52,82 @@ public sealed class InspectorViewModel : ViewModelBase
     public string StrokeHex
     {
         get;
-        set { if (SetProperty(ref field, value)) ApplyStroke(); }
+        set { if (SetProperty(ref field, value)) ApplyShapeStroke(); }
     } = "#FF000000";
 
     public double StrokeThickness
     {
         get;
-        set { if (SetProperty(ref field, value)) ApplyStyle(s => s.Stroke.Thickness = StrokeThickness); }
+        set { if (SetProperty(ref field, value)) ApplyShapeStyle(s => s.Stroke.Thickness = StrokeThickness); }
     } = 1.5d;
 
     public double FontSize
     {
         get;
-        set { if (SetProperty(ref field, value)) ApplyStyle(s => s.Font.Size = FontSize); }
+        set { if (SetProperty(ref field, value)) ApplyShapeStyle(s => s.Font.Size = FontSize); }
     } = 12d;
 
     public bool Bold
     {
         get;
-        set { if (SetProperty(ref field, value)) ApplyStyle(s => s.Font.Bold = Bold); }
+        set { if (SetProperty(ref field, value)) ApplyShapeStyle(s => s.Font.Bold = Bold); }
     }
 
     public bool Italic
     {
         get;
-        set { if (SetProperty(ref field, value)) ApplyStyle(s => s.Font.Italic = Italic); }
+        set { if (SetProperty(ref field, value)) ApplyShapeStyle(s => s.Font.Italic = Italic); }
     }
 
     public ModelStyle.TextAlignment Alignment
     {
         get;
-        set { if (SetProperty(ref field, value)) ApplyStyle(s => s.TextAlignment = Alignment); }
+        set { if (SetProperty(ref field, value)) ApplyShapeStyle(s => s.TextAlignment = Alignment); }
     }
+
+    // --- Connector properties ---
+
+    public RelationshipKind ConnectorKind
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.Kind = ConnectorKind); }
+    }
+
+    public RouteStyle ConnectorRouteStyle
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.Route = ConnectorRouteStyle); }
+    }
+
+    public string ConnectorStrokeHex
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnectorStroke(); }
+    } = "#FF000000";
+
+    public double ConnectorThickness
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.Style.Stroke.Thickness = ConnectorThickness); }
+    } = 1.5d;
+
+    public string SourceLabel
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.SourceLabel = NullIfEmpty(SourceLabel)); }
+    } = string.Empty;
+
+    public string CenterLabel
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.CenterLabel = NullIfEmpty(CenterLabel)); }
+    } = string.Empty;
+
+    public string TargetLabel
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.TargetLabel = NullIfEmpty(TargetLabel)); }
+    } = string.Empty;
 
     public void SetTarget(DiagramDocumentViewModel? target)
     {
@@ -92,22 +153,35 @@ public sealed class InspectorViewModel : ViewModelBase
         _loading = true;
         try
         {
-            ShapeNodeViewModel? node = _target?.SelectedNodes.FirstOrDefault();
-            HasSelection = node is not null;
-            if (node is null)
-            {
-                return;
-            }
+            ConnectorViewModel? connector = _target?.SelectedConnector;
+            ShapeNodeViewModel? node = connector is null ? _target?.SelectedNodes.FirstOrDefault() : null;
 
-            ModelStyle.ShapeStyle style = node.Model.Style;
-            Text = node.Model.Text;
-            FillHex = style.Fill.ToHex();
-            StrokeHex = style.Stroke.Color.ToHex();
-            StrokeThickness = style.Stroke.Thickness;
-            FontSize = style.Font.Size;
-            Bold = style.Font.Bold;
-            Italic = style.Font.Italic;
-            Alignment = style.TextAlignment;
+            IsConnectorSelected = connector is not null;
+            IsShapeSelected = node is not null;
+
+            if (connector is not null)
+            {
+                Connector model = connector.Model;
+                ConnectorKind = model.Kind;
+                ConnectorRouteStyle = model.Route;
+                ConnectorStrokeHex = model.Style.Stroke.Color.ToHex();
+                ConnectorThickness = model.Style.Stroke.Thickness;
+                SourceLabel = model.SourceLabel ?? string.Empty;
+                CenterLabel = model.CenterLabel ?? string.Empty;
+                TargetLabel = model.TargetLabel ?? string.Empty;
+            }
+            else if (node is not null)
+            {
+                ModelStyle.ShapeStyle style = node.Model.Style;
+                Text = node.Model.Text;
+                FillHex = style.Fill.ToHex();
+                StrokeHex = style.Stroke.Color.ToHex();
+                StrokeThickness = style.Stroke.Thickness;
+                FontSize = style.Font.Size;
+                Bold = style.Font.Bold;
+                Italic = style.Font.Italic;
+                Alignment = style.TextAlignment;
+            }
         }
         finally
         {
@@ -141,19 +215,19 @@ public sealed class InspectorViewModel : ViewModelBase
     {
         if (ModelStyle.ArgbColor.TryParse(FillHex, out ModelStyle.ArgbColor color))
         {
-            ApplyStyle(s => s.Fill = color);
+            ApplyShapeStyle(s => s.Fill = color);
         }
     }
 
-    private void ApplyStroke()
+    private void ApplyShapeStroke()
     {
         if (ModelStyle.ArgbColor.TryParse(StrokeHex, out ModelStyle.ArgbColor color))
         {
-            ApplyStyle(s => s.Stroke.Color = color);
+            ApplyShapeStyle(s => s.Stroke.Color = color);
         }
     }
 
-    private void ApplyStyle(Action<ModelStyle.ShapeStyle> mutate)
+    private void ApplyShapeStyle(Action<ModelStyle.ShapeStyle> mutate)
     {
         if (_loading || _target is null)
         {
@@ -175,4 +249,27 @@ public sealed class InspectorViewModel : ViewModelBase
 
         _target.MarkModified();
     }
+
+    private void ApplyConnectorStroke()
+    {
+        if (ModelStyle.ArgbColor.TryParse(ConnectorStrokeHex, out ModelStyle.ArgbColor color))
+        {
+            ApplyConnector(c => c.Style.Stroke.Color = color);
+        }
+    }
+
+    private void ApplyConnector(Action<Connector> mutate)
+    {
+        if (_loading || _target?.SelectedConnector is not { } connector)
+        {
+            return;
+        }
+
+        _target.NotifyStyleEditStarting();
+        mutate(connector.Model);
+        connector.RaiseStyleChanged();
+        _target.MarkModified();
+    }
+
+    private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }

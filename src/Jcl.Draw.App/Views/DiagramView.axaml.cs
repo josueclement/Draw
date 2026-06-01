@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
@@ -10,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.VisualTree;
 using Jcl.Draw.App.ViewModels;
 using Jcl.Draw.Diagramming.Geometry;
+using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Primitives;
 
 namespace Jcl.Draw.App.Views;
@@ -23,6 +25,7 @@ public partial class DiagramView : UserControl
         Marquee,
         Pan,
         Resize,
+        Connect,
     }
 
     private const double HandleScreenSize = 10d;
@@ -39,6 +42,8 @@ public partial class DiagramView : UserControl
     private Rectangle? _marquee;
     private int _resizeHandle = -1;
     private ShapeNodeViewModel? _resizeTarget;
+    private ShapeNodeViewModel? _connectSource;
+    private Line? _connectPreview;
 
     public DiagramView()
     {
@@ -162,7 +167,24 @@ public partial class DiagramView : UserControl
         }
 
         ToolboxViewModel? toolbox = GetToolbox();
-        if (toolbox?.SelectedTool is { } tool)
+
+        // Connector mode: drag from a source node to a target node.
+        if (toolbox is { IsConnectorMode: true })
+        {
+            ShapeNodeViewModel? from = HitTestNode(world);
+            if (from is not null)
+            {
+                _connectSource = from;
+                _mode = DragMode.Connect;
+                StartConnectPreview(from, world);
+                e.Pointer.Capture(Viewport);
+            }
+
+            return;
+        }
+
+        // Shape placement.
+        if (toolbox?.SelectedShape is { } tool)
         {
             _vm.AddShape(tool.Kind, new Point2D(world.X, world.Y));
             toolbox.ActivateSelectTool();
@@ -188,6 +210,14 @@ public partial class DiagramView : UserControl
         }
         else
         {
+            ConnectorViewModel? connector = _vm.HitTestConnector(new Point2D(world.X, world.Y), 6d / Zoom);
+            if (connector is not null)
+            {
+                _vm.SelectConnector(connector);
+                e.Pointer.Capture(Viewport);
+                return;
+            }
+
             _mode = DragMode.Marquee;
             _marqueeStartWorld = world;
             _marqueeAdditive = ctrl;
@@ -236,6 +266,10 @@ public partial class DiagramView : UserControl
             case DragMode.Marquee:
                 UpdateMarquee(world);
                 break;
+
+            case DragMode.Connect:
+                UpdateConnectPreview(world);
+                break;
         }
     }
 
@@ -262,6 +296,19 @@ public partial class DiagramView : UserControl
                     _vm.SelectInRect(rect, _marqueeAdditive);
                     EndMarquee();
                     break;
+
+                case DragMode.Connect:
+                    ShapeNodeViewModel? target = HitTestNode(ScreenToWorld(e.GetPosition(Viewport)));
+                    if (_connectSource is not null && target is not null && !ReferenceEquals(target, _connectSource))
+                    {
+                        ToolboxViewModel? toolbox = GetToolbox();
+                        RelationshipKind kind = toolbox?.SelectedConnector?.Kind ?? RelationshipKind.Association;
+                        _vm.AddConnector(_connectSource.Id, target.Id, kind);
+                        toolbox?.ActivateSelectTool();
+                    }
+
+                    EndConnectPreview();
+                    break;
             }
         }
 
@@ -269,6 +316,7 @@ public partial class DiagramView : UserControl
         _undoCaptured = false;
         _resizeHandle = -1;
         _resizeTarget = null;
+        _connectSource = null;
         e.Pointer.Capture(null);
         UpdateHandles();
     }
@@ -507,6 +555,40 @@ public partial class DiagramView : UserControl
             Overlay.Children.Remove(_marquee);
             _marquee = null;
         }
+    }
+
+    private void StartConnectPreview(ShapeNodeViewModel from, Point world)
+    {
+        Point2D center = from.Model.Bounds.Center;
+        _connectPreview = new Line
+        {
+            StartPoint = new Point(center.X, center.Y),
+            EndPoint = world,
+            Stroke = new SolidColorBrush(Color.Parse("#3D7EFF")),
+            StrokeThickness = 1.5d / Zoom,
+            StrokeDashArray = new AvaloniaList<double> { 4, 2 },
+            IsHitTestVisible = false,
+        };
+        Overlay.Children.Add(_connectPreview);
+    }
+
+    private void UpdateConnectPreview(Point world)
+    {
+        if (_connectPreview is not null)
+        {
+            _connectPreview.EndPoint = world;
+        }
+    }
+
+    private void EndConnectPreview()
+    {
+        if (_connectPreview is not null)
+        {
+            Overlay.Children.Remove(_connectPreview);
+            _connectPreview = null;
+        }
+
+        _connectSource = null;
     }
 
     private ToolboxViewModel? GetToolbox()

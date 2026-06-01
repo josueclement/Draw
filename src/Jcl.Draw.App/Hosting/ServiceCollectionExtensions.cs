@@ -2,6 +2,7 @@ using Jcl.Draw.App.Configuration;
 using Jcl.Draw.App.Services;
 using Jcl.Draw.App.ViewModels;
 using Jcl.Draw.App.Views;
+using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Diagramming.Undo;
 using Jcl.Draw.Model.Serialization;
 using Microsoft.Extensions.Configuration;
@@ -21,6 +22,12 @@ public static class ServiceCollectionExtensions
         // Stateless / shared services.
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IDocumentSerializer, JsonDocumentSerializer>();
+
+        // Connector routing strategies + dispatcher.
+        services.AddSingleton<IConnectorRouteStrategy, StraightRouter>();
+        services.AddSingleton<IConnectorRouteStrategy, OrthogonalRouter>();
+        services.AddSingleton<IConnectorRouteStrategy, BezierRouter>();
+        services.AddSingleton<IConnectorRouter, ConnectorRouter>();
         services.AddSingleton<IDocumentFileService, DocumentFileService>();
         services.AddSingleton<IFileDialogService, FileDialogService>();
         services.AddSingleton<IRecentFilesService, RecentFilesService>();

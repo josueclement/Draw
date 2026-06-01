@@ -84,21 +84,31 @@
 
             <!-- Toolbox -->
             <Border Grid.Column="0" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,1,0" Padding="8">
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Tools" FontWeight="SemiBold" Margin="0,0,0,8" />
-                    <Button DockPanel.Dock="Top" Content="Select / Move"
-                            HorizontalAlignment="Stretch" Margin="0,0,0,8"
-                            Command="{Binding ActivateSelectToolCommand}" />
-                    <TextBlock DockPanel.Dock="Top" Text="Shapes" Opacity="0.7" Margin="0,0,0,4" />
-                    <ListBox ItemsSource="{Binding Toolbox.Shapes}"
-                             SelectedItem="{Binding Toolbox.SelectedTool, Mode=TwoWay}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ShapeToolItem">
-                                <TextBlock Text="{Binding Name}" />
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
+                <ScrollViewer>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Tools" FontWeight="SemiBold" />
+                        <Button Content="Select / Move" HorizontalAlignment="Stretch"
+                                Command="{Binding ActivateSelectToolCommand}" />
+                        <TextBlock Text="Shapes" Opacity="0.7" Margin="0,6,0,0" />
+                        <ListBox ItemsSource="{Binding Toolbox.Shapes}"
+                                 SelectedItem="{Binding Toolbox.SelectedShape, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ShapeToolItem">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="Connectors" Opacity="0.7" Margin="0,6,0,0" />
+                        <ListBox ItemsSource="{Binding Toolbox.Connectors}"
+                                 SelectedItem="{Binding Toolbox.SelectedConnector, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ConnectorToolItem">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
 
             <!-- Document tabs -->
@@ -126,12 +136,13 @@
             <!-- Inspector -->
             <Border Grid.Column="2" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="1,0,0,0" Padding="10">
                 <ScrollViewer>
-                    <StackPanel Spacing="10" IsEnabled="{Binding Inspector.HasSelection}">
+                    <StackPanel Spacing="10">
                         <TextBlock Text="Properties" FontWeight="SemiBold" />
                         <TextBlock Text="No selection" Opacity="0.6"
-                                   IsVisible="{Binding !Inspector.HasSelection}" />
+                                   IsVisible="{Binding Inspector.HasNoSelection}" />
 
-                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.HasSelection}">
+                        <!-- Shape properties -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsShapeSelected}">
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Text" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.Text, Mode=TwoWay}" AcceptsReturn="True" />
@@ -167,6 +178,48 @@
                                 <ComboBox HorizontalAlignment="Stretch"
                                           ItemsSource="{x:Static vm:InspectorViewModel.AlignmentOptions}"
                                           SelectedItem="{Binding Inspector.Alignment, Mode=TwoWay}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Connector properties -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsConnectorSelected}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Relationship" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.RelationshipOptions}"
+                                          SelectedItem="{Binding Inspector.ConnectorKind, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Route" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.RouteStyleOptions}"
+                                          SelectedItem="{Binding Inspector.ConnectorRouteStyle, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Source label" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.SourceLabel, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Center label" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.CenterLabel, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Target label" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.TargetLabel, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.ConnectorStrokeHex, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke thickness" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.ConnectorThickness, Mode=TwoWay}" />
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
