@@ -165,6 +165,45 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         return vm;
     }
 
+    private const double ClassNodeDefaultWidth = 170d;
+    private const double ClassNodeDefaultHeight = 110d;
+
+    public ClassNodeViewModel AddClassNode(ClassNodeKind kind, Point2D center)
+    {
+        CaptureUndo();
+
+        double w = ClassNodeDefaultWidth;
+        double h = ClassNodeDefaultHeight;
+        Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
+        if (SnapEnabled)
+        {
+            bounds = bounds.PositionSnappedToGrid(GridSize);
+        }
+
+        ClassNode node = new()
+        {
+            Kind = kind,
+            Name = DefaultClassName(kind),
+            Bounds = bounds,
+            Style = _document.DefaultShapeStyle.Clone(),
+            ZIndex = NextZIndex(),
+        };
+
+        _document.Nodes.Add(node);
+        ClassNodeViewModel vm = new(node, this);
+        Nodes.Add(vm);
+        SelectOnly(vm);
+        MarkModified();
+        return vm;
+    }
+
+    private static string DefaultClassName(ClassNodeKind kind) => kind switch
+    {
+        ClassNodeKind.Interface => "Interface",
+        ClassNodeKind.Enum => "Enumeration",
+        _ => "Class",
+    };
+
     public ConnectorViewModel? AddConnector(Guid sourceId, Guid targetId, RelationshipKind kind)
     {
         if (sourceId == targetId)
@@ -423,8 +462,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
 
     private NodeViewModelBase CreateNodeViewModel(NodeBase node) => node switch
     {
+        ClassNode @class => new ClassNodeViewModel(@class, this),
         ShapeNode shape => new ShapeNodeViewModel(shape),
-        // ClassNode arm is added in Task 14 once ClassNodeViewModel exists.
         _ => throw new NotSupportedException($"Unsupported node type: {node.GetType().Name}"),
     };
 

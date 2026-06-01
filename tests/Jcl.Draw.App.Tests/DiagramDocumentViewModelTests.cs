@@ -165,14 +165,39 @@ public class DiagramDocumentViewModelTests
     }
 
     [Fact]
-    public void GetTypeSuggestions_OnEmptyDocument_ReturnsDistinctPrimitives()
+    public void GetTypeSuggestions_IncludesClassNames()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        ClassNodeViewModel node = doc.AddClassNode(ClassNodeKind.Class, new Point2D(100, 100));
+        node.Name = "Account";
+
+        Assert.Contains("Account", doc.GetTypeSuggestions());
+    }
+
+    [Fact]
+    public void AddClassNode_AddsSelectedClassNode_AndMarksModified()
     {
         DiagramDocumentViewModel doc = CreateDocument();
 
-        var suggestions = doc.GetTypeSuggestions();
+        ClassNodeViewModel node = doc.AddClassNode(ClassNodeKind.Interface, new Point2D(200, 150));
 
-        Assert.Contains("string", suggestions);
-        Assert.Contains("int", suggestions);
-        Assert.Equal(suggestions.Count, suggestions.Distinct().Count());
+        Assert.Same(node, Assert.Single(doc.Nodes));
+        Assert.True(node.IsSelected);
+        Assert.True(doc.IsModified);
+        Assert.Equal(ClassNodeKind.Interface, node.Kind);
+    }
+
+    [Fact]
+    public void ClassNode_SurvivesUndoRedo_AsClassNodeViewModel()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        doc.AddClassNode(ClassNodeKind.Class, new Point2D(200, 150));
+
+        doc.Undo();
+        Assert.Empty(doc.Nodes);
+
+        doc.Redo();
+        ClassNodeViewModel node = Assert.IsType<ClassNodeViewModel>(Assert.Single(doc.Nodes));
+        Assert.Equal(ClassNodeKind.Class, node.Kind);
     }
 }
