@@ -154,7 +154,7 @@ public sealed class InspectorViewModel : ViewModelBase
         try
         {
             ConnectorViewModel? connector = _target?.SelectedConnector;
-            ShapeNodeViewModel? node = connector is null ? _target?.SelectedNodes.FirstOrDefault() : null;
+            ShapeNodeViewModel? node = connector is null ? _target?.SelectedNodes.OfType<ShapeNodeViewModel>().FirstOrDefault() : null;
 
             IsConnectorSelected = connector is not null;
             IsShapeSelected = node is not null;
@@ -196,7 +196,7 @@ public sealed class InspectorViewModel : ViewModelBase
             return;
         }
 
-        List<ShapeNodeViewModel> selected = _target.SelectedNodes.ToList();
+        List<ShapeNodeViewModel> selected = _target.SelectedNodes.OfType<ShapeNodeViewModel>().ToList();
         if (selected.Count == 0)
         {
             return;
@@ -234,7 +234,7 @@ public sealed class InspectorViewModel : ViewModelBase
             return;
         }
 
-        List<ShapeNodeViewModel> selected = _target.SelectedNodes.ToList();
+        List<ShapeNodeViewModel> selected = _target.SelectedNodes.OfType<ShapeNodeViewModel>().ToList();
         if (selected.Count == 0)
         {
             return;

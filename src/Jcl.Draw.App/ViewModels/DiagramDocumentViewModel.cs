@@ -45,7 +45,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         _cleanSnapshot = _serializer.Serialize(_document);
     }
 
-    public ObservableCollection<ShapeNodeViewModel> Nodes { get; } = new();
+    public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
 
     public ObservableCollection<ConnectorViewModel> Connectors { get; } = new();
 
@@ -128,7 +128,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         }
     }
 
-    public IEnumerable<ShapeNodeViewModel> SelectedNodes => Nodes.Where(n => n.IsSelected);
+    public IEnumerable<NodeViewModelBase> SelectedNodes => Nodes.Where(n => n.IsSelected);
 
     public event EventHandler? UndoStateChanged;
 
@@ -171,8 +171,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
             return null;
         }
 
-        ShapeNodeViewModel? source = FindNode(sourceId);
-        ShapeNodeViewModel? target = FindNode(targetId);
+        NodeViewModelBase? source = FindNode(sourceId);
+        NodeViewModelBase? target = FindNode(targetId);
         if (source is null || target is null)
         {
             return null;
@@ -196,7 +196,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void DeleteSelected()
     {
-        List<ShapeNodeViewModel> selectedNodes = SelectedNodes.ToList();
+        List<NodeViewModelBase> selectedNodes = SelectedNodes.ToList();
         ConnectorViewModel? selectedConnector = SelectedConnector;
         if (selectedNodes.Count == 0 && selectedConnector is null)
         {
@@ -208,7 +208,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         if (selectedNodes.Count > 0)
         {
             HashSet<Guid> removedIds = selectedNodes.Select(n => n.Id).ToHashSet();
-            foreach (ShapeNodeViewModel vm in selectedNodes)
+            foreach (NodeViewModelBase vm in selectedNodes)
             {
                 _document.Nodes.Remove(vm.Model);
                 Nodes.Remove(vm);
@@ -231,7 +231,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void MoveSelectedBy(double dx, double dy)
     {
-        foreach (ShapeNodeViewModel vm in SelectedNodes)
+        foreach (NodeViewModelBase vm in SelectedNodes)
         {
             vm.X += dx;
             vm.Y += dy;
@@ -247,7 +247,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
             return;
         }
 
-        foreach (ShapeNodeViewModel vm in SelectedNodes)
+        foreach (NodeViewModelBase vm in SelectedNodes)
         {
             Rect2D snapped = vm.Model.Bounds.PositionSnappedToGrid(GridSize);
             vm.X = snapped.X;
@@ -255,7 +255,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         }
     }
 
-    public void SetNodeBounds(ShapeNodeViewModel vm, Rect2D bounds)
+    public void SetNodeBounds(NodeViewModelBase vm, Rect2D bounds)
     {
         vm.X = bounds.X;
         vm.Y = bounds.Y;
@@ -264,10 +264,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         MarkModified();
     }
 
-    public void SelectOnly(ShapeNodeViewModel vm)
+    public void SelectOnly(NodeViewModelBase vm)
     {
         ClearConnectorSelection();
-        foreach (ShapeNodeViewModel n in Nodes)
+        foreach (NodeViewModelBase n in Nodes)
         {
             n.IsSelected = ReferenceEquals(n, vm);
         }
@@ -275,7 +275,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         RaiseSelectionChanged();
     }
 
-    public void ToggleSelect(ShapeNodeViewModel vm)
+    public void ToggleSelect(NodeViewModelBase vm)
     {
         ClearConnectorSelection();
         vm.IsSelected = !vm.IsSelected;
@@ -285,7 +285,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
     public void ClearSelection()
     {
         ClearConnectorSelection();
-        foreach (ShapeNodeViewModel n in Nodes)
+        foreach (NodeViewModelBase n in Nodes)
         {
             n.IsSelected = false;
         }
@@ -296,7 +296,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
     public void SelectInRect(Rect2D rect, bool additive)
     {
         ClearConnectorSelection();
-        foreach (ShapeNodeViewModel n in Nodes)
+        foreach (NodeViewModelBase n in Nodes)
         {
             if (!additive)
             {
@@ -314,7 +314,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void SelectConnector(ConnectorViewModel connector)
     {
-        foreach (ShapeNodeViewModel n in Nodes)
+        foreach (NodeViewModelBase n in Nodes)
         {
             n.IsSelected = false;
         }
@@ -378,7 +378,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 
     public void NotifyStyleEditStarting() => CaptureUndo();
 
-    public ShapeNodeViewModel? FindNode(Guid id) => Nodes.FirstOrDefault(n => n.Id == id);
+    public NodeViewModelBase? FindNode(Guid id) => Nodes.FirstOrDefault(n => n.Id == id);
 
     private void ClearConnectorSelection()
     {
@@ -395,13 +395,20 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
     private void RebuildNodes()
     {
         Nodes.Clear();
-        foreach (ShapeNode node in _document.Nodes.OfType<ShapeNode>().OrderBy(n => n.ZIndex))
+        foreach (NodeBase node in _document.Nodes.OrderBy(n => n.ZIndex))
         {
-            Nodes.Add(new ShapeNodeViewModel(node));
+            Nodes.Add(CreateNodeViewModel(node));
         }
 
         RaiseSelectionChanged();
     }
+
+    private NodeViewModelBase CreateNodeViewModel(NodeBase node) => node switch
+    {
+        ShapeNode shape => new ShapeNodeViewModel(shape),
+        // ClassNode arm is added in Task 14 once ClassNodeViewModel exists.
+        _ => throw new NotSupportedException($"Unsupported node type: {node.GetType().Name}"),
+    };
 
     private void RebuildConnectors()
     {
@@ -416,11 +423,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         // Non-destructive: build view models only for connectors whose endpoints resolve to
         // current node view models. Connectors are NOT removed from the model here — genuine
         // orphan removal happens explicitly in DeleteSelected.
-        Dictionary<Guid, ShapeNodeViewModel> byId = Nodes.ToDictionary(n => n.Id);
+        Dictionary<Guid, NodeViewModelBase> byId = Nodes.ToDictionary(n => n.Id);
         foreach (Connector connector in _document.Connectors)
         {
-            if (byId.TryGetValue(connector.SourceNodeId, out ShapeNodeViewModel? source)
-                && byId.TryGetValue(connector.TargetNodeId, out ShapeNodeViewModel? target))
+            if (byId.TryGetValue(connector.SourceNodeId, out NodeViewModelBase? source)
+                && byId.TryGetValue(connector.TargetNodeId, out NodeViewModelBase? target))
             {
                 Connectors.Add(new ConnectorViewModel(connector, source, target, _router));
             }

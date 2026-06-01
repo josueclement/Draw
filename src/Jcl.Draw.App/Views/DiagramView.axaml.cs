@@ -29,7 +29,6 @@ public partial class DiagramView : UserControl
     }
 
     private const double HandleScreenSize = 10d;
-    private const double MinShapeSize = 12d;
 
     private readonly List<Rectangle> _handles = new();
     private DiagramDocumentViewModel? _vm;
@@ -41,8 +40,8 @@ public partial class DiagramView : UserControl
     private bool _marqueeAdditive;
     private Rectangle? _marquee;
     private int _resizeHandle = -1;
-    private ShapeNodeViewModel? _resizeTarget;
-    private ShapeNodeViewModel? _connectSource;
+    private NodeViewModelBase? _resizeTarget;
+    private NodeViewModelBase? _connectSource;
     private Line? _connectPreview;
 
     public DiagramView()
@@ -209,7 +208,7 @@ public partial class DiagramView : UserControl
         // Connector mode: drag from a source node to a target node.
         if (toolbox is { IsConnectorMode: true })
         {
-            ShapeNodeViewModel? from = HitTestNode(world);
+            NodeViewModelBase? from = HitTestNode(world);
             if (from is not null)
             {
                 _connectSource = from;
@@ -230,7 +229,7 @@ public partial class DiagramView : UserControl
         }
 
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
-        ShapeNodeViewModel? node = HitTestNode(world);
+        NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
         {
             if (ctrl)
@@ -336,7 +335,7 @@ public partial class DiagramView : UserControl
                     break;
 
                 case DragMode.Connect:
-                    ShapeNodeViewModel? target = HitTestNode(ScreenToWorld(e.GetPosition(Viewport)));
+                    NodeViewModelBase? target = HitTestNode(ScreenToWorld(e.GetPosition(Viewport)));
                     if (_connectSource is not null && target is not null && !ReferenceEquals(target, _connectSource))
                     {
                         ToolboxViewModel? toolbox = GetToolbox();
@@ -397,11 +396,10 @@ public partial class DiagramView : UserControl
         }
 
         Point world = ScreenToWorld(e.GetPosition(Viewport));
-        ShapeNodeViewModel? node = HitTestNode(world);
-        if (node is not null)
+        if (HitTestNode(world) is ShapeNodeViewModel shape)
         {
             _vm.CaptureUndo();
-            node.IsEditing = true;
+            shape.IsEditing = true;
         }
     }
 
@@ -439,13 +437,13 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        foreach (ShapeNodeViewModel node in _vm.Nodes.Where(n => n.IsEditing))
+        foreach (NodeViewModelBase node in _vm.Nodes.Where(n => n.IsEditing))
         {
             node.IsEditing = false;
         }
     }
 
-    private ShapeNodeViewModel? HitTestNode(Point world)
+    private NodeViewModelBase? HitTestNode(Point world)
     {
         Point2D p = new(world.X, world.Y);
         return _vm?.Nodes.LastOrDefault(n => n.Model.Bounds.Contains(p));
@@ -471,7 +469,7 @@ public partial class DiagramView : UserControl
         return -1;
     }
 
-    private static Point[] HandlePositions(ShapeNodeViewModel node)
+    private static Point[] HandlePositions(NodeViewModelBase node)
     {
         Rect2D b = node.Model.Bounds;
         double cx = b.X + (b.Width / 2);
@@ -489,7 +487,7 @@ public partial class DiagramView : UserControl
         };
     }
 
-    private static Rect2D ResizeBounds(ShapeNodeViewModel node, int handle, Point world)
+    private static Rect2D ResizeBounds(NodeViewModelBase node, int handle, Point world)
     {
         Rect2D b = node.Model.Bounds;
         double l = b.Left;
@@ -511,8 +509,8 @@ public partial class DiagramView : UserControl
 
         double left = Math.Min(l, r);
         double top = Math.Min(t, bottom);
-        double width = Math.Max(MinShapeSize, Math.Abs(r - l));
-        double height = Math.Max(MinShapeSize, Math.Abs(bottom - t));
+        double width = Math.Max(node.MinWidth, Math.Abs(r - l));
+        double height = Math.Max(node.MinHeight, Math.Abs(bottom - t));
         return new Rect2D(left, top, width, height);
     }
 
@@ -595,7 +593,7 @@ public partial class DiagramView : UserControl
         }
     }
 
-    private void StartConnectPreview(ShapeNodeViewModel from, Point world)
+    private void StartConnectPreview(NodeViewModelBase from, Point world)
     {
         Point2D center = from.Model.Bounds.Center;
         _connectPreview = new Line

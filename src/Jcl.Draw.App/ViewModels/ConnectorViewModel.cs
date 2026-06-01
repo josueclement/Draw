@@ -21,7 +21,7 @@ public sealed class ConnectorViewModel : ViewModelBase
     private readonly IConnectorRouter _router;
     private ConnectorRoute _route;
 
-    public ConnectorViewModel(Connector model, ShapeNodeViewModel source, ShapeNodeViewModel target, IConnectorRouter router)
+    public ConnectorViewModel(Connector model, NodeViewModelBase source, NodeViewModelBase target, IConnectorRouter router)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         Source = source ?? throw new ArgumentNullException(nameof(source));
@@ -37,9 +37,9 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     public Guid Id => _model.Id;
 
-    public ShapeNodeViewModel Source { get; }
+    public NodeViewModelBase Source { get; }
 
-    public ShapeNodeViewModel Target { get; }
+    public NodeViewModelBase Target { get; }
 
     public bool IsSelected
     {
@@ -121,10 +121,10 @@ public sealed class ConnectorViewModel : ViewModelBase
     private ConnectorRoute Compute()
     {
         ConnectorRouteRequest request = new(
-            Source.Model.Kind,
-            Source.Model.Bounds,
-            Target.Model.Kind,
-            Target.Model.Bounds,
+            Source.BoundaryKind,
+            Source.Bounds,
+            Target.BoundaryKind,
+            Target.Bounds,
             _model.Route,
             _model.BendPoints);
         return _router.Route(request);
@@ -132,10 +132,10 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     private void OnEndpointChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ShapeNodeViewModel.X)
-            or nameof(ShapeNodeViewModel.Y)
-            or nameof(ShapeNodeViewModel.Width)
-            or nameof(ShapeNodeViewModel.Height))
+        if (e.PropertyName is nameof(NodeViewModelBase.X)
+            or nameof(NodeViewModelBase.Y)
+            or nameof(NodeViewModelBase.Width)
+            or nameof(NodeViewModelBase.Height))
         {
             Recompute();
         }
