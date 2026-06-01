@@ -237,6 +237,14 @@ public partial class DiagramView : UserControl
             return;
         }
 
+        // Use-case-node placement.
+        if (toolbox?.SelectedUseCaseNode is { } useCaseTool)
+        {
+            _vm.AddUseCaseNode(useCaseTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return;
+        }
+
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
@@ -405,10 +413,10 @@ public partial class DiagramView : UserControl
         }
 
         Point world = ScreenToWorld(e.GetPosition(Viewport));
-        if (HitTestNode(world) is ShapeNodeViewModel shape)
+        if (HitTestNode(world) is { HasInlineLabel: true } node)
         {
             _vm.CaptureUndo();
-            shape.IsEditing = true;
+            node.IsEditing = true;
         }
     }
 
@@ -481,9 +489,11 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        foreach (ShapeNodeViewModel node in _vm.Nodes.OfType<ShapeNodeViewModel>().Where(n => n.IsEditing))
+        bool labelEdited = false;
+        foreach (NodeViewModelBase node in _vm.Nodes.Where(n => n.IsEditing))
         {
             node.IsEditing = false;
+            labelEdited = true;
         }
 
         bool committed = false;
@@ -492,7 +502,7 @@ public partial class DiagramView : UserControl
             committed |= klass.CommitPendingEdits();
         }
 
-        if (committed)
+        if (labelEdited || committed)
         {
             _vm.MarkModified();
         }
