@@ -19,12 +19,12 @@ labels; drag-from-node-to-node creation with preview; connector selection + insp
 adversarial multi-dimension review pass (degenerate-geometry guards, non-destructive
 connector rebuild, theme-aware decoration fills, save-state-aware dirty flag).
 
-## Phase 3 — UML class diagrams ✅ (current)
+## Phase 3 — UML class diagrams ✅
 
 Shared compartment/list node (`Class` / `Interface` / `Enum`); member editor (inline +
 inspector) with free-text types + autocomplete; class relationships reuse Phase 2.
 
-## Phase 4 — Use-case diagrams
+## Phase 4 — Use-case diagrams ✅ (current)
 
 Actor, use-case, system boundary; association, include/extend, generalization.
 

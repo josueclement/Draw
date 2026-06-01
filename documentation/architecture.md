@@ -44,6 +44,16 @@ in the inspector; both paths route undo capture and dirty-marking through `INode
 Class nodes attach connectors as a plain rectangle (`BoundaryKind == Rectangle`), reusing the
 Phase 2 router unchanged.
 
+## Use-case diagrams (Phase 4)
+
+Actor, use-case and system-boundary nodes are `NodeBase` subtypes on the same
+`NodeViewModelBase` foundation. Inline label editing is generalized via `HasInlineLabel` /
+`Label`, so shapes, actors, use-cases and boundaries all edit a single label the same way. The
+system boundary is visual-only: it carries the lowest z-index and is inserted at the front of
+the node collection so it renders behind the use cases it frames (no parent-child grouping).
+Use-case relationships (association, include / extend, generalization) reuse the Phase 2
+connectors unchanged; the toolbox now surfaces Include and Extend.
+
 ## Bootstrapping
 
 `Program.Main` builds an `IHost`, starts it, runs Avalonia's classic desktop lifetime to
