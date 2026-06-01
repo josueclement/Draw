@@ -9,7 +9,7 @@ multi-document tabs; full editor UX (zoom/pan, grid + snap, marquee multi-select
 move/resize handles, copy via duplicate, keyboard shortcuts); the 7 basic shapes with
 text; per-shape styling + inspector; memento undo/redo; PNG + clipboard export.
 
-## Phase 2 — Connectors ✅ (current)
+## Phase 2 — Connectors ✅
 
 `IConnectorRouter` with straight / orthogonal / bezier strategies and shape-boundary
 attachment; the full UML relationship decoration set (open arrow, hollow/filled diamond,
@@ -19,7 +19,7 @@ labels; drag-from-node-to-node creation with preview; connector selection + insp
 adversarial multi-dimension review pass (degenerate-geometry guards, non-destructive
 connector rebuild, theme-aware decoration fills, save-state-aware dirty flag).
 
-## Phase 3 — UML class diagrams
+## Phase 3 — UML class diagrams ✅ (current)
 
 Shared compartment/list node (`Class` / `Interface` / `Enum`); member editor (inline +
 inspector) with free-text types + autocomplete; class relationships reuse Phase 2.

@@ -4,8 +4,8 @@
 
 | Project | TFM | Responsibility |
 |---|---|---|
-| `Jcl.Draw.Model` | net10 | Framework-agnostic document model (`DiagramDocument`, `NodeBase`/`ShapeNode`, `Connector`), value primitives (`Point2D`/`Rect2D`/`ArgbColor`), styling, and `System.Text.Json` serialization with polymorphic `$type` discriminators. |
-| `Jcl.Draw.Diagramming` | net10 | UI-agnostic behavior: memento `IUndoService`, grid-snapping extensions. |
+| `Jcl.Draw.Model` | net10 | Framework-agnostic document model (`DiagramDocument`, `NodeBase`/`ShapeNode`/`ClassNode`, `Connector`), value primitives (`Point2D`/`Rect2D`/`ArgbColor`), styling, and `System.Text.Json` serialization with polymorphic `$type` discriminators. |
+| `Jcl.Draw.Diagramming` | net10 | UI-agnostic behavior: memento `IUndoService`, grid-snapping, connector routing (`Routing`) + shape-boundary geometry, and UML member-signature parsing (`Uml.MemberSignature`). |
 | `Jcl.Draw.App` | net10 / Avalonia 12 | `IHost` bootstrap, DI, MVVM view models, services, and the canvas editor. |
 
 > **TFM deviation:** the libraries target `net10` rather than the house default of
@@ -30,6 +30,19 @@ that into Avalonia geometry, builds the per-relationship UML decorations
 (`ConnectorDecorationBuilder`) and label positions, and recomputes whenever an endpoint
 node moves. Connectors render as `Path` controls in a layer behind the nodes; selection and
 hit-testing use point-to-segment distance against the flattened route.
+
+## Class diagrams (Phase 3)
+
+`NodeViewModelBase` factors out the bindable concerns shared by every node kind —
+placement, selection, and style — so `ShapeNodeViewModel` and `ClassNodeViewModel` differ
+only in content; connectors, resize handles and the inspector's shared-style editors operate
+on the base. A `ClassNode` (class / interface / enum) carries structured `ClassMember`s split
+into attribute and operation compartments and renders as a multi-compartment box via its own
+`DataTemplate`. Members round-trip to UML text (`+ name: Type`, `+ op(params): ret`) through
+`Uml.MemberSignature`, edited either inline on the canvas (double-tap a row) or field-by-field
+in the inspector; both paths route undo capture and dirty-marking through `INodeEditContext`.
+Class nodes attach connectors as a plain rectangle (`BoundaryKind == Rectangle`), reusing the
+Phase 2 router unchanged.
 
 ## Bootstrapping
 
