@@ -141,31 +141,31 @@
                         <TextBlock Text="No selection" Opacity="0.6"
                                    IsVisible="{Binding Inspector.HasNoSelection}" />
 
-                        <!-- Shape properties -->
+                        <!-- Shape properties (text fields commit on focus-loss so each edit is one undo step) -->
                         <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsShapeSelected}">
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Text" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.Text, Mode=TwoWay}" AcceptsReturn="True" />
+                                <TextBox Text="{Binding Inspector.Text, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Fill (#AARRGGBB)" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.FillHex, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.FillHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.StrokeHex, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.StrokeHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke thickness" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.StrokeThickness, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.StrokeThickness, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Font size" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.FontSize, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.FontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" Spacing="14">
@@ -199,27 +199,27 @@
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Source label" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.SourceLabel, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.SourceLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Center label" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.CenterLabel, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.CenterLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Target label" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.TargetLabel, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.TargetLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.ConnectorStrokeHex, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.ConnectorStrokeHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke thickness" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.ConnectorThickness, Mode=TwoWay}" />
+                                <TextBox Text="{Binding Inspector.ConnectorThickness, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>

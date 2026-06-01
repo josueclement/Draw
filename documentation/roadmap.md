@@ -2,17 +2,22 @@
 
 Delivered MVP-first; each phase is independently runnable.
 
-## Phase 1 — Editor foundation ✅ (current)
+## Phase 1 — Editor foundation ✅
 
 Solution scaffolding + `IHost`/DI/Fluent theme; JSON document model with save/open/new and
 multi-document tabs; full editor UX (zoom/pan, grid + snap, marquee multi-select,
 move/resize handles, copy via duplicate, keyboard shortcuts); the 7 basic shapes with
 text; per-shape styling + inspector; memento undo/redo; PNG + clipboard export.
 
-## Phase 2 — Connectors
+## Phase 2 — Connectors ✅ (current)
 
-`IConnectorRouter` (straight / orthogonal / bezier), floating attachment with bend points,
-the full UML relationship decoration set, and editable connector labels.
+`IConnectorRouter` with straight / orthogonal / bezier strategies and shape-boundary
+attachment; the full UML relationship decoration set (open arrow, hollow/filled diamond,
+hollow triangle, dashed lines for realization/dependency); editable source/center/target
+labels; drag-from-node-to-node creation with preview; connector selection + inspector
+(kind/route/labels/stroke); undo and orphan-pruning on node delete. Hardened via an
+adversarial multi-dimension review pass (degenerate-geometry guards, non-destructive
+connector rebuild, theme-aware decoration fills, save-state-aware dirty flag).
 
 ## Phase 3 — UML class diagrams
 

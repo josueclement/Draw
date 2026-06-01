@@ -22,6 +22,7 @@ public class DiagramDocumentViewModelTests
             DiagramDocument.CreateEmpty(DiagramType.Freeform),
             new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
             Router(),
+            new JsonDocumentSerializer(),
             new EditorOptions { SnapToGrid = snap, GridSize = 10, DefaultShapeWidth = 120, DefaultShapeHeight = 70 },
             filePath: null);
 
@@ -133,6 +134,19 @@ public class DiagramDocumentViewModelTests
 
         Assert.Null(connector);
         Assert.Empty(doc.Connectors);
+    }
+
+    [Fact]
+    public void UndoBackToSavedState_ClearsModifiedFlag()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        doc.MarkSaved("/tmp/diagram.jcld");
+        doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
+        Assert.True(doc.IsModified);
+
+        doc.Undo();
+
+        Assert.False(doc.IsModified);
     }
 
     [Fact]

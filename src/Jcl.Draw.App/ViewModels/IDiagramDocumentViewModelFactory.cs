@@ -39,6 +39,7 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
             document,
             new MementoUndoService(_serializer, _undoOptions.Value),
             _router,
+            _serializer,
             _editorOptions.Value,
             filePath);
 

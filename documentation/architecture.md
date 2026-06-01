@@ -17,7 +17,19 @@ Nodes are templated Avalonia controls positioned on a `Canvas` inside a zoom/pan
 transform; selection handles and the marquee live on an overlay canvas. Avalonia renders
 with Skia under the hood, so no raw `SKCanvas` is needed. `ShapeNodeViewModel` exposes
 Avalonia media (geometry/brushes) derived from the model; `ShapeGeometryBuilder` produces
-the outline for each of the 7 shape kinds.
+the outline for each of the 7 shape kinds (sharing `ShapeOutline` with the router).
+
+## Connectors (Phase 2)
+
+`Jcl.Draw.Diagramming.Routing` computes connector geometry independently of the UI:
+`ShapeBoundary` finds where a ray from a shape's centre crosses its outline (the floating
+attachment point), and `IConnectorRouter` dispatches to a `StraightRouter` /
+`OrthogonalRouter` / `BezierRouter` strategy (registered in DI) returning a `ConnectorRoute`
+(polyline or cubic) plus non-zero endpoint direction vectors. `ConnectorViewModel` turns
+that into Avalonia geometry, builds the per-relationship UML decorations
+(`ConnectorDecorationBuilder`) and label positions, and recomputes whenever an endpoint
+node moves. Connectors render as `Path` controls in a layer behind the nodes; selection and
+hit-testing use point-to-segment distance against the flattened route.
 
 ## Bootstrapping
 

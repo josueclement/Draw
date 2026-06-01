@@ -54,6 +54,7 @@ public partial class DiagramView : UserControl
         Viewport.PointerReleased += OnPointerReleased;
         Viewport.PointerWheelChanged += OnPointerWheel;
         Viewport.DoubleTapped += OnDoubleTapped;
+        Viewport.SizeChanged += (_, _) => UpdateGridBounds();
         KeyDown += OnKeyDown;
         DataContextChanged += OnDataContextChanged;
     }
@@ -100,7 +101,44 @@ public partial class DiagramView : UserControl
     {
         double zoom = Zoom;
         World.RenderTransform = new MatrixTransform(new Matrix(zoom, 0, 0, zoom, _vm?.PanX ?? 0, _vm?.PanY ?? 0));
+        UpdateGridBounds();
         UpdateHandles();
+    }
+
+    // Keeps the tiled grid rectangle covering the currently visible world region (pan is unbounded),
+    // aligned to grid multiples so the lines coincide with snap positions.
+    private void UpdateGridBounds()
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        double zoom = Zoom <= 0 ? 1d : Zoom;
+        double viewWidth = Viewport.Bounds.Width;
+        double viewHeight = Viewport.Bounds.Height;
+        if (viewWidth <= 0 || viewHeight <= 0)
+        {
+            viewWidth = 4000;
+            viewHeight = 4000;
+        }
+
+        double cell = _vm.GridSize > 0 ? _vm.GridSize : 50d;
+        double worldLeft = -_vm.PanX / zoom;
+        double worldTop = -_vm.PanY / zoom;
+        double worldRight = worldLeft + (viewWidth / zoom);
+        double worldBottom = worldTop + (viewHeight / zoom);
+        double margin = cell * 10d;
+
+        double left = System.Math.Floor((worldLeft - margin) / cell) * cell;
+        double top = System.Math.Floor((worldTop - margin) / cell) * cell;
+        double right = System.Math.Ceiling((worldRight + margin) / cell) * cell;
+        double bottom = System.Math.Ceiling((worldBottom + margin) / cell) * cell;
+
+        Canvas.SetLeft(GridBackground, left);
+        Canvas.SetTop(GridBackground, top);
+        GridBackground.Width = right - left;
+        GridBackground.Height = bottom - top;
     }
 
     private void UpdateGrid()

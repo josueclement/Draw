@@ -54,7 +54,9 @@ public sealed class ConnectorViewModel : ViewModelBase
     public double StrokeThickness => _model.Style.Stroke.Thickness;
 
     public AvaloniaList<double>? StrokeDashArray
-        => ConnectorDecorationBuilder.Describe(_model.Kind).Dashed ? new AvaloniaList<double> { 6, 3 } : null;
+        => ConnectorDecorationBuilder.Describe(_model.Kind).Dashed
+            ? new AvaloniaList<double> { 6, 3 }
+            : _model.Style.Stroke.Dash.ToDashArray();
 
     public Geometry? SourceDecoration
     {
@@ -164,7 +166,50 @@ public sealed class ConnectorViewModel : ViewModelBase
             return null;
         }
 
-        return ConnectorDecorationBuilder.IsFilled(decoration) ? Stroke : Brushes.White;
+        return ConnectorDecorationBuilder.IsFilled(decoration) ? Stroke : HollowFill();
+    }
+
+    // Hollow decorations occlude the line, so they fill with the diagram background (theme-aware).
+    private static IBrush HollowFill()
+    {
+        if (Application.Current is { } app
+            && app.TryGetResource("ThemeBackgroundBrush", app.ActualThemeVariant, out object? resource)
+            && resource is IBrush brush)
+        {
+            return brush;
+        }
+
+        return Brushes.White;
+    }
+
+    /// <summary>The route as a flattened world-coordinate polyline (bezier curves are sampled).</summary>
+    public IReadOnlyList<ModelPoint> GetFlattenedPoints()
+    {
+        if (!_route.IsBezier)
+        {
+            return _route.Points;
+        }
+
+        const int segments = 16;
+        List<ModelPoint> points = new(segments + 1);
+        for (int i = 0; i <= segments; i++)
+        {
+            points.Add(CubicAt(_route.Start, _route.Control1, _route.Control2, _route.End, i / (double)segments));
+        }
+
+        return points;
+    }
+
+    private static ModelPoint CubicAt(ModelPoint a, ModelPoint b, ModelPoint c, ModelPoint d, double t)
+    {
+        double u = 1d - t;
+        double w0 = u * u * u;
+        double w1 = 3 * u * u * t;
+        double w2 = 3 * u * t * t;
+        double w3 = t * t * t;
+        return new ModelPoint(
+            (w0 * a.X) + (w1 * b.X) + (w2 * c.X) + (w3 * d.X),
+            (w0 * a.Y) + (w1 * b.Y) + (w2 * c.Y) + (w3 * d.Y));
     }
 
     private string DefaultStereotype() => _model.Kind switch
@@ -176,20 +221,36 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     private ModelPoint Midpoint()
     {
-        ModelPoint mid;
-        if (_route.IsBezier)
-        {
-            mid = (_route.Start + _route.End) * 0.5d;
-        }
-        else
-        {
-            IReadOnlyList<ModelPoint> points = _route.Points;
-            mid = points[points.Count / 2];
-        }
-
-        ModelPoint along = (_route.End - _route.Start).Normalized();
+        ModelPoint mid = PointAtHalfLength(GetFlattenedPoints(), out ModelPoint along);
         ModelPoint perpendicular = new(-along.Y, along.X);
         return mid + (perpendicular * LabelOffset);
+    }
+
+    private static ModelPoint PointAtHalfLength(IReadOnlyList<ModelPoint> points, out ModelPoint direction)
+    {
+        double total = 0d;
+        for (int i = 1; i < points.Count; i++)
+        {
+            total += points[i].DistanceTo(points[i - 1]);
+        }
+
+        double half = total / 2d;
+        double accumulated = 0d;
+        for (int i = 1; i < points.Count; i++)
+        {
+            double segment = points[i].DistanceTo(points[i - 1]);
+            if (segment > 1e-9 && accumulated + segment >= half)
+            {
+                double t = (half - accumulated) / segment;
+                direction = (points[i] - points[i - 1]).Normalized();
+                return points[i - 1] + ((points[i] - points[i - 1]) * t);
+            }
+
+            accumulated += segment;
+        }
+
+        direction = (points[points.Count - 1] - points[0]).Normalized();
+        return (points[0] + points[points.Count - 1]) * 0.5d;
     }
 
     private static ModelPoint EndLabelPosition(ModelPoint anchor, ModelPoint outward)

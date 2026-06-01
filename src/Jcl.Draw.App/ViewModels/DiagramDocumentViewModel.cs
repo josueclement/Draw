@@ -11,6 +11,7 @@ using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Documents;
 using Jcl.Draw.Model.Nodes;
 using Jcl.Draw.Model.Primitives;
+using Jcl.Draw.Model.Serialization;
 
 namespace Jcl.Draw.App.ViewModels;
 
@@ -19,24 +20,29 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
+    private readonly IDocumentSerializer _serializer;
     private readonly EditorOptions _options;
     private DiagramDocument _document;
+    private string _cleanSnapshot;
 
     public DiagramDocumentViewModel(
         DiagramDocument document,
         IUndoService undo,
         IConnectorRouter router,
+        IDocumentSerializer serializer,
         EditorOptions options,
         string? filePath)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
         _undo = undo ?? throw new ArgumentNullException(nameof(undo));
         _router = router ?? throw new ArgumentNullException(nameof(router));
+        _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         RebuildNodes();
         RebuildConnectors();
+        _cleanSnapshot = _serializer.Serialize(_document);
     }
 
     public ObservableCollection<ShapeNodeViewModel> Nodes { get; } = new();
@@ -344,7 +350,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         _document = _undo.Undo(_document);
         RebuildNodes();
         RebuildConnectors();
-        MarkModified();
+        RecomputeModified();
         RaiseUndoState();
     }
 
@@ -353,7 +359,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         _document = _undo.Redo(_document);
         RebuildNodes();
         RebuildConnectors();
-        MarkModified();
+        RecomputeModified();
         RaiseUndoState();
     }
 
@@ -363,7 +369,12 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
     {
         FilePath = path;
         IsModified = false;
+        _cleanSnapshot = _serializer.Serialize(_document);
     }
+
+    // After undo/redo the document is dirty only if it differs from the last saved/loaded state.
+    private void RecomputeModified()
+        => IsModified = !string.Equals(_serializer.Serialize(_document), _cleanSnapshot, StringComparison.Ordinal);
 
     public void NotifyStyleEditStarting() => CaptureUndo();
 
@@ -402,40 +413,23 @@ public sealed class DiagramDocumentViewModel : ViewModelBase
         Connectors.Clear();
         SelectedConnector = null;
 
+        // Non-destructive: build view models only for connectors whose endpoints resolve to
+        // current node view models. Connectors are NOT removed from the model here — genuine
+        // orphan removal happens explicitly in DeleteSelected.
         Dictionary<Guid, ShapeNodeViewModel> byId = Nodes.ToDictionary(n => n.Id);
-        List<Connector> valid = new();
         foreach (Connector connector in _document.Connectors)
         {
             if (byId.TryGetValue(connector.SourceNodeId, out ShapeNodeViewModel? source)
                 && byId.TryGetValue(connector.TargetNodeId, out ShapeNodeViewModel? target))
             {
-                valid.Add(connector);
                 Connectors.Add(new ConnectorViewModel(connector, source, target, _router));
             }
         }
-
-        if (valid.Count != _document.Connectors.Count)
-        {
-            _document.Connectors.Clear();
-            _document.Connectors.AddRange(valid);
-        }
     }
 
-    private double ConnectorDistance(ConnectorViewModel connector, Point2D world)
+    private static double ConnectorDistance(ConnectorViewModel connector, Point2D world)
     {
-        ConnectorRouteRequest request = new(
-            connector.Source.Model.Kind,
-            connector.Source.Model.Bounds,
-            connector.Target.Model.Kind,
-            connector.Target.Model.Bounds,
-            connector.Model.Route,
-            connector.Model.BendPoints);
-        ConnectorRoute route = _router.Route(request);
-
-        IReadOnlyList<Point2D> points = route.IsBezier
-            ? new[] { route.Start, route.Control1, route.Control2, route.End }
-            : route.Points;
-
+        IReadOnlyList<Point2D> points = connector.GetFlattenedPoints();
         double min = double.PositiveInfinity;
         for (int i = 1; i < points.Count; i++)
         {

@@ -22,12 +22,24 @@ public sealed class BezierRouter : IConnectorRouteStrategy
         Point2D target = ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
 
         double handle = Math.Max(20d, (target - source).Length * 0.4);
-        Point2D outwardSource = (source - sourceCenter).Normalized();
-        Point2D outwardTarget = (target - targetCenter).Normalized();
+        Point2D outwardSource = SafeOutward(source - sourceCenter, target - source);
+        Point2D outwardTarget = SafeOutward(target - targetCenter, source - target);
 
         Point2D control1 = source + (outwardSource * handle);
         Point2D control2 = target + (outwardTarget * handle);
 
         return ConnectorRoute.Bezier(source, control1, control2, target);
+    }
+
+    private static Point2D SafeOutward(Point2D primary, Point2D fallback)
+    {
+        Point2D normalized = primary.Normalized();
+        if (normalized.Length >= 0.5d)
+        {
+            return normalized;
+        }
+
+        Point2D alternative = fallback.Normalized();
+        return alternative.Length >= 0.5d ? alternative : new Point2D(1, 0);
     }
 }

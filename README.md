@@ -4,7 +4,7 @@ A cross-platform (Windows / Linux / macOS) desktop application for drawing schem
 UML/ER diagrams, built with **Avalonia 12** on **.NET 10**. Diagrams with a semantic
 model (UML class/ER) can generate SQL DDL.
 
-> Status: **Phase 1 (editor foundation)** — see [`documentation/roadmap.md`](documentation/roadmap.md).
+> Status: **Phase 2 (connectors)** complete — see [`documentation/roadmap.md`](documentation/roadmap.md).
 
 ## Solution layout
 
@@ -26,7 +26,7 @@ documentation/
 
 ```bash
 dotnet build Draw.slnx
-dotnet test --solution Draw.slnx     # MTP mode (see global.json); 56 tests
+dotnet test --solution Draw.slnx     # MTP mode (see global.json); 76 tests
 ```
 
 Tests use **xUnit v3** on the Microsoft Testing Platform. `dotnet test` requires the

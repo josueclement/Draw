@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Jcl.Draw.Model.Primitives;
 
@@ -10,6 +11,11 @@ internal static class RouteHelpers
     /// <summary>Removes consecutive duplicate points; guarantees at least two points remain.</summary>
     public static List<Point2D> Dedupe(IReadOnlyList<Point2D> points)
     {
+        if (points is null || points.Count == 0)
+        {
+            throw new ArgumentException("Dedupe requires at least one point.", nameof(points));
+        }
+
         List<Point2D> result = new();
         foreach (Point2D p in points)
         {

@@ -19,6 +19,7 @@ public class InspectorViewModelTests
             DiagramDocument.CreateEmpty(DiagramType.Freeform),
             new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
             new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
+            new JsonDocumentSerializer(),
             new EditorOptions { SnapToGrid = false },
             filePath: null);
         node = doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));

@@ -1,3 +1,4 @@
+using System;
 using Jcl.Draw.Diagramming.Routing;
 using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Nodes;
@@ -88,4 +89,25 @@ public class ConnectorRoutingTests
 
         Assert.False(route.IsBezier);
     }
+
+    [Theory]
+    [InlineData(RouteStyle.Straight)]
+    [InlineData(RouteStyle.Orthogonal)]
+    [InlineData(RouteStyle.Bezier)]
+    public void CoincidentNodes_ProduceNonZeroEndpointDirections(RouteStyle style)
+    {
+        ConnectorRouteRequest request = new(
+            ShapeKind.Rectangle, new Rect2D(0, 0, 100, 100),
+            ShapeKind.Rectangle, new Rect2D(0, 0, 100, 100),
+            style);
+
+        ConnectorRoute route = CreateRouter().Route(request);
+
+        Assert.True(route.StartDirection.Length > 0.5, "StartDirection must be a non-zero unit vector.");
+        Assert.True(route.EndDirection.Length > 0.5, "EndDirection must be a non-zero unit vector.");
+    }
+
+    [Fact]
+    public void Polyline_EmptyInput_Throws()
+        => Assert.Throws<ArgumentException>(() => ConnectorRoute.Polyline(Array.Empty<Point2D>()));
 }

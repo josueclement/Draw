@@ -23,6 +23,13 @@ public sealed class OrthogonalRouter : IConnectorRouteStrategy
         {
             Point2D source = ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, targetCenter);
             Point2D target = ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
+
+            // Overlapping nodes make the elbow self-cross; fall back to a direct segment.
+            if (request.SourceBounds.IntersectsWith(request.TargetBounds))
+            {
+                return ConnectorRoute.Polyline(RouteHelpers.Dedupe(new List<Point2D> { source, target }));
+            }
+
             return ConnectorRoute.Polyline(RouteHelpers.Dedupe(BuildElbow(source, target, sourceCenter, targetCenter)));
         }
 
