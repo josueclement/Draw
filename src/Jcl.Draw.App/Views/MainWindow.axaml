@@ -107,6 +107,15 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                        <TextBlock Text="Class diagram" Opacity="0.7" Margin="0,6,0,0" />
+                        <ListBox ItemsSource="{Binding Toolbox.ClassNodes}"
+                                 SelectedItem="{Binding Toolbox.SelectedClassNode, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ClassNodeToolItem">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

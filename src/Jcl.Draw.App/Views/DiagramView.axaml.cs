@@ -228,6 +228,14 @@ public partial class DiagramView : UserControl
             return;
         }
 
+        // Class-node placement.
+        if (toolbox?.SelectedClassNode is { } classTool)
+        {
+            _vm.AddClassNode(classTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return;
+        }
+
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
