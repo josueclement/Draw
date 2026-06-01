@@ -19,6 +19,14 @@ public sealed class ShapeNodeViewModel : NodeViewModelBase
 
     public override ShapeKind BoundaryKind => _model.Kind;
 
+    public override bool HasInlineLabel => true;
+
+    public override string Label
+    {
+        get => Text;
+        set => Text = value;
+    }
+
     public ShapeKind Kind => _model.Kind;
 
     public string Text
@@ -30,6 +38,7 @@ public sealed class ShapeNodeViewModel : NodeViewModelBase
             {
                 _model.Text = value ?? string.Empty;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(Label));
             }
         }
     }

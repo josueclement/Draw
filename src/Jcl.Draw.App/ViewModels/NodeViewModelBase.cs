@@ -22,6 +22,16 @@ public abstract class NodeViewModelBase : ViewModelBase
     /// <summary>The shape kind used for connector boundary attachment.</summary>
     public abstract ShapeKind BoundaryKind { get; }
 
+    /// <summary>True when this node has a single editable text label (inline + inspector).</summary>
+    public virtual bool HasInlineLabel => false;
+
+    /// <summary>The node's single editable label; overridden by label-bearing node kinds.</summary>
+    public virtual string Label
+    {
+        get => string.Empty;
+        set { }
+    }
+
     /// <summary>Smallest width/height a resize gesture may produce for this node.</summary>
     public virtual double MinWidth => 12d;
 
