@@ -1,0 +1,276 @@
+using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
+using Jcl.Draw.App.Services;
+using Jcl.Draw.Model.Documents;
+using Jcl.Draw.Model.Serialization;
+
+namespace Jcl.Draw.App.ViewModels;
+
+/// <summary>Root view model: open documents (tabs), file/edit commands, toolbox and inspector.</summary>
+public sealed class ShellViewModel : ViewModelBase
+{
+    private readonly IDiagramDocumentViewModelFactory _factory;
+    private readonly IDocumentFileService _files;
+    private readonly IFileDialogService _fileDialogs;
+    private readonly IRecentFilesService _recent;
+    private readonly IDialogService _dialogs;
+    private readonly IThemeService _theme;
+
+    public ShellViewModel(
+        IDiagramDocumentViewModelFactory factory,
+        IDocumentFileService files,
+        IFileDialogService fileDialogs,
+        IRecentFilesService recent,
+        IDialogService dialogs,
+        IThemeService theme,
+        ToolboxViewModel toolbox,
+        InspectorViewModel inspector)
+    {
+        _factory = factory;
+        _files = files;
+        _fileDialogs = fileDialogs;
+        _recent = recent;
+        _dialogs = dialogs;
+        _theme = theme;
+        Toolbox = toolbox;
+        Inspector = inspector;
+
+        NewCommand = new RelayCommand(OnNew);
+        OpenCommand = new AsyncRelayCommand(OnOpenAsync);
+        OpenRecentCommand = new AsyncRelayCommand<string>(OnOpenRecentAsync);
+        SaveCommand = new AsyncRelayCommand(OnSaveAsync, () => HasActiveDocument);
+        SaveAsCommand = new AsyncRelayCommand(OnSaveAsAsync, () => HasActiveDocument);
+        CloseDocumentCommand = new AsyncRelayCommand<DiagramDocumentViewModel>(OnCloseDocumentAsync);
+        UndoCommand = new RelayCommand(OnUndo, () => ActiveDocument?.CanUndo ?? false);
+        RedoCommand = new RelayCommand(OnRedo, () => ActiveDocument?.CanRedo ?? false);
+        DeleteCommand = new RelayCommand(OnDelete, () => ActiveDocument?.HasSelection ?? false);
+        ExportPngCommand = new RelayCommand(OnExportPng, () => HasActiveDocument);
+        CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
+        ToggleThemeCommand = new RelayCommand(OnToggleTheme);
+        ActivateSelectToolCommand = new RelayCommand(() => Toolbox.ActivateSelectTool());
+
+        _recent.Changed += (_, _) => RefreshRecentFiles();
+        RefreshRecentFiles();
+
+        OnNew();
+    }
+
+    public ObservableCollection<DiagramDocumentViewModel> Documents { get; } = new();
+
+    public ObservableCollection<string> RecentFiles { get; } = new();
+
+    public ToolboxViewModel Toolbox { get; }
+
+    public InspectorViewModel Inspector { get; }
+
+    public RelayCommand NewCommand { get; }
+    public AsyncRelayCommand OpenCommand { get; }
+    public AsyncRelayCommand<string> OpenRecentCommand { get; }
+    public AsyncRelayCommand SaveCommand { get; }
+    public AsyncRelayCommand SaveAsCommand { get; }
+    public AsyncRelayCommand<DiagramDocumentViewModel> CloseDocumentCommand { get; }
+    public RelayCommand UndoCommand { get; }
+    public RelayCommand RedoCommand { get; }
+    public RelayCommand DeleteCommand { get; }
+    public RelayCommand ExportPngCommand { get; }
+    public RelayCommand CopyImageCommand { get; }
+    public RelayCommand ToggleThemeCommand { get; }
+    public RelayCommand ActivateSelectToolCommand { get; }
+
+    public event EventHandler? ExportPngRequested;
+
+    public event EventHandler? CopyImageRequested;
+
+    public bool HasActiveDocument => ActiveDocument is not null;
+
+    public string Title => ActiveDocument is null ? "JCL Draw" : $"JCL Draw — {ActiveDocument.DisplayName}";
+
+    public DiagramDocumentViewModel? ActiveDocument
+    {
+        get;
+        set
+        {
+            DiagramDocumentViewModel? previous = field;
+            if (SetProperty(ref field, value))
+            {
+                if (previous is not null)
+                {
+                    previous.UndoStateChanged -= OnActiveUndoStateChanged;
+                    previous.SelectionChanged -= OnActiveSelectionChanged;
+                    previous.PropertyChanged -= OnActiveDocumentPropertyChanged;
+                }
+
+                if (field is not null)
+                {
+                    field.UndoStateChanged += OnActiveUndoStateChanged;
+                    field.SelectionChanged += OnActiveSelectionChanged;
+                    field.PropertyChanged += OnActiveDocumentPropertyChanged;
+                }
+
+                Inspector.SetTarget(field);
+                OnPropertyChanged(nameof(HasActiveDocument));
+                OnPropertyChanged(nameof(Title));
+                NotifyDocumentCommands();
+            }
+        }
+    }
+
+    private void OnNew() => AddAndActivate(_factory.CreateNew(DiagramType.Freeform));
+
+    private async Task OnOpenAsync()
+    {
+        string? path = await _fileDialogs.PickOpenAsync();
+        if (path is not null)
+        {
+            await OpenPathAsync(path);
+        }
+    }
+
+    private async Task OnOpenRecentAsync(string? path)
+    {
+        if (!string.IsNullOrEmpty(path))
+        {
+            await OpenPathAsync(path);
+        }
+    }
+
+    private async Task OpenPathAsync(string path)
+    {
+        DiagramDocumentViewModel? existing = Documents.FirstOrDefault(
+            d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            ActiveDocument = existing;
+            return;
+        }
+
+        try
+        {
+            DiagramDocument document = await _files.LoadAsync(path);
+            AddAndActivate(_factory.Create(document, path));
+            _recent.Add(path);
+        }
+        catch (Exception ex) when (ex is IOException or DocumentSerializationException or UnauthorizedAccessException)
+        {
+            await _dialogs.ShowErrorAsync("Could not open file", ex.Message);
+            _recent.Remove(path);
+        }
+    }
+
+    private Task OnSaveAsync() => ActiveDocument is null ? Task.CompletedTask : SaveAsync(ActiveDocument, ActiveDocument.FilePath);
+
+    private Task OnSaveAsAsync() => ActiveDocument is null ? Task.CompletedTask : SaveAsync(ActiveDocument, null);
+
+    private async Task<bool> SaveAsync(DiagramDocumentViewModel document, string? path)
+    {
+        if (path is null)
+        {
+            string suggested = document.FilePath is null ? "diagram" : Path.GetFileNameWithoutExtension(document.FilePath);
+            path = await _fileDialogs.PickSaveAsync(suggested);
+            if (path is null)
+            {
+                return false;
+            }
+        }
+
+        try
+        {
+            await _files.SaveAsync(document.Document, path);
+            document.MarkSaved(path);
+            _recent.Add(path);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await _dialogs.ShowErrorAsync("Could not save file", ex.Message);
+            return false;
+        }
+    }
+
+    private async Task OnCloseDocumentAsync(DiagramDocumentViewModel? document)
+    {
+        document ??= ActiveDocument;
+        if (document is null)
+        {
+            return;
+        }
+
+        if (document.IsModified)
+        {
+            bool save = await _dialogs.ConfirmAsync(
+                "Unsaved changes",
+                $"Save changes to {document.DisplayName} before closing?");
+            if (save && !await SaveAsync(document, document.FilePath))
+            {
+                return;
+            }
+        }
+
+        int index = Documents.IndexOf(document);
+        Documents.Remove(document);
+        if (ReferenceEquals(ActiveDocument, document))
+        {
+            ActiveDocument = Documents.Count > 0 ? Documents[Math.Min(index, Documents.Count - 1)] : null;
+        }
+    }
+
+    private void OnUndo() => ActiveDocument?.Undo();
+
+    private void OnRedo() => ActiveDocument?.Redo();
+
+    private void OnDelete() => ActiveDocument?.DeleteSelected();
+
+    private void OnExportPng() => ExportPngRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnCopyImage() => CopyImageRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnToggleTheme() => _theme.Toggle();
+
+    private void AddAndActivate(DiagramDocumentViewModel document)
+    {
+        Documents.Add(document);
+        ActiveDocument = document;
+    }
+
+    private void OnActiveUndoStateChanged(object? sender, EventArgs e)
+    {
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnActiveSelectionChanged(object? sender, EventArgs e)
+        => DeleteCommand.NotifyCanExecuteChanged();
+
+    private void OnActiveDocumentPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DiagramDocumentViewModel.DisplayName))
+        {
+            OnPropertyChanged(nameof(Title));
+        }
+    }
+
+    private void NotifyDocumentCommands()
+    {
+        SaveCommand.NotifyCanExecuteChanged();
+        SaveAsCommand.NotifyCanExecuteChanged();
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+        DeleteCommand.NotifyCanExecuteChanged();
+        ExportPngCommand.NotifyCanExecuteChanged();
+        CopyImageCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshRecentFiles()
+    {
+        RecentFiles.Clear();
+        foreach (string path in _recent.Files)
+        {
+            RecentFiles.Add(path);
+        }
+    }
+}
