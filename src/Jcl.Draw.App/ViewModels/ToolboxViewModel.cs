@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Linq;
+using CommunityToolkit.Mvvm.Input;
 using Jcl.Draw.Model.Connectors;
 using Jcl.Draw.Model.Nodes;
 
@@ -60,6 +62,23 @@ public sealed class ToolboxViewModel : ViewModelBase
         new UseCaseToolItem("Use case", UseCaseNodeKind.UseCase),
         new UseCaseToolItem("System boundary", UseCaseNodeKind.SystemBoundary),
     };
+
+    public ToolboxViewModel()
+    {
+        // Each ribbon dropdown item arms a tool by its kind; reuse the mutually-exclusive Selected* setters.
+        SelectShapeToolCommand = new RelayCommand<ShapeKind>(kind => SelectedShape = Shapes.First(s => s.Kind == kind));
+        SelectConnectorToolCommand = new RelayCommand<RelationshipKind>(kind => SelectedConnector = Connectors.First(c => c.Kind == kind));
+        SelectClassNodeToolCommand = new RelayCommand<ClassNodeKind>(kind => SelectedClassNode = ClassNodes.First(c => c.Kind == kind));
+        SelectUseCaseToolCommand = new RelayCommand<UseCaseNodeKind>(kind => SelectedUseCaseNode = UseCaseNodes.First(u => u.Kind == kind));
+    }
+
+    public RelayCommand<ShapeKind> SelectShapeToolCommand { get; }
+
+    public RelayCommand<RelationshipKind> SelectConnectorToolCommand { get; }
+
+    public RelayCommand<ClassNodeKind> SelectClassNodeToolCommand { get; }
+
+    public RelayCommand<UseCaseNodeKind> SelectUseCaseToolCommand { get; }
 
     public ShapeToolItem? SelectedShape
     {
@@ -146,6 +165,17 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public bool IsUseCaseNodeMode => SelectedUseCaseNode is not null;
 
+    public bool IsShapeMode => SelectedShape is not null;
+
+    /// <summary>Dropdown-button captions: the active pick's name, or the category label when nothing is armed.</summary>
+    public string ShapesHeader => SelectedShape?.Name ?? "Shapes";
+
+    public string ConnectorsHeader => SelectedConnector?.Name ?? "Connectors";
+
+    public string ClassHeader => SelectedClassNode?.Name ?? "Class diagram";
+
+    public string UseCaseHeader => SelectedUseCaseNode?.Name ?? "Use case";
+
     /// <summary>
     /// Status-bar hint describing how to use the armed tool; <c>null</c> when the select tool is active.
     /// </summary>
@@ -188,9 +218,14 @@ public sealed class ToolboxViewModel : ViewModelBase
     private void RaiseModes()
     {
         OnPropertyChanged(nameof(IsSelectTool));
+        OnPropertyChanged(nameof(IsShapeMode));
         OnPropertyChanged(nameof(IsConnectorMode));
         OnPropertyChanged(nameof(IsClassNodeMode));
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
+        OnPropertyChanged(nameof(ShapesHeader));
+        OnPropertyChanged(nameof(ConnectorsHeader));
+        OnPropertyChanged(nameof(ClassHeader));
+        OnPropertyChanged(nameof(UseCaseHeader));
         OnPropertyChanged(nameof(ActiveToolHint));
     }
 }

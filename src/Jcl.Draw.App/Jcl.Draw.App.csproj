@@ -21,6 +21,8 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Carbon.Avalonia.Desktop" />
+    <PackageReference Include="PhosphorIconsAvalonia" />
   </ItemGroup>
 
   <ItemGroup>

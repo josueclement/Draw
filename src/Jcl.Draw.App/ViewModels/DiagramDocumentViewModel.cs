@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using CommunityToolkit.Mvvm.Input;
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.Diagramming.Geometry;
 using Jcl.Draw.Diagramming.Routing;
@@ -26,6 +27,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
     private DiagramDocument _document;
     private string _cleanSnapshot;
 
+    // Ribbon View-tab zoom step + bounds; bounds mirror the Ctrl+wheel clamp in DiagramView.
+    private const double ZoomStep = 1.2d;
+    private const double MinZoom = 0.1d;
+    private const double MaxZoom = 8d;
+
     public DiagramDocumentViewModel(
         DiagramDocument document,
         IUndoService undo,
@@ -44,6 +50,15 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         RebuildNodes();
         RebuildConnectors();
         _cleanSnapshot = _serializer.Serialize(_document);
+
+        ZoomInCommand = new RelayCommand(() => Zoom = Math.Clamp(Zoom * ZoomStep, MinZoom, MaxZoom));
+        ZoomOutCommand = new RelayCommand(() => Zoom = Math.Clamp(Zoom / ZoomStep, MinZoom, MaxZoom));
+        ZoomResetCommand = new RelayCommand(() =>
+        {
+            Zoom = 1d;
+            PanX = 0d;
+            PanY = 0d;
+        });
     }
 
     public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
@@ -96,6 +111,12 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         get;
         set => SetProperty(ref field, value);
     } = 1d;
+
+    public RelayCommand ZoomInCommand { get; }
+
+    public RelayCommand ZoomOutCommand { get; }
+
+    public RelayCommand ZoomResetCommand { get; }
 
     public double PanX
     {

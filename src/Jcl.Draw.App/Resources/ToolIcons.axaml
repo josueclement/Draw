@@ -1,0 +1,36 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+      Custom tool glyphs for UML items PhosphorIconsAvalonia has no match for.
+      Authored in a 24x24 space; PathIcon fills with Foreground. Outline shapes use
+      the even-odd rule (F0: outer ring minus inner). Relationship glyphs mirror the
+      end-caps produced by Rendering/ConnectorDecorationBuilder (diamond/triangle/arrow,
+      hollow vs filled, solid vs dashed) so the menu icon reads like the drawn connector.
+    -->
+
+    <!-- Shapes (outline) -->
+    <GeometryGroup x:Key="ToolIcon.Ellipse" FillRule="EvenOdd">
+        <EllipseGeometry Rect="1,5,22,14" />
+        <EllipseGeometry Rect="3,7,18,10" />
+    </GeometryGroup>
+    <StreamGeometry x:Key="ToolIcon.RoundedRectangle">F0 M6,5 L18,5 A4,4 0 0 1 22,9 L22,15 A4,4 0 0 1 18,19 L6,19 A4,4 0 0 1 2,15 L2,9 A4,4 0 0 1 6,5 Z M7,7 L17,7 A3,3 0 0 1 20,10 L20,14 A3,3 0 0 1 17,17 L7,17 A3,3 0 0 1 4,14 L4,10 A3,3 0 0 1 7,7 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Trapezoid">F0 M7,6 L17,6 L21,18 L3,18 Z M9,8 L15,8 L18.5,16 L5.5,16 Z</StreamGeometry>
+
+    <!-- Class diagram: interface lollipop (provided-interface circle on a stem) -->
+    <GeometryGroup x:Key="ToolIcon.Interface" FillRule="EvenOdd">
+        <EllipseGeometry Rect="8,3,8,8" />
+        <EllipseGeometry Rect="10,5,4,4" />
+        <RectangleGeometry Rect="11,11,2,10" />
+    </GeometryGroup>
+
+    <!-- Relationships (mirror ConnectorDecorationBuilder.Describe) -->
+    <StreamGeometry x:Key="ToolIcon.Association">M2,11.2 L22,11.2 L22,12.8 L2,12.8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.DirectedAssociation">M2,11.2 L15,11.2 L15,12.8 L2,12.8 Z M22,12 L15,8 L17.5,12 L15,16 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Aggregation">F0 M2,12 L7,7.5 L12,12 L7,16.5 Z M4.5,12 L7,9.8 L9.5,12 L7,14.2 Z M12,11.2 L22,11.2 L22,12.8 L12,12.8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Composition">M2,12 L7,7.5 L12,12 L7,16.5 Z M12,11.2 L22,11.2 L22,12.8 L12,12.8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Generalization">F0 M22,12 L14.5,7 L14.5,17 Z M19.2,12 L16.2,9.2 L16.2,14.8 Z M2,11.2 L14.5,11.2 L14.5,12.8 L2,12.8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Realization">F0 M22,12 L14.5,7 L14.5,17 Z M19.2,12 L16.2,9.2 L16.2,14.8 Z M2,11.2 L6,11.2 L6,12.8 L2,12.8 Z M8.5,11.2 L12.8,11.2 L12.8,12.8 L8.5,12.8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Dependency">M22,12 L15,8 L17.5,12 L15,16 Z M2,11.2 L6,11.2 L6,12.8 L2,12.8 Z M8.5,11.2 L12.8,11.2 L12.8,12.8 L8.5,12.8 Z</StreamGeometry>
+
+</ResourceDictionary>
