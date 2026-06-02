@@ -4,9 +4,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Shapes;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Jcl.Draw.App.Configuration;
 using Jcl.Draw.App.Services;
 using Jcl.Draw.App.ViewModels;
@@ -30,7 +34,7 @@ public class CanvasPlacementHeadlessTests
     // resources (FluentTheme + editor brushes) are loaded exactly as in production.
     private static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<global::Jcl.Draw.App.App>()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 
     private static ShellViewModel CreateShell()
     {
@@ -84,6 +88,62 @@ public class CanvasPlacementHeadlessTests
             Dispatcher.UIThread.RunJobs();
 
             Assert.Single(doc.Nodes);
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task PlacedShape_RenderProbe()
+    {
+        using HeadlessUnitTestSession session = HeadlessUnitTestSession.StartNew(typeof(CanvasPlacementHeadlessTests));
+
+        await session.Dispatch(() =>
+        {
+            ShellViewModel shell = CreateShell();
+            DiagramDocumentViewModel doc = shell.ActiveDocument!;
+
+            DiagramView view = new() { DataContext = doc };
+            Window window = new()
+            {
+                DataContext = shell,
+                Content = view,
+                Width = 800,
+                Height = 600,
+            };
+
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+
+            shell.Toolbox.SelectedShape = shell.Toolbox.Shapes.First();
+            Dispatcher.UIThread.RunJobs();
+
+            window.MouseDown(new Point(400, 300), MouseButton.Left);
+            window.MouseUp(new Point(400, 300), MouseButton.Left);
+            Dispatcher.UIThread.RunJobs();
+
+            // Real Skia render (UseHeadlessDrawing=false) → capture the frame to a PNG we can inspect.
+            string status;
+            try
+            {
+                using var frame = window.CaptureRenderedFrame();
+                if (frame is null)
+                {
+                    status = "frame=NULL";
+                }
+                else
+                {
+                    frame.Save("/tmp/render_probe.png");
+                    status = $"frame={frame.PixelSize.Width}x{frame.PixelSize.Height} saved";
+                }
+            }
+            catch (System.Exception ex)
+            {
+                status = "capture threw: " + ex.GetType().Name + ": " + ex.Message;
+            }
+
+            System.IO.File.WriteAllText("/tmp/render_probe_status.txt",
+                $"nodes={doc.Nodes.Count}; {status}");
+
+            window.Close();
         }, CancellationToken.None);
     }
 }

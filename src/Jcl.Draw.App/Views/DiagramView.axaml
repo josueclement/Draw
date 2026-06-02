@@ -14,7 +14,11 @@
                        Width="6000" Height="6000"
                        IsHitTestVisible="False" />
 
-            <ItemsControl ItemsSource="{Binding Connectors}" IsHitTestVisible="False">
+            <!-- Connectors and Nodes are unbounded world-space layers. Their Canvas ItemsPanel has
+                 zero desired size, so the ItemsControl measures to 0x0; since ItemsControl defaults
+                 ClipToBounds=true, it would otherwise clip every item away. Keep it false — the
+                 Viewport border above is what actually clips to the visible region. -->
+            <ItemsControl ItemsSource="{Binding Connectors}" IsHitTestVisible="False" ClipToBounds="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas />
@@ -52,7 +56,8 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <ItemsControl ItemsSource="{Binding Nodes}">
+            <!-- ClipToBounds=false for the same reason as the Connectors layer above. -->
+            <ItemsControl ItemsSource="{Binding Nodes}" ClipToBounds="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas />
