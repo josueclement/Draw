@@ -39,6 +39,12 @@ public partial class MainWindow : Window
         shell.ExportPngRequested += OnExportPngRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
+
+        // Open on the Insert (tools) tab. This must be set here, not as a literal SelectedIndex in XAML:
+        // the XAML attribute is applied while Ribbon.Tabs is still empty, so Ribbon never syncs SelectedTab
+        // and its OnApplyTemplate then forces Tabs[0]. Setting it now (after InitializeComponent populated
+        // Tabs) is a real 0 -> 1 change that selects Tabs[1] and survives template application.
+        MainRibbon.SelectedIndex = 1;
     }
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
