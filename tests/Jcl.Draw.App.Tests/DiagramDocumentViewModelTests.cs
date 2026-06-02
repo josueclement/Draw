@@ -68,6 +68,51 @@ public class DiagramDocumentViewModelTests
     }
 
     [Fact]
+    public void ZoomInCommand_IncreasesZoom_ClampedToMax()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        double before = doc.Zoom;
+
+        doc.ZoomInCommand.Execute(null);
+        Assert.True(doc.Zoom > before);
+
+        for (int i = 0; i < 60; i++)
+        {
+            doc.ZoomInCommand.Execute(null);
+        }
+
+        Assert.True(doc.Zoom <= 8d);
+    }
+
+    [Fact]
+    public void ZoomOutCommand_DecreasesZoom_ClampedToMin()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+
+        for (int i = 0; i < 100; i++)
+        {
+            doc.ZoomOutCommand.Execute(null);
+        }
+
+        Assert.True(doc.Zoom >= 0.1d);
+    }
+
+    [Fact]
+    public void ZoomResetCommand_RestoresDefaultView()
+    {
+        DiagramDocumentViewModel doc = CreateDocument();
+        doc.ZoomInCommand.Execute(null);
+        doc.PanX = 123;
+        doc.PanY = 456;
+
+        doc.ZoomResetCommand.Execute(null);
+
+        Assert.Equal(1d, doc.Zoom);
+        Assert.Equal(0d, doc.PanX);
+        Assert.Equal(0d, doc.PanY);
+    }
+
+    [Fact]
     public void Undo_RemovesAddedShape_RedoRestoresIt()
     {
         DiagramDocumentViewModel doc = CreateDocument();

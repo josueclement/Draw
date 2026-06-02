@@ -3,7 +3,8 @@ namespace Jcl.Draw.Model.Styling;
 /// <summary>Fill, stroke, font and text alignment for a shape node.</summary>
 public sealed class ShapeStyle
 {
-    public ArgbColor Fill { get; set; } = ArgbColor.White;
+    // Default fill: Carbon "surface" tone (#EBEDF0) — a soft grey that reads on both light and dark canvases.
+    public ArgbColor Fill { get; set; } = new(0xFF, 0xEB, 0xED, 0xF0);
 
     public StrokeStyle Stroke { get; set; } = new();
 

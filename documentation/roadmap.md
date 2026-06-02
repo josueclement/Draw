@@ -34,3 +34,11 @@ Actor, use-case, system boundary; association, include/extend, generalization.
 `Jcl.Draw.Sql` with `ISqlDialect` for PostgreSQL / SQL Server / SQLite / MySQL,
 ER→DDL (primary) and optional class→table mapping; `Jcl.Draw.Export` adds SVG/PDF
 (SkiaSharp).
+
+## UI shell — Ribbon, icons & theming ✅ (cross-cutting)
+
+Replaces the top toolbar + left tool palette with a `Carbon.Avalonia.Desktop` **Ribbon**
+(Home / Insert / View; per-category tool dropdowns); menu bar, inspector, tabs and status bar
+stay. Icons come from `PhosphorIconsAvalonia`, with custom vector glyphs for the UML items it
+lacks. Adopts Carbon's palette for the chrome and as the new default shape style (soft-grey fill,
+accent-blue stroke, dark text). See `documentation/plans/2026-06-02-ui-ribbon-revamp.md`.

@@ -138,4 +138,40 @@ public class ToolboxViewModelTests
 
         Assert.True(raised);
     }
+
+    [Fact]
+    public void SelectShapeToolCommand_ArmsShapeByKind_AndUpdatesHeader()
+    {
+        ToolboxViewModel toolbox = new();
+
+        toolbox.SelectShapeToolCommand.Execute(ShapeKind.Diamond);
+
+        Assert.Equal(ShapeKind.Diamond, toolbox.SelectedShape?.Kind);
+        Assert.True(toolbox.IsShapeMode);
+        Assert.Equal("Diamond", toolbox.ShapesHeader);
+    }
+
+    [Fact]
+    public void SelectConnectorToolCommand_ArmsConnectorByKind_AndClearsOthers()
+    {
+        ToolboxViewModel toolbox = new();
+        toolbox.SelectShapeToolCommand.Execute(ShapeKind.Rectangle);
+
+        toolbox.SelectConnectorToolCommand.Execute(RelationshipKind.Composition);
+
+        Assert.Equal(RelationshipKind.Composition, toolbox.SelectedConnector?.Kind);
+        Assert.Null(toolbox.SelectedShape);
+        Assert.Equal("Composition", toolbox.ConnectorsHeader);
+    }
+
+    [Fact]
+    public void DropdownHeaders_FallBackToCategoryLabels_WhenNothingArmed()
+    {
+        ToolboxViewModel toolbox = new();
+
+        Assert.Equal("Shapes", toolbox.ShapesHeader);
+        Assert.Equal("Connectors", toolbox.ConnectorsHeader);
+        Assert.Equal("Class diagram", toolbox.ClassHeader);
+        Assert.Equal("Use case", toolbox.UseCaseHeader);
+    }
 }

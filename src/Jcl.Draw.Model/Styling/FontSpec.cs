@@ -14,7 +14,8 @@ public sealed class FontSpec
 
     public bool Italic { get; set; }
 
-    public ArgbColor Color { get; set; } = ArgbColor.Black;
+    // Default text: Carbon "foreground" near-black (#1E1F22) — readable on the default grey fill.
+    public ArgbColor Color { get; set; } = new(0xFF, 0x1E, 0x1F, 0x22);
 
     public FontSpec Clone() => new()
     {

@@ -4,6 +4,8 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using Carbon.Avalonia.Desktop.Controls.Ribbon;
+using CommunityToolkit.Mvvm.Input;
 using Jcl.Draw.App.Services;
 using Jcl.Draw.App.ViewModels;
 
@@ -36,9 +38,45 @@ public partial class MainWindow : Window
         DataContext = shell;
         shell.ExportPngRequested += OnExportPngRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
+        WireToolDropdowns(shell.Toolbox);
+
+        // Open on the Insert (tools) tab. This must be set here, not as a literal SelectedIndex in XAML:
+        // the XAML attribute is applied while Ribbon.Tabs is still empty, so Ribbon never syncs SelectedTab
+        // and its OnApplyTemplate then forces Tabs[0]. Setting it now (after InitializeComponent populated
+        // Tabs) is a real 0 -> 1 change that selects Tabs[1] and survives template application.
+        MainRibbon.SelectedIndex = 1;
     }
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
+
+    // Carbon's RibbonMenuItem is a plain AvaloniaObject (no DataContext), so its Command cannot be data-bound
+    // in XAML. Each dropdown's items share one "arm tool" command; assign it here. The per-item kind is set
+    // via CommandParameter in XAML.
+    private void WireToolDropdowns(ToolboxViewModel toolbox)
+    {
+        WireDropdown(ShapesDropDown, toolbox.SelectShapeToolCommand);
+        WireDropdown(ConnectorsDropDown, toolbox.SelectConnectorToolCommand);
+        WireDropdown(ClassDropDown, toolbox.SelectClassNodeToolCommand);
+        WireDropdown(UseCaseDropDown, toolbox.SelectUseCaseToolCommand);
+    }
+
+    // Carbon doesn't close the popup when a RibbonMenuItem is clicked (it dismisses only on an outside
+    // click), so the first canvas click would otherwise be spent dismissing the popup. Wrap each arm
+    // command to close the dropdown on selection; the per-item kind still arrives via the XAML
+    // CommandParameter. Closing also ends the open-popup state that made the button re-measure.
+    private static void WireDropdown<TKind>(RibbonDropDownButton dropdown, RelayCommand<TKind> arm)
+    {
+        RelayCommand<TKind> wrapper = new(kind =>
+        {
+            arm.Execute(kind);
+            dropdown.IsDropDownOpen = false;
+        });
+
+        foreach (RibbonMenuItem item in dropdown.Items)
+        {
+            item.Command = wrapper;
+        }
+    }
 
     private DiagramView? ActiveDiagramView()
         => _shell is null

@@ -5,6 +5,14 @@
 
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Carbon controls theme (Ribbon, …) + the Carbon* palette brushes. Carbon's Fluent.axaml
+                     is a ResourceDictionary, so it is merged here (not added to Application.Styles). -->
+                <ResourceInclude Source="avares://Carbon.Avalonia.Desktop/Themes/Fluent.axaml" />
+                <!-- Custom vector glyphs for UML tools PhosphorIconsAvalonia has no match for. -->
+                <ResourceInclude Source="avares://Jcl.Draw.App/Resources/ToolIcons.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
             <!-- Editor brushes. These replace Avalonia 0.10-era theme keys (ThemeBackgroundBrush /
                  ThemeBorderLowBrush) that no longer exist in Avalonia 12's Fluent theme and so resolved
                  to null at runtime — which, on the canvas Border, made it non-hit-testable. -->
