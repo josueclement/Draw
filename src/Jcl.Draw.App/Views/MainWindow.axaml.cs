@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using Carbon.Avalonia.Desktop.Controls.Ribbon;
+using CommunityToolkit.Mvvm.Input;
 using Jcl.Draw.App.Services;
 using Jcl.Draw.App.ViewModels;
 
@@ -47,24 +48,27 @@ public partial class MainWindow : Window
     // via CommandParameter in XAML.
     private void WireToolDropdowns(ToolboxViewModel toolbox)
     {
-        foreach (RibbonMenuItem item in ShapesDropDown.Items)
-        {
-            item.Command = toolbox.SelectShapeToolCommand;
-        }
+        WireDropdown(ShapesDropDown, toolbox.SelectShapeToolCommand);
+        WireDropdown(ConnectorsDropDown, toolbox.SelectConnectorToolCommand);
+        WireDropdown(ClassDropDown, toolbox.SelectClassNodeToolCommand);
+        WireDropdown(UseCaseDropDown, toolbox.SelectUseCaseToolCommand);
+    }
 
-        foreach (RibbonMenuItem item in ConnectorsDropDown.Items)
+    // Carbon doesn't close the popup when a RibbonMenuItem is clicked (it dismisses only on an outside
+    // click), so the first canvas click would otherwise be spent dismissing the popup. Wrap each arm
+    // command to close the dropdown on selection; the per-item kind still arrives via the XAML
+    // CommandParameter. Closing also ends the open-popup state that made the button re-measure.
+    private static void WireDropdown<TKind>(RibbonDropDownButton dropdown, RelayCommand<TKind> arm)
+    {
+        RelayCommand<TKind> wrapper = new(kind =>
         {
-            item.Command = toolbox.SelectConnectorToolCommand;
-        }
+            arm.Execute(kind);
+            dropdown.IsDropDownOpen = false;
+        });
 
-        foreach (RibbonMenuItem item in ClassDropDown.Items)
+        foreach (RibbonMenuItem item in dropdown.Items)
         {
-            item.Command = toolbox.SelectClassNodeToolCommand;
-        }
-
-        foreach (RibbonMenuItem item in UseCaseDropDown.Items)
-        {
-            item.Command = toolbox.SelectUseCaseToolCommand;
+            item.Command = wrapper;
         }
     }
 

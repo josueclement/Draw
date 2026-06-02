@@ -92,7 +92,7 @@
         <!-- Ribbon: replaces the former top toolbar and left tool palette. Tool dropdown items carry their
              CommandParameter (kind) here; their shared Command is assigned in code-behind because Carbon's
              RibbonMenuItem is a plain AvaloniaObject with no DataContext to bind against. -->
-        <ribbon:Ribbon DockPanel.Dock="Top">
+        <ribbon:Ribbon DockPanel.Dock="Top" SelectedIndex="1">
             <ribbon:RibbonTab Header="Home">
                 <ribbon:RibbonGroup Header="File">
                     <ribbon:RibbonButton Header="New" Command="{Binding NewCommand}" IconData="{pia:IconGeometry Icon=file_plus}" />
