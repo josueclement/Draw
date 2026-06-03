@@ -20,10 +20,15 @@
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FFFAFAFA" />
                     <SolidColorBrush x:Key="EditorBorderBrush" Color="#22000000" />
+                    <!-- Theme-aware defaults for un-customised node fill/text (Carbon surface/foreground tones). -->
+                    <SolidColorBrush x:Key="NodeDefaultFillBrush" Color="#FFEBEDF0" />
+                    <SolidColorBrush x:Key="NodeDefaultTextBrush" Color="#FF1E1F22" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FF1F1F1F" />
                     <SolidColorBrush x:Key="EditorBorderBrush" Color="#22FFFFFF" />
+                    <SolidColorBrush x:Key="NodeDefaultFillBrush" Color="#FF2B2D30" />
+                    <SolidColorBrush x:Key="NodeDefaultTextBrush" Color="#FFBCBEC4" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

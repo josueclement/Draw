@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.Input;
 using Draw.App.Configuration;
+using Draw.App.Services;
 using Draw.Diagramming.Geometry;
 using Draw.Diagramming.Routing;
 using Draw.Diagramming.Uml;
@@ -18,12 +19,13 @@ using Draw.Model.Serialization;
 namespace Draw.App.ViewModels;
 
 /// <summary>Editor state and mutating operations for one open diagram (one tab).</summary>
-public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
+public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDisposable
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
     private readonly IDocumentSerializer _serializer;
     private readonly EditorOptions _options;
+    private readonly IThemeService _theme;
     private DiagramDocument _document;
     private string _cleanSnapshot;
 
@@ -38,6 +40,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         IConnectorRouter router,
         IDocumentSerializer serializer,
         EditorOptions options,
+        IThemeService theme,
         string? filePath)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
@@ -45,8 +48,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _theme = theme ?? throw new ArgumentNullException(nameof(theme));
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
+        _theme.ThemeChanged += OnThemeChanged;
         RebuildNodes();
         RebuildConnectors();
         _cleanSnapshot = _serializer.Serialize(_document);
@@ -179,7 +184,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         };
 
         _document.Nodes.Add(node);
-        ShapeNodeViewModel vm = new(node);
+        ShapeNodeViewModel vm = new(node, _theme);
         Nodes.Add(vm);
         SelectOnly(vm);
         MarkModified();
@@ -211,7 +216,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
         };
 
         _document.Nodes.Add(node);
-        ClassNodeViewModel vm = new(node, this);
+        ClassNodeViewModel vm = new(node, this, _theme);
         Nodes.Add(vm);
         SelectOnly(vm);
         MarkModified();
@@ -544,13 +549,26 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
 
     private NodeViewModelBase CreateNodeViewModel(NodeBase node) => node switch
     {
-        ClassNode @class => new ClassNodeViewModel(@class, this),
-        ActorNode actor => new ActorNodeViewModel(actor),
-        UseCaseNode useCase => new UseCaseNodeViewModel(useCase),
-        SystemBoundaryNode boundary => new SystemBoundaryNodeViewModel(boundary),
-        ShapeNode shape => new ShapeNodeViewModel(shape),
+        ClassNode @class => new ClassNodeViewModel(@class, this, _theme),
+        ActorNode actor => new ActorNodeViewModel(actor, _theme),
+        UseCaseNode useCase => new UseCaseNodeViewModel(useCase, _theme),
+        SystemBoundaryNode boundary => new SystemBoundaryNodeViewModel(boundary, _theme),
+        ShapeNode shape => new ShapeNodeViewModel(shape, _theme),
         _ => throw new NotSupportedException($"Unsupported node type: {node.GetType().Name}"),
     };
+
+    // On theme change, re-raise style-derived brushes so default-styled nodes adopt the new theme's
+    // fill/text colours (user-customised colours are unaffected — see NodeViewModelBase.UsesDefault*).
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        foreach (NodeViewModelBase node in Nodes)
+        {
+            node.RaiseStyleChanged();
+        }
+    }
+
+    /// <summary>Detaches from the shared theme service when the tab closes, so this VM can be collected.</summary>
+    public void Dispose() => _theme.ThemeChanged -= OnThemeChanged;
 
     private void RebuildConnectors()
     {

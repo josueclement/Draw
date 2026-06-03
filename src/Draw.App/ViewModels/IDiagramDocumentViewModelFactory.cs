@@ -1,4 +1,5 @@
 using Draw.App.Configuration;
+using Draw.App.Services;
 using Draw.Diagramming.Routing;
 using Draw.Diagramming.Undo;
 using Draw.Model.Documents;
@@ -21,17 +22,20 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
     private readonly IConnectorRouter _router;
     private readonly IOptions<EditorOptions> _editorOptions;
     private readonly IOptions<UndoOptions> _undoOptions;
+    private readonly IThemeService _theme;
 
     public DiagramDocumentViewModelFactory(
         IDocumentSerializer serializer,
         IConnectorRouter router,
         IOptions<EditorOptions> editorOptions,
-        IOptions<UndoOptions> undoOptions)
+        IOptions<UndoOptions> undoOptions,
+        IThemeService theme)
     {
         _serializer = serializer;
         _router = router;
         _editorOptions = editorOptions;
         _undoOptions = undoOptions;
+        _theme = theme;
     }
 
     public DiagramDocumentViewModel Create(DiagramDocument document, string? filePath)
@@ -41,6 +45,7 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
             _router,
             _serializer,
             _editorOptions.Value,
+            _theme,
             filePath);
 
     public DiagramDocumentViewModel CreateNew(DiagramType type)

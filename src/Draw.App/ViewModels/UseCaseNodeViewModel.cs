@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Media;
 using Draw.App.Rendering;
+using Draw.App.Services;
 using Draw.Model.Nodes;
 
 namespace Draw.App.ViewModels;
@@ -10,8 +11,8 @@ public sealed class UseCaseNodeViewModel : NodeViewModelBase
 {
     private readonly UseCaseNode _model;
 
-    public UseCaseNodeViewModel(UseCaseNode model)
-        : base(model)
+    public UseCaseNodeViewModel(UseCaseNode model, IThemeService theme)
+        : base(model, theme)
     {
         _model = model;
     }

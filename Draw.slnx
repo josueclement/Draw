@@ -4,9 +4,4 @@
     <Project Path="src/Draw.Diagramming/Draw.Diagramming.csproj" />
     <Project Path="src/Draw.Model/Draw.Model.csproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/Draw.App.Tests/Draw.App.Tests.csproj" />
-    <Project Path="tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj" />
-    <Project Path="tests/Draw.Model.Tests/Draw.Model.Tests.csproj" />
-  </Folder>
 </Solution>

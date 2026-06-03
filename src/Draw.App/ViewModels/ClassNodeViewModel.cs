@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Draw.App.Services;
 using Draw.Model.Nodes;
 
 namespace Draw.App.ViewModels;
@@ -15,8 +16,8 @@ public sealed class ClassNodeViewModel : NodeViewModelBase
     private readonly ClassNode _model;
     private readonly INodeEditContext _context;
 
-    public ClassNodeViewModel(ClassNode model, INodeEditContext context)
-        : base(model)
+    public ClassNodeViewModel(ClassNode model, INodeEditContext context, IThemeService theme)
+        : base(model, theme)
     {
         _model = model;
         _context = context ?? throw new ArgumentNullException(nameof(context));

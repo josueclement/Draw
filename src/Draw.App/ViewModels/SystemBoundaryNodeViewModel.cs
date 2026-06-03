@@ -1,4 +1,5 @@
 using System;
+using Draw.App.Services;
 using Draw.Model.Nodes;
 
 namespace Draw.App.ViewModels;
@@ -8,8 +9,8 @@ public sealed class SystemBoundaryNodeViewModel : NodeViewModelBase
 {
     private readonly SystemBoundaryNode _model;
 
-    public SystemBoundaryNodeViewModel(SystemBoundaryNode model)
-        : base(model)
+    public SystemBoundaryNodeViewModel(SystemBoundaryNode model, IThemeService theme)
+        : base(model, theme)
     {
         _model = model;
     }
