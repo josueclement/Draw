@@ -32,6 +32,24 @@ public sealed class Connector
 
     public string? CenterLabel { get; set; }
 
+    /// <summary>
+    /// Forced source attachment as a relative (u,v) point in [0,1]² of the source node's bounds,
+    /// resolved to a point on the shape outline (ray-cast from the centre). Null = automatic.
+    /// </summary>
+    public Point2D? SourceAnchor { get; set; }
+
+    /// <summary>Forced target attachment; see <see cref="SourceAnchor"/>. Null = automatic.</summary>
+    public Point2D? TargetAnchor { get; set; }
+
+    /// <summary>World-unit offset added to the natural source-label position. Null = default.</summary>
+    public Point2D? SourceLabelOffset { get; set; }
+
+    /// <summary>World-unit offset added to the natural centre-label position. Null = default.</summary>
+    public Point2D? CenterLabelOffset { get; set; }
+
+    /// <summary>World-unit offset added to the natural target-label position. Null = default.</summary>
+    public Point2D? TargetLabelOffset { get; set; }
+
     public Connector Clone() => new()
     {
         Id = Id,
@@ -44,5 +62,10 @@ public sealed class Connector
         SourceLabel = SourceLabel,
         TargetLabel = TargetLabel,
         CenterLabel = CenterLabel,
+        SourceAnchor = SourceAnchor,
+        TargetAnchor = TargetAnchor,
+        SourceLabelOffset = SourceLabelOffset,
+        CenterLabelOffset = CenterLabelOffset,
+        TargetLabelOffset = TargetLabelOffset,
     };
 }
