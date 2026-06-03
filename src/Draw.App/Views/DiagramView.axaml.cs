@@ -9,10 +9,12 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Draw.App.ViewModels;
 using Draw.Diagramming.Geometry;
 using Draw.Model.Connectors;
+using Draw.Model.Nodes;
 using Draw.Model.Primitives;
 
 namespace Draw.App.Views;
@@ -232,6 +234,12 @@ public partial class DiagramView : UserControl
         PointerPoint point = e.GetCurrentPoint(Viewport);
         Point screen = point.Position;
         Point world = ScreenToWorld(screen);
+
+        // Right-clicking a class member opens its context menu instead of starting a pan.
+        if (point.Properties.IsRightButtonPressed && (e.Source as Control)?.DataContext is ClassMemberViewModel)
+        {
+            return;
+        }
 
         if (point.Properties.IsMiddleButtonPressed || point.Properties.IsRightButtonPressed)
         {
@@ -577,38 +585,238 @@ public partial class DiagramView : UserControl
 
     private void OnMemberDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (_vm is null)
+        if (_vm is null || (sender as Control)?.DataContext is not ClassMemberViewModel member)
         {
             return;
         }
 
-        if ((sender as Control)?.DataContext is ClassMemberViewModel member)
-        {
-            _vm.CaptureUndo();
-            member.BeginEdit();
-            e.Handled = true;
-
-            // Focus the sibling editor so typing starts immediately.
-            if ((sender as Control)?.Parent is Panel panel)
-            {
-                panel.Children.OfType<TextBox>().FirstOrDefault()?.Focus();
-            }
-        }
+        // Undo is captured lazily on commit (only if the text actually changed).
+        member.BeginEdit();
+        e.Handled = true;
+        TryFocusMemberEditor(member, selectAll: true);
     }
 
     private void OnMemberEditCommitted(object? sender, RoutedEventArgs e)
     {
-        if (_vm is null)
+        if (_vm is null || (sender as Control)?.DataContext is not ClassMemberViewModel member)
         {
             return;
         }
 
-        if ((sender as Control)?.DataContext is ClassMemberViewModel { IsEditing: true } member)
+        if (member.IsEditing)
         {
             member.CommitEdit();
-            _vm.MarkModified();
+        }
+
+        // After focus settles, drop an abandoned blank — unless focus moved to another member
+        // editor of the same node (the Enter-adds-next / Tab flow keeps the session alive).
+        if (OwningNode(member) is { } node)
+        {
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    if (!IsEditingMemberOf(node))
+                    {
+                        node.DiscardEmptyNewMembers();
+                    }
+                },
+                DispatcherPriority.Background);
         }
     }
+
+    private void OnMemberEditKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_vm is null
+            || sender is not TextBox { DataContext: ClassMemberViewModel member }
+            || OwningNode(member) is not { } node)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Enter:
+                CommitAndAddNext(node, member);
+                e.Handled = true;
+                break;
+            case Key.Tab:
+                NavigateMember(node, member, e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : +1);
+                e.Handled = true;
+                break;
+            case Key.Up when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
+                node.MoveMember(member, -1);
+                TryFocusMemberEditor(member, selectAll: false);
+                e.Handled = true;
+                break;
+            case Key.Down when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
+                node.MoveMember(member, +1);
+                TryFocusMemberEditor(member, selectAll: false);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void OnCompartmentDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (_vm is null || (sender as Control)?.DataContext is not ClassNodeViewModel node)
+        {
+            return;
+        }
+
+        bool operations = (sender as Control)?.Tag as string == "operations";
+        MemberKind kind = operations
+            ? MemberKind.Operation
+            : node.IsEnum ? MemberKind.EnumLiteral : MemberKind.Field;
+        AddMemberAndEdit(node, kind, index: -1);
+        e.Handled = true;
+    }
+
+    private void OnAddFieldClick(object? sender, RoutedEventArgs e)
+    {
+        if (NodeOf(sender) is { } node)
+        {
+            AddMemberAndEdit(node, node.IsEnum ? MemberKind.EnumLiteral : MemberKind.Field, index: -1);
+        }
+    }
+
+    private void OnAddOperationClick(object? sender, RoutedEventArgs e)
+    {
+        if (NodeOf(sender) is { } node)
+        {
+            AddMemberAndEdit(node, MemberKind.Operation, index: -1);
+        }
+    }
+
+    private void OnInsertBelowClick(object? sender, RoutedEventArgs e)
+    {
+        if (MemberOf(sender) is not { } member || OwningNode(member) is not { } node)
+        {
+            return;
+        }
+
+        (_, int index) = node.Locate(member);
+        if (index >= 0)
+        {
+            AddMemberAndEdit(node, member.Model.Kind, index + 1);
+        }
+    }
+
+    private void OnMoveMemberUpClick(object? sender, RoutedEventArgs e) => MoveMember(sender, -1);
+
+    private void OnMoveMemberDownClick(object? sender, RoutedEventArgs e) => MoveMember(sender, +1);
+
+    private void OnRemoveMemberClick(object? sender, RoutedEventArgs e)
+    {
+        if (MemberOf(sender) is { } member && OwningNode(member) is { } node)
+        {
+            node.RemoveMember(member);
+        }
+    }
+
+    private void OnSetVisibilityClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: MemberVisibility visibility, DataContext: ClassMemberViewModel member })
+        {
+            member.Visibility = visibility;
+        }
+    }
+
+    private void MoveMember(object? sender, int delta)
+    {
+        if (MemberOf(sender) is { } member && OwningNode(member) is { } node)
+        {
+            node.MoveMember(member, delta);
+        }
+    }
+
+    private void CommitAndAddNext(ClassNodeViewModel node, ClassMemberViewModel member)
+    {
+        member.CommitEdit();
+        if (string.IsNullOrWhiteSpace(member.Name))
+        {
+            // Enter on an empty row finishes entry rather than spawning another blank.
+            node.DiscardEmptyNewMembers();
+            Focus();
+            return;
+        }
+
+        (_, int index) = node.Locate(member);
+        AddMemberAndEdit(node, member.Model.Kind, index + 1);
+    }
+
+    private void NavigateMember(ClassNodeViewModel node, ClassMemberViewModel member, int delta)
+    {
+        member.CommitEdit();
+        if (string.IsNullOrWhiteSpace(member.Name))
+        {
+            node.DiscardEmptyNewMembers();
+            Focus();
+            return;
+        }
+
+        (System.Collections.ObjectModel.ObservableCollection<ClassMemberViewModel> list, int index) = node.Locate(member);
+        int next = index + delta;
+        if (index < 0 || next < 0)
+        {
+            Focus();
+            return;
+        }
+
+        if (next >= list.Count)
+        {
+            // Past the end → behave like Enter and add a fresh member of the same kind.
+            AddMemberAndEdit(node, member.Model.Kind, index: -1);
+            return;
+        }
+
+        ClassMemberViewModel target = list[next];
+        target.BeginEdit();
+        TryFocusMemberEditor(target, selectAll: true);
+    }
+
+    private void AddMemberAndEdit(ClassNodeViewModel node, MemberKind kind, int index)
+    {
+        ClassMemberViewModel vm = node.InsertNewMember(kind, index);
+        TryFocusMemberEditor(vm, selectAll: false);
+    }
+
+    private void TryFocusMemberEditor(ClassMemberViewModel member, bool selectAll)
+    {
+        // Post at Loaded priority so a just-inserted row's container is realized before we focus.
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                TextBox? box = this.GetVisualDescendants()
+                    .OfType<TextBox>()
+                    .FirstOrDefault(t => ReferenceEquals(t.DataContext, member));
+                if (box is null)
+                {
+                    return;
+                }
+
+                box.Focus();
+                if (selectAll)
+                {
+                    box.SelectAll();
+                }
+                else
+                {
+                    box.CaretIndex = box.Text?.Length ?? 0;
+                }
+            },
+            DispatcherPriority.Loaded);
+    }
+
+    private ClassNodeViewModel? OwningNode(ClassMemberViewModel member) =>
+        _vm?.Nodes.OfType<ClassNodeViewModel>()
+            .FirstOrDefault(n => n.PrimaryMembers.Contains(member) || n.Operations.Contains(member));
+
+    private static ClassNodeViewModel? NodeOf(object? sender) => (sender as Control)?.DataContext as ClassNodeViewModel;
+
+    private static ClassMemberViewModel? MemberOf(object? sender) => (sender as Control)?.DataContext as ClassMemberViewModel;
+
+    private static bool IsEditingMemberOf(ClassNodeViewModel node) =>
+        node.PrimaryMembers.Concat(node.Operations).Any(m => m.IsEditing);
 
     private void EndEditing()
     {
@@ -628,6 +836,7 @@ public partial class DiagramView : UserControl
         foreach (ClassNodeViewModel klass in _vm.Nodes.OfType<ClassNodeViewModel>())
         {
             committed |= klass.CommitPendingEdits();
+            klass.DiscardEmptyNewMembers();
         }
 
         if (labelEdited || committed)

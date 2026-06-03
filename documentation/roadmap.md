@@ -54,3 +54,11 @@ Replaces the top toolbar + left tool palette with a `Carbon.Avalonia.Desktop` **
 stay. Icons come from `PhosphorIconsAvalonia`, with custom vector glyphs for the UML items it
 lacks. Adopts Carbon's palette for the chrome and as the new default shape style (soft-grey fill,
 accent-blue stroke, dark text). See `documentation/plans/2026-06-02-ui-ribbon-revamp.md`.
+
+## UML member editing — canvas-first rapid entry ✅ (cross-cutting)
+
+Adding members to a class/interface/enum is now keyboard-driven on the canvas: double-click a
+compartment (or the hover `+` button) to add, `Enter` adds the next member of the same kind,
+`Tab` / `Alt`+arrows navigate and reorder, and a right-click context menu covers
+insert/move/visibility/delete. One undo step per member; the Inspector stays as the precise
+editor. See `documentation/plans/2026-06-03-uml-member-editing-ux.md`.
