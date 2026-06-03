@@ -43,6 +43,10 @@ connectors (`Ctrl`+click / drag / `Alt`+click), and drag the source/center/targe
 `Alt`+click to reset). Reuses the selection-handle + `Ctrl`/`Alt`+click model and the memento undo.
 See `documentation/plans/2026-06-03-connector-editing.md`.
 
+Adds a fourth route style, **Rounded** — a smooth curve averaged from the bend points (rides the
+midpoints between consecutive points; a gentle S-curve when there are none), rendered as true cubic
+beziers. See `documentation/plans/2026-06-03-connector-rounded-route.md`.
+
 ## UI shell — Ribbon, icons & theming ✅ (cross-cutting)
 
 Replaces the top toolbar + left tool palette with a `Carbon.Avalonia.Desktop` **Ribbon**

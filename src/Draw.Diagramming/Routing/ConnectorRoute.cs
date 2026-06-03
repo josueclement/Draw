@@ -17,7 +17,8 @@ public sealed class ConnectorRoute
         Point2D control1,
         Point2D control2,
         Point2D startDirection,
-        Point2D endDirection)
+        Point2D endDirection,
+        IReadOnlyList<CubicSegment>? cubics = null)
     {
         Points = points;
         IsBezier = isBezier;
@@ -25,6 +26,7 @@ public sealed class ConnectorRoute
         Control2 = control2;
         StartDirection = startDirection;
         EndDirection = endDirection;
+        Cubics = cubics;
     }
 
     /// <summary>Ordered points. For a bezier this is just [start, end].</summary>
@@ -37,6 +39,12 @@ public sealed class ConnectorRoute
 
     /// <summary>Second cubic control point (valid when <see cref="IsBezier"/>).</summary>
     public Point2D Control2 { get; }
+
+    /// <summary>
+    /// The ordered cubic segments of a smooth multi-segment curve, or null for polyline/single-bezier
+    /// routes. When non-null the figure is <see cref="Start"/> followed by each segment's controls/end.
+    /// </summary>
+    public IReadOnlyList<CubicSegment>? Cubics { get; }
 
     public Point2D Start => Points[0];
 
@@ -74,6 +82,27 @@ public sealed class ConnectorRoute
         return new ConnectorRoute(new[] { start, end }, isBezier: true, control1, control2, startDir, endDir);
     }
 
+    /// <summary>A smooth curve made of one or more cubic bezier segments starting at <paramref name="start"/>.</summary>
+    public static ConnectorRoute PolyCubic(Point2D start, IReadOnlyList<CubicSegment> segments)
+    {
+        if (segments is null || segments.Count == 0)
+        {
+            throw new ArgumentException("A poly-cubic route requires at least one segment.", nameof(segments));
+        }
+
+        List<Point2D> points = new(segments.Count + 1) { start };
+        foreach (CubicSegment segment in segments)
+        {
+            points.Add(segment.End);
+        }
+
+        Point2D end = points[points.Count - 1];
+        Point2D fallback = DefaultDirection(end - start);
+        Point2D startDir = NonZeroDirectionOr(segments[0].Control1 - start, fallback);
+        Point2D endDir = NonZeroDirectionOr(end - segments[segments.Count - 1].Control2, fallback);
+        return new ConnectorRoute(points, isBezier: false, default, default, startDir, endDir, segments);
+    }
+
     private static Point2D DefaultDirection(Point2D delta)
     {
         Point2D normalized = delta.Normalized();
@@ -86,3 +115,6 @@ public sealed class ConnectorRoute
         return normalized.Length < 0.5d ? fallback : normalized;
     }
 }
+
+/// <summary>One cubic bezier segment of a <see cref="ConnectorRoute"/> curve (its start is the previous segment's end, or the route start for the first).</summary>
+public readonly record struct CubicSegment(Point2D Control1, Point2D Control2, Point2D End);

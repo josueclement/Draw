@@ -120,8 +120,8 @@ public sealed class ConnectorViewModel : ViewModelBase
     /// <summary>True when the target end is pinned to a forced anchor (vs. automatic attachment).</summary>
     public bool TargetAnchored => _model.TargetAnchor is not null;
 
-    /// <summary>True for route styles whose bend points are honoured (straight, orthogonal).</summary>
-    public bool SupportsWaypoints => _model.Route is RouteStyle.Straight or RouteStyle.Orthogonal;
+    /// <summary>True for route styles whose bend points are honoured (straight, orthogonal, rounded).</summary>
+    public bool SupportsWaypoints => _model.Route is RouteStyle.Straight or RouteStyle.Orthogonal or RouteStyle.Rounded;
 
     /// <summary>Recomputes the route and re-raises all derived properties.</summary>
     public void Recompute()
@@ -314,6 +314,23 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     private Geometry BuildLineGeometry()
     {
+        if (_route.Cubics is { } cubics)
+        {
+            StreamGeometry geometry = new();
+            using (StreamGeometryContext ctx = geometry.Open())
+            {
+                ctx.BeginFigure(ToPoint(_route.Start), isFilled: false);
+                foreach (CubicSegment segment in cubics)
+                {
+                    ctx.CubicBezierTo(ToPoint(segment.Control1), ToPoint(segment.Control2), ToPoint(segment.End));
+                }
+
+                ctx.EndFigure(false);
+            }
+
+            return geometry;
+        }
+
         if (_route.IsBezier)
         {
             StreamGeometry geometry = new();
@@ -356,6 +373,24 @@ public sealed class ConnectorViewModel : ViewModelBase
     /// <summary>The route as a flattened world-coordinate polyline (bezier curves are sampled).</summary>
     public IReadOnlyList<ModelPoint> GetFlattenedPoints()
     {
+        if (_route.Cubics is { } cubics)
+        {
+            const int perSegment = 16;
+            List<ModelPoint> samples = new((cubics.Count * perSegment) + 1) { _route.Start };
+            ModelPoint segmentStart = _route.Start;
+            foreach (CubicSegment segment in cubics)
+            {
+                for (int i = 1; i <= perSegment; i++)
+                {
+                    samples.Add(CubicAt(segmentStart, segment.Control1, segment.Control2, segment.End, i / (double)perSegment));
+                }
+
+                segmentStart = segment.End;
+            }
+
+            return samples;
+        }
+
         if (!_route.IsBezier)
         {
             return _route.Points;
