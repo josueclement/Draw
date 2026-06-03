@@ -34,4 +34,20 @@ internal static class RouteHelpers
 
         return result;
     }
+
+    /// <summary>
+    /// A unit "outward" direction: <paramref name="primary"/> if non-degenerate, else
+    /// <paramref name="fallback"/>, else +X. Used to bow a curve away from a shape boundary.
+    /// </summary>
+    public static Point2D SafeOutward(Point2D primary, Point2D fallback)
+    {
+        Point2D normalized = primary.Normalized();
+        if (normalized.Length >= 0.5d)
+        {
+            return normalized;
+        }
+
+        Point2D alternative = fallback.Normalized();
+        return alternative.Length >= 0.5d ? alternative : new Point2D(1, 0);
+    }
 }
