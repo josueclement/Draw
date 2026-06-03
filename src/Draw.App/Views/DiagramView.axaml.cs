@@ -27,11 +27,25 @@ public partial class DiagramView : UserControl
         Pan,
         Resize,
         Connect,
+        EndpointMove,
+        WaypointMove,
+        LabelMove,
     }
+
+    private enum ConnectorHitKind
+    {
+        None,
+        Endpoint,
+        Waypoint,
+        Label,
+    }
+
+    private readonly record struct ConnectorHit(ConnectorHitKind Kind, bool IsSource, int BendIndex, ConnectorLabelKind Label);
 
     private const double HandleScreenSize = 10d;
 
     private readonly List<Rectangle> _handles = new();
+    private readonly List<Control> _connectorHandles = new();
     private DiagramDocumentViewModel? _vm;
     private DragMode _mode = DragMode.None;
     private bool _undoCaptured;
@@ -45,6 +59,13 @@ public partial class DiagramView : UserControl
     private NodeViewModelBase? _connectSource;
     private Line? _connectPreview;
     private ToolboxViewModel? _toolbox;
+
+    // Connector-edit gesture state (endpoint anchor / waypoint / label drags on the selected connector).
+    private ConnectorViewModel? _editConnector;
+    private bool _editSourceEndpoint;
+    private int _editBendIndex = -1;
+    private ConnectorLabelKind _editLabelKind;
+    private Point _labelGrabDelta;
 
     public DiagramView()
     {
@@ -278,6 +299,21 @@ public partial class DiagramView : UserControl
         }
 
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        bool alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+
+        // Editing the selected connector's handles takes precedence over node hit-testing, because
+        // endpoint handles sit on the shape boundaries and would otherwise be stolen by the node.
+        if (_vm.SelectedConnector is { } selected)
+        {
+            ConnectorHit hit = HitConnector(selected, world);
+            if (hit.Kind != ConnectorHitKind.None)
+            {
+                BeginConnectorEdit(selected, hit, world, alt);
+                e.Pointer.Capture(Viewport);
+                return;
+            }
+        }
+
         NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
         {
@@ -299,6 +335,21 @@ public partial class DiagramView : UserControl
             ConnectorViewModel? connector = _vm.HitTestConnector(new Point2D(world.X, world.Y), 6d / Zoom);
             if (connector is not null)
             {
+                // Ctrl+click on a straight/orthogonal connector splits it: insert a bend point at the
+                // click and immediately drag it (one undo step covers the add + reposition).
+                if (ctrl && connector.SupportsWaypoints)
+                {
+                    _vm.CaptureUndo();
+                    _vm.SelectConnector(connector);
+                    _editConnector = connector;
+                    _editBendIndex = connector.InsertBendPointAt(new Point2D(world.X, world.Y));
+                    _mode = DragMode.WaypointMove;
+                    _undoCaptured = true;
+                    UpdateHandles();
+                    e.Pointer.Capture(Viewport);
+                    return;
+                }
+
                 _vm.SelectConnector(connector);
                 e.Pointer.Capture(Viewport);
                 return;
@@ -356,6 +407,27 @@ public partial class DiagramView : UserControl
             case DragMode.Connect:
                 UpdateConnectPreview(world);
                 break;
+
+            case DragMode.EndpointMove when _editConnector is not null:
+                EnsureUndoCaptured();
+                SetEndpointAnchor(_editConnector, _editSourceEndpoint, world);
+                UpdateHandles();
+                break;
+
+            case DragMode.WaypointMove when _editConnector is not null:
+                EnsureUndoCaptured();
+                _editConnector.MoveBendPoint(_editBendIndex, new Point2D(world.X, world.Y));
+                UpdateHandles();
+                break;
+
+            case DragMode.LabelMove when _editConnector is not null:
+                EnsureUndoCaptured();
+                Point2D natural = _editConnector.NaturalLabelAnchor(_editLabelKind);
+                _editConnector.SetLabelOffset(
+                    _editLabelKind,
+                    new Point2D((world.X + _labelGrabDelta.X) - natural.X, (world.Y + _labelGrabDelta.Y) - natural.Y));
+                UpdateHandles();
+                break;
         }
     }
 
@@ -395,6 +467,28 @@ public partial class DiagramView : UserControl
 
                     EndConnectPreview();
                     break;
+
+                case DragMode.EndpointMove:
+                    _vm.MarkModified();
+                    break;
+
+                case DragMode.WaypointMove when _editConnector is not null:
+                    if (_vm.SnapEnabled)
+                    {
+                        _editConnector.SnapBendPointToGrid(_editBendIndex, _vm.GridSize);
+                    }
+
+                    _vm.MarkModified();
+                    break;
+
+                case DragMode.LabelMove when _editConnector is not null:
+                    if (_vm.SnapEnabled)
+                    {
+                        _editConnector.SnapLabelToGrid(_editLabelKind, _vm.GridSize);
+                    }
+
+                    _vm.MarkModified();
+                    break;
             }
         }
 
@@ -403,6 +497,8 @@ public partial class DiagramView : UserControl
         _resizeHandle = -1;
         _resizeTarget = null;
         _connectSource = null;
+        _editConnector = null;
+        _editBendIndex = -1;
         e.Pointer.Capture(null);
         UpdateHandles();
     }
@@ -629,14 +725,58 @@ public partial class DiagramView : UserControl
 
         _handles.Clear();
 
-        if (_vm is null || _vm.SelectedNodes.Count() != 1)
+        foreach (Control handle in _connectorHandles)
+        {
+            Overlay.Children.Remove(handle);
+        }
+
+        _connectorHandles.Clear();
+
+        if (_vm is null)
         {
             return;
         }
 
+        if (_vm.SelectedNodes.Count() == 1)
+        {
+            double size = HandleScreenSize / Zoom;
+            IBrush stroke = new SolidColorBrush(Color.Parse("#3D7EFF"));
+            foreach (Point position in HandlePositions(_vm.SelectedNodes.First()))
+            {
+                Rectangle handle = new()
+                {
+                    Width = size,
+                    Height = size,
+                    Fill = Brushes.White,
+                    Stroke = stroke,
+                    StrokeThickness = 1d / Zoom,
+                };
+                Canvas.SetLeft(handle, position.X - (size / 2));
+                Canvas.SetTop(handle, position.Y - (size / 2));
+                Overlay.Children.Add(handle);
+                _handles.Add(handle);
+            }
+
+            return;
+        }
+
+        if (_vm.SelectedConnector is { } connector)
+        {
+            DrawConnectorHandles(connector);
+        }
+    }
+
+    // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);
+    // bend-point handles are squares — drawn on the zoom-scaled overlay like node handles.
+    private void DrawConnectorHandles(ConnectorViewModel connector)
+    {
         double size = HandleScreenSize / Zoom;
         IBrush stroke = new SolidColorBrush(Color.Parse("#3D7EFF"));
-        foreach (Point position in HandlePositions(_vm.SelectedNodes.First()))
+
+        AddEndpointHandle(connector.RouteStart, connector.SourceAnchored, size, stroke);
+        AddEndpointHandle(connector.RouteEnd, connector.TargetAnchored, size, stroke);
+
+        foreach (Point2D waypoint in connector.Waypoints)
         {
             Rectangle handle = new()
             {
@@ -646,10 +786,156 @@ public partial class DiagramView : UserControl
                 Stroke = stroke,
                 StrokeThickness = 1d / Zoom,
             };
-            Canvas.SetLeft(handle, position.X - (size / 2));
-            Canvas.SetTop(handle, position.Y - (size / 2));
+            Canvas.SetLeft(handle, waypoint.X - (size / 2));
+            Canvas.SetTop(handle, waypoint.Y - (size / 2));
             Overlay.Children.Add(handle);
-            _handles.Add(handle);
+            _connectorHandles.Add(handle);
+        }
+    }
+
+    private void AddEndpointHandle(Point2D position, bool filled, double size, IBrush stroke)
+    {
+        Ellipse handle = new()
+        {
+            Width = size,
+            Height = size,
+            Fill = filled ? stroke : Brushes.White,
+            Stroke = stroke,
+            StrokeThickness = 1d / Zoom,
+        };
+        Canvas.SetLeft(handle, position.X - (size / 2));
+        Canvas.SetTop(handle, position.Y - (size / 2));
+        Overlay.Children.Add(handle);
+        _connectorHandles.Add(handle);
+    }
+
+    // Code-based hit-testing (the connector layer is IsHitTestVisible=false). Endpoints and bend
+    // points use the precise handle tolerance; labels use an estimated text box and are lowest
+    // priority so they don't steal an endpoint grab.
+    private ConnectorHit HitConnector(ConnectorViewModel connector, Point world)
+    {
+        double tolerance = HandleScreenSize / Zoom;
+        Point2D w = new(world.X, world.Y);
+
+        if (Within(connector.RouteStart, w, tolerance))
+        {
+            return new ConnectorHit(ConnectorHitKind.Endpoint, true, -1, default);
+        }
+
+        if (Within(connector.RouteEnd, w, tolerance))
+        {
+            return new ConnectorHit(ConnectorHitKind.Endpoint, false, -1, default);
+        }
+
+        IReadOnlyList<Point2D> waypoints = connector.Waypoints;
+        for (int i = 0; i < waypoints.Count; i++)
+        {
+            if (Within(waypoints[i], w, tolerance))
+            {
+                return new ConnectorHit(ConnectorHitKind.Waypoint, false, i, default);
+            }
+        }
+
+        if (connector.HasCenterLabel && LabelHit(connector, ConnectorLabelKind.Center, connector.CenterLabelText, world))
+        {
+            return new ConnectorHit(ConnectorHitKind.Label, false, -1, ConnectorLabelKind.Center);
+        }
+
+        if (connector.HasSourceLabel && LabelHit(connector, ConnectorLabelKind.Source, connector.SourceLabelText, world))
+        {
+            return new ConnectorHit(ConnectorHitKind.Label, false, -1, ConnectorLabelKind.Source);
+        }
+
+        if (connector.HasTargetLabel && LabelHit(connector, ConnectorLabelKind.Target, connector.TargetLabelText, world))
+        {
+            return new ConnectorHit(ConnectorHitKind.Label, false, -1, ConnectorLabelKind.Target);
+        }
+
+        return new ConnectorHit(ConnectorHitKind.None, false, -1, default);
+    }
+
+    private static bool Within(Point2D a, Point2D b, double tolerance)
+        => Math.Abs(a.X - b.X) <= tolerance && Math.Abs(a.Y - b.Y) <= tolerance;
+
+    private static bool LabelHit(ConnectorViewModel connector, ConnectorLabelKind kind, string? text, Point world)
+    {
+        Point2D topLeft = connector.LabelDisplay(kind);
+        double width = Math.Max(8d, (text?.Length ?? 0) * 7d); // FontSize 11 estimate
+        const double height = 16d;
+        return world.X >= topLeft.X - 2d && world.X <= topLeft.X + width + 2d
+            && world.Y >= topLeft.Y - 2d && world.Y <= topLeft.Y + height + 2d;
+    }
+
+    private void BeginConnectorEdit(ConnectorViewModel connector, ConnectorHit hit, Point world, bool alt)
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        _editConnector = connector;
+
+        // Alt = remove/reset (a discrete action, not a drag), consistent across all three handles.
+        if (alt)
+        {
+            _vm.CaptureUndo();
+            switch (hit.Kind)
+            {
+                case ConnectorHitKind.Endpoint when hit.IsSource:
+                    connector.SetSourceAnchor(null);
+                    break;
+                case ConnectorHitKind.Endpoint:
+                    connector.SetTargetAnchor(null);
+                    break;
+                case ConnectorHitKind.Waypoint:
+                    connector.RemoveBendPoint(hit.BendIndex);
+                    break;
+                case ConnectorHitKind.Label:
+                    connector.SetLabelOffset(hit.Label, null);
+                    break;
+            }
+
+            _vm.MarkModified();
+            _mode = DragMode.None;
+            _editConnector = null;
+            UpdateHandles();
+            return;
+        }
+
+        switch (hit.Kind)
+        {
+            case ConnectorHitKind.Endpoint:
+                _editSourceEndpoint = hit.IsSource;
+                _mode = DragMode.EndpointMove;
+                break;
+            case ConnectorHitKind.Waypoint:
+                _editBendIndex = hit.BendIndex;
+                _mode = DragMode.WaypointMove;
+                break;
+            case ConnectorHitKind.Label:
+                _editLabelKind = hit.Label;
+                Point2D display = connector.LabelDisplay(hit.Label);
+                _labelGrabDelta = new Point(display.X - world.X, display.Y - world.Y);
+                _mode = DragMode.LabelMove;
+                break;
+        }
+
+        _undoCaptured = false;
+    }
+
+    private void SetEndpointAnchor(ConnectorViewModel connector, bool source, Point world)
+    {
+        Rect2D bounds = (source ? connector.Source : connector.Target).Bounds;
+        double u = bounds.Width <= 0 ? 0.5 : Math.Clamp((world.X - bounds.X) / bounds.Width, 0d, 1d);
+        double v = bounds.Height <= 0 ? 0.5 : Math.Clamp((world.Y - bounds.Y) / bounds.Height, 0d, 1d);
+        Point2D relative = new(u, v);
+        if (source)
+        {
+            connector.SetSourceAnchor(relative);
+        }
+        else
+        {
+            connector.SetTargetAnchor(relative);
         }
     }
 

@@ -18,8 +18,12 @@ public sealed class StraightRouter : IConnectorRouteStrategy
         Point2D firstToward = request.BendPoints.Count > 0 ? request.BendPoints[0] : targetCenter;
         Point2D lastToward = request.BendPoints.Count > 0 ? request.BendPoints[request.BendPoints.Count - 1] : sourceCenter;
 
-        Point2D source = ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, firstToward);
-        Point2D target = ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, lastToward);
+        Point2D source = request.SourceAnchor is { } sa
+            ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, sa)
+            : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, firstToward);
+        Point2D target = request.TargetAnchor is { } ta
+            ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, ta)
+            : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, lastToward);
 
         List<Point2D> points = new() { source };
         points.AddRange(request.BendPoints);

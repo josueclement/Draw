@@ -18,8 +18,12 @@ public sealed class BezierRouter : IConnectorRouteStrategy
         Point2D sourceCenter = request.SourceBounds.Center;
         Point2D targetCenter = request.TargetBounds.Center;
 
-        Point2D source = ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, targetCenter);
-        Point2D target = ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
+        Point2D source = request.SourceAnchor is { } sa
+            ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, sa)
+            : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, targetCenter);
+        Point2D target = request.TargetAnchor is { } ta
+            ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, ta)
+            : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
 
         double handle = Math.Max(20d, (target - source).Length * 0.4);
         Point2D outwardSource = SafeOutward(source - sourceCenter, target - source);

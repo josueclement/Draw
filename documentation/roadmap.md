@@ -35,6 +35,14 @@ Actor, use-case, system boundary; association, include/extend, generalization.
 ER→DDL (primary) and optional class→table mapping; `Draw.Export` adds SVG/PDF
 (SkiaSharp).
 
+## Connector editing — forced anchors, waypoints, movable labels ✅ (cross-cutting)
+
+Direct in-canvas control over connector geometry on top of Phase 2: pin either endpoint anywhere on
+a shape's outline (tracks move + resize), add/move/remove waypoints on straight + orthogonal
+connectors (`Ctrl`+click / drag / `Alt`+click), and drag the source/center/target labels (with
+`Alt`+click to reset). Reuses the selection-handle + `Ctrl`/`Alt`+click model and the memento undo.
+See `documentation/plans/2026-06-03-connector-editing.md`.
+
 ## UI shell — Ribbon, icons & theming ✅ (cross-cutting)
 
 Replaces the top toolbar + left tool palette with a `Carbon.Avalonia.Desktop` **Ribbon**

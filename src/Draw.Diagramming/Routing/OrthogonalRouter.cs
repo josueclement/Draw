@@ -21,8 +21,12 @@ public sealed class OrthogonalRouter : IConnectorRouteStrategy
 
         if (request.BendPoints.Count == 0)
         {
-            Point2D source = ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, targetCenter);
-            Point2D target = ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
+            Point2D source = request.SourceAnchor is { } sa0
+                ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, sa0)
+                : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, targetCenter);
+            Point2D target = request.TargetAnchor is { } ta0
+                ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, ta0)
+                : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
 
             // Overlapping nodes make the elbow self-cross; fall back to a direct segment.
             if (request.SourceBounds.IntersectsWith(request.TargetBounds))
@@ -33,8 +37,12 @@ public sealed class OrthogonalRouter : IConnectorRouteStrategy
             return ConnectorRoute.Polyline(RouteHelpers.Dedupe(BuildElbow(source, target, sourceCenter, targetCenter)));
         }
 
-        Point2D src = ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, request.BendPoints[0]);
-        Point2D tgt = ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, request.BendPoints[request.BendPoints.Count - 1]);
+        Point2D src = request.SourceAnchor is { } sa
+            ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, sa)
+            : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, request.BendPoints[0]);
+        Point2D tgt = request.TargetAnchor is { } ta
+            ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, ta)
+            : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, request.BendPoints[request.BendPoints.Count - 1]);
 
         List<Point2D> sequence = new() { src };
         sequence.AddRange(request.BendPoints);

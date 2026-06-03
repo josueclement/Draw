@@ -30,6 +30,20 @@ public static class ShapeBoundary
         return IntersectPolygon(polygon, center, direction) ?? center;
     }
 
+    /// <summary>
+    /// Resolves a forced attachment expressed as a relative (u,v) point in [0,1]² of
+    /// <paramref name="bounds"/> to a point on the shape outline. The relative point is cast as a
+    /// ray from the shape centre, so the result lands on the outline (the shape kinds in use are
+    /// convex, giving a single intersection). Falls back to the centre for degenerate bounds.
+    /// </summary>
+    public static Point2D ResolveAnchor(ShapeKind kind, Rect2D bounds, Point2D relative)
+    {
+        Point2D toward = new(
+            bounds.X + (relative.X * bounds.Width),
+            bounds.Y + (relative.Y * bounds.Height));
+        return IntersectFromCenter(kind, bounds, toward);
+    }
+
     private static Point2D IntersectEllipse(Rect2D ellipse, Point2D center, Point2D direction)
     {
         double rx = ellipse.Width / 2;
