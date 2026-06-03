@@ -102,6 +102,62 @@ public sealed class ClassNodeViewModel : NodeViewModelBase
     public void AddOperation()
         => AddMember(new ClassMember { Kind = MemberKind.Operation, Name = "operation", Visibility = MemberVisibility.Public }, Operations);
 
+    /// <summary>
+    /// Inserts a blank member of <paramref name="kind"/> at <paramref name="index"/> in its
+    /// compartment (clamped; negative ⇒ append), enters inline editing on it and returns its
+    /// view model so the caller can focus the editor. Used by the canvas add/rapid-entry flow.
+    /// </summary>
+    public ClassMemberViewModel InsertNewMember(MemberKind kind, int index)
+    {
+        _context.BeginMemberEdit();
+
+        ClassMember member = new() { Kind = kind, Visibility = MemberVisibility.Public };
+        ClassMemberViewModel vm = Wrap(member);
+        vm.IsNewlyAdded = true;
+
+        ObservableCollection<ClassMemberViewModel> list = kind == MemberKind.Operation ? Operations : PrimaryMembers;
+        int target = index < 0 || index > list.Count ? list.Count : index;
+        list.Insert(target, vm);
+        ReorderModelFromCollections();
+
+        vm.BeginEdit();
+        _context.EndMemberEdit();
+        GrowToFitContent();
+        OnPropertyChanged(nameof(MinHeight));
+        return vm;
+    }
+
+    /// <summary>Finds the compartment and index of <paramref name="member"/> (index -1 if absent).</summary>
+    public (ObservableCollection<ClassMemberViewModel> List, int Index) Locate(ClassMemberViewModel member)
+    {
+        int primary = PrimaryMembers.IndexOf(member);
+        return primary >= 0 ? (PrimaryMembers, primary) : (Operations, Operations.IndexOf(member));
+    }
+
+    /// <summary>
+    /// Removes any still-unnamed members created via the add flow (e.g. a trailing blank left by
+    /// Enter-then-Escape). Silent: the original insert already captured undo and marked dirty.
+    /// </summary>
+    public void DiscardEmptyNewMembers()
+    {
+        System.Collections.Generic.List<ClassMemberViewModel> blanks = PrimaryMembers.Concat(Operations)
+            .Where(m => m.IsNewlyAdded && string.IsNullOrWhiteSpace(m.Name))
+            .ToList();
+        if (blanks.Count == 0)
+        {
+            return;
+        }
+
+        foreach (ClassMemberViewModel m in blanks)
+        {
+            _model.Members.Remove(m.Model);
+            PrimaryMembers.Remove(m);
+            Operations.Remove(m);
+        }
+
+        OnPropertyChanged(nameof(MinHeight));
+    }
+
     public void RemoveMember(ClassMemberViewModel member)
     {
         if (member is null)

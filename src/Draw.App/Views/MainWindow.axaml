@@ -175,7 +175,14 @@
             </StackPanel>
         </Border>
 
-        <Grid ColumnDefinitions="*,260">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <!-- Inspector: resizable via the splitter; MinWidth keeps the fixed-width
+                     member rows from clipping, MaxWidth stops it eating the canvas. -->
+                <ColumnDefinition Width="260" MinWidth="220" MaxWidth="560" />
+            </Grid.ColumnDefinitions>
 
             <!-- Document tabs -->
             <TabControl Grid.Column="0"
@@ -201,9 +208,14 @@
                 </TabControl.ContentTemplate>
             </TabControl>
 
+            <!-- Drag handle between canvas and inspector. Sits in the Auto column and doubles
+                 as the divider, so the inspector border drops its left edge below. -->
+            <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns"
+                          Background="{DynamicResource CarbonBorderBrush}" />
+
             <!-- Inspector -->
-            <Border Grid.Column="1" Background="{DynamicResource CarbonSurfaceBrush}"
-                    BorderBrush="{DynamicResource CarbonBorderBrush}" BorderThickness="1,0,0,0" Padding="10">
+            <Border Grid.Column="2" Background="{DynamicResource CarbonSurfaceBrush}"
+                    Padding="10">
                 <ScrollViewer>
                     <StackPanel Spacing="10">
                         <TextBlock Text="Properties" FontWeight="SemiBold" />
