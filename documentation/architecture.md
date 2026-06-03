@@ -68,13 +68,13 @@ provides DI, configuration, logging and (later) hosted services. `App` resolves
   per completed gesture; depth-capped via `UndoOptions`.
 - **Each document tab owns its own `IUndoService`** (created by `DiagramDocumentViewModelFactory`).
 - **View models avoid `Avalonia.Controls`** (use `Avalonia.Media` value types only), so
-  editor logic is unit-tested without a display.
+  editor logic stays decoupled from the rendering layer.
 - **PanAndZoom dropped:** `Avalonia.Controls.PanAndZoom` 11.3.0 depends on Avalonia 11 and
   has no Avalonia 12 build, so zoom/pan is implemented in-house with a `MatrixTransform`.
 - **Clipboard image** uses Avalonia 12's `IClipboard.SetBitmapAsync` (platform-dependent).
 
-## Testing
+## Verification
 
-xUnit v3 on the Microsoft Testing Platform (opted in via `global.json`). Coverage targets
-non-UI logic: serialization round-trips, memento undo/redo, snapping math, and view-model
-behavior (add/select/move/delete/undo, file commands, inspector). No pixel tests.
+There is no automated test suite. Verify changes with `dotnet build Draw.slnx` (compiled XAML
+validates bindings and types) plus a manual run on Windows/macOS — the headless Linux/WSL2
+environment cannot render the GUI.

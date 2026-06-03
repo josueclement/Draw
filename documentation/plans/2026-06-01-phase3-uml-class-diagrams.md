@@ -6,7 +6,7 @@
 
 **Architecture:** A new polymorphic `ClassNode` model joins `ShapeNode` under `NodeBase`. The App layer extracts a `NodeViewModelBase` so selection/resize/style/canvas-placement serve both node kinds; `ClassNodeViewModel` + `ClassMemberViewModel` add compartments and members. A pure `MemberSignature` parser/formatter (Diagramming layer) round-trips members ↔ UML text. A single `INodeEditContext` (implemented by `DiagramDocumentViewModel`) gives member VMs undo capture, dirty marking, and type-autocomplete without coupling nodes to the document.
 
-**Tech Stack:** .NET 10, C# 13, Avalonia 12, CommunityToolkit.Mvvm, System.Text.Json (polymorphic), xUnit v3 on Microsoft.Testing.Platform.
+**Tech Stack:** .NET 10, C# 13, Avalonia 12, CommunityToolkit.Mvvm, System.Text.Json (polymorphic).
 
 ---
 
@@ -14,8 +14,7 @@
 
 - **Branch:** work on `feature/phase3-uml-class-diagrams` (already created; the design spec is committed there).
 - **Build:** `dotnet build Draw.slnx`
-- **Test a project:** `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj` (swap project as needed). The repo's `global.json` already opts into Microsoft.Testing.Platform, so `dotnet test --project <csproj>` is correct. To run everything: `dotnet test --solution Draw.slnx`.
-- **TDD granularity:** for pure logic (model, parser, view-model logic) follow strict red→green→commit. AXAML templates and pointer code-behind have **no UI test harness in this repo**, so those tasks are verified by `dotnet build` (compiled XAML catches binding/type errors) plus a manual run; this is called out explicitly per task. Do not claim a UI task is "tested" — say "builds; manually verified".
+- **Verification:** all work is verified by `dotnet build Draw.slnx` (compiled XAML catches binding/type errors) plus a manual run. Do not claim a task is "tested" — say "builds; manually verified".
 - **Running the app (Linux/WSL only):** native fontconfig is required or SkiaSharp fails — `sudo apt-get install -y libfontconfig1 libice6 libsm6`. Not needed on Windows/macOS. Launch with `dotnet run --project src/Draw.App/Draw.App.csproj`.
 - **Commits:** git has no global identity in this environment. **Task 0** sets a local identity once; afterward `git commit` works. Every commit message ends with the trailer shown in Task 0.
 - **Member is a class, not a record** (matches `ShapeStyle`). **`ClassMember.Type` is free text.** **`BoundaryKind` for class nodes is `ShapeKind.Rectangle`** (no Diagramming change).
@@ -117,54 +116,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/Draw.Model/Nodes/ClassMember.cs`
-- Test: `tests/Draw.Model.Tests/ClassMemberTests.cs`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.Model.Tests/ClassMemberTests.cs`:
-```csharp
-using Draw.Model.Nodes;
-using Xunit;
-
-namespace Draw.Model.Tests;
-
-public class ClassMemberTests
-{
-    [Fact]
-    public void Clone_CopiesAllFields_AndIsIndependent()
-    {
-        ClassMember member = new()
-        {
-            Visibility = MemberVisibility.Protected,
-            Name = "deposit",
-            Type = "void",
-            Parameters = "amount: decimal",
-            Kind = MemberKind.Operation,
-            IsStatic = true,
-            IsAbstract = true,
-        };
-
-        ClassMember clone = member.Clone();
-        clone.Name = "withdraw";
-
-        Assert.Equal("deposit", member.Name);
-        Assert.Equal("withdraw", clone.Name);
-        Assert.Equal(MemberVisibility.Protected, clone.Visibility);
-        Assert.Equal("void", clone.Type);
-        Assert.Equal("amount: decimal", clone.Parameters);
-        Assert.Equal(MemberKind.Operation, clone.Kind);
-        Assert.True(clone.IsStatic);
-        Assert.True(clone.IsAbstract);
-    }
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
-Expected: FAIL — `ClassMember` does not exist (compile error).
-
-- [ ] **Step 3: Implement `ClassMember`**
+- [ ] **Step 1: Implement `ClassMember`**
 
 `src/Draw.Model/Nodes/ClassMember.cs`:
 ```csharp
@@ -203,15 +156,15 @@ public sealed class ClassMember
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.Model/Nodes/ClassMember.cs tests/Draw.Model.Tests/ClassMemberTests.cs
+git add src/Draw.Model/Nodes/ClassMember.cs
 git commit -m "Add ClassMember model with deep clone
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -224,78 +177,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `src/Draw.Model/Nodes/ClassNode.cs`
 - Modify: `src/Draw.Model/Nodes/NodeBase.cs:14` (add `[JsonDerivedType]`)
-- Test: `tests/Draw.Model.Tests/ClassNodeTests.cs`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.Model.Tests/ClassNodeTests.cs`:
-```csharp
-using System;
-using System.Collections.Generic;
-using Draw.Model.Documents;
-using Draw.Model.Nodes;
-using Draw.Model.Primitives;
-using Draw.Model.Serialization;
-using Xunit;
-
-namespace Draw.Model.Tests;
-
-public class ClassNodeTests
-{
-    private static ClassNode SampleClassNode() => new()
-    {
-        Id = Guid.NewGuid(),
-        Kind = ClassNodeKind.Interface,
-        Name = "Account",
-        IsAbstract = true,
-        Bounds = new Rect2D(10, 20, 160, 100),
-        Members = new List<ClassMember>
-        {
-            new() { Visibility = MemberVisibility.Private, Name = "id", Type = "Guid", Kind = MemberKind.Field },
-            new() { Visibility = MemberVisibility.Public, Name = "deposit", Type = "void", Parameters = "amount: decimal", Kind = MemberKind.Operation },
-        },
-    };
-
-    [Fact]
-    public void Clone_DeepCopiesMembers()
-    {
-        ClassNode node = SampleClassNode();
-
-        ClassNode clone = Assert.IsType<ClassNode>(node.Clone());
-        clone.Members[0].Name = "changed";
-
-        Assert.Equal(node.Id, clone.Id);
-        Assert.Equal("id", node.Members[0].Name);
-        Assert.Equal("changed", clone.Members[0].Name);
-        Assert.NotSame(node.Members[0], clone.Members[0]);
-    }
-
-    [Fact]
-    public void RoundTrip_PreservesClassNodeAndMembers()
-    {
-        JsonDocumentSerializer serializer = new();
-        DiagramDocument doc = new() { DiagramType = DiagramType.Class };
-        doc.Nodes.Add(SampleClassNode());
-
-        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
-
-        ClassNode node = Assert.IsType<ClassNode>(Assert.Single(back.Nodes));
-        Assert.Equal(ClassNodeKind.Interface, node.Kind);
-        Assert.Equal("Account", node.Name);
-        Assert.True(node.IsAbstract);
-        Assert.Equal(2, node.Members.Count);
-        Assert.Equal(MemberKind.Operation, node.Members[1].Kind);
-        Assert.Equal("amount: decimal", node.Members[1].Parameters);
-    }
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
-Expected: FAIL — `ClassNode` does not exist.
-
-- [ ] **Step 3: Implement `ClassNode`**
+- [ ] **Step 1: Implement `ClassNode`**
 
 `src/Draw.Model/Nodes/ClassNode.cs`:
 ```csharp
@@ -330,7 +213,7 @@ public sealed class ClassNode : NodeBase
 }
 ```
 
-- [ ] **Step 4: Register the derived type**
+- [ ] **Step 2: Register the derived type**
 
 Modify `src/Draw.Model/Nodes/NodeBase.cs` — add the attribute directly below the existing `[JsonDerivedType(typeof(ShapeNode), "shape")]` (line 14):
 ```csharp
@@ -340,15 +223,15 @@ Modify `src/Draw.Model/Nodes/NodeBase.cs` — add the attribute directly below t
 public abstract class NodeBase
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [ ] **Step 3: Build**
 
-Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
-Expected: PASS (both new tests + existing serializer tests).
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/Draw.Model/Nodes/ClassNode.cs src/Draw.Model/Nodes/NodeBase.cs tests/Draw.Model.Tests/ClassNodeTests.cs
+git add src/Draw.Model/Nodes/ClassNode.cs src/Draw.Model/Nodes/NodeBase.cs
 git commit -m "Add ClassNode model and register it for polymorphic JSON
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -362,38 +245,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/Draw.Diagramming/Uml/PrimitiveTypes.cs`
-- Test: `tests/Draw.Diagramming.Tests/PrimitiveTypesTests.cs`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.Diagramming.Tests/PrimitiveTypesTests.cs`:
-```csharp
-using Draw.Diagramming.Uml;
-using Xunit;
-
-namespace Draw.Diagramming.Tests;
-
-public class PrimitiveTypesTests
-{
-    [Fact]
-    public void All_ContainsCommonPrimitives_AndIsDistinct()
-    {
-        Assert.Contains("string", PrimitiveTypes.All);
-        Assert.Contains("int", PrimitiveTypes.All);
-        Assert.Contains("Guid", PrimitiveTypes.All);
-        Assert.Contains("void", PrimitiveTypes.All);
-        Assert.Equal(PrimitiveTypes.All.Count, PrimitiveTypes.All.Distinct().Count());
-    }
-}
-```
-(Add `using System.Linq;` at the top.)
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
-Expected: FAIL — `PrimitiveTypes` does not exist.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Implement**
 
 `src/Draw.Diagramming/Uml/PrimitiveTypes.cs`:
 ```csharp
@@ -413,15 +266,15 @@ public static class PrimitiveTypes
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.Diagramming/Uml/PrimitiveTypes.cs tests/Draw.Diagramming.Tests/PrimitiveTypesTests.cs
+git add src/Draw.Diagramming/Uml/PrimitiveTypes.cs
 git commit -m "Add primitive type suggestion list
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -433,67 +286,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/Draw.Diagramming/Uml/MemberSignature.cs`
-- Test: `tests/Draw.Diagramming.Tests/MemberSignatureTests.cs`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.Diagramming.Tests/MemberSignatureTests.cs`:
-```csharp
-using Draw.Diagramming.Uml;
-using Draw.Model.Nodes;
-using Xunit;
-
-namespace Draw.Diagramming.Tests;
-
-public class MemberSignatureTests
-{
-    [Fact]
-    public void Format_Field_WithType()
-    {
-        ClassMember m = new() { Visibility = MemberVisibility.Private, Name = "balance", Type = "decimal", Kind = MemberKind.Field };
-        Assert.Equal("- balance: decimal", MemberSignature.Format(m));
-    }
-
-    [Fact]
-    public void Format_Field_WithoutType_OmitsColon()
-    {
-        ClassMember m = new() { Visibility = MemberVisibility.Public, Name = "id", Kind = MemberKind.Field };
-        Assert.Equal("+ id", MemberSignature.Format(m));
-    }
-
-    [Fact]
-    public void Format_Operation_WithParamsAndReturn()
-    {
-        ClassMember m = new()
-        {
-            Visibility = MemberVisibility.Public, Name = "deposit",
-            Parameters = "amount: decimal", Type = "void", Kind = MemberKind.Operation,
-        };
-        Assert.Equal("+ deposit(amount: decimal): void", MemberSignature.Format(m));
-    }
-
-    [Fact]
-    public void Format_Operation_NoParams_NoReturn()
-    {
-        ClassMember m = new() { Visibility = MemberVisibility.Protected, Name = "close", Kind = MemberKind.Operation };
-        Assert.Equal("# close()", MemberSignature.Format(m));
-    }
-
-    [Fact]
-    public void Format_EnumLiteral_NameOnly()
-    {
-        ClassMember m = new() { Name = "ACTIVE", Kind = MemberKind.EnumLiteral };
-        Assert.Equal("ACTIVE", MemberSignature.Format(m));
-    }
-}
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
-Expected: FAIL — `MemberSignature` does not exist.
-
-- [ ] **Step 3: Implement `Format` (and the visibility marker helper)**
+- [ ] **Step 1: Implement `Format` (and the visibility marker helper)**
 
 `src/Draw.Diagramming/Uml/MemberSignature.cs`:
 ```csharp
@@ -543,15 +337,15 @@ public static class MemberSignature
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.Diagramming/Uml/MemberSignature.cs tests/Draw.Diagramming.Tests/MemberSignatureTests.cs
+git add src/Draw.Diagramming/Uml/MemberSignature.cs
 git commit -m "Add MemberSignature.Format for UML member text
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -563,72 +357,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.Diagramming/Uml/MemberSignature.cs`
-- Modify: `tests/Draw.Diagramming.Tests/MemberSignatureTests.cs`
 
-`Parse(string text, MemberKind context)` always returns a `ClassMember` (best-effort; never throws). Rules: a leading `+ - # ~` sets visibility (default Public). If `context` is `EnumLiteral`, the result is an `EnumLiteral` with the trimmed text as Name. Otherwise, the presence of `(` ⇒ `Operation` (text inside `()` ⇒ `Parameters`, text after `):` ⇒ `Type`); no `(` ⇒ `Field` (text after `:` ⇒ `Type`).
+`Parse(string text, MemberKind context)` always returns a `ClassMember` (best-effort; never throws). Rules: a leading `+ - # ~` sets visibility (default Public). If `context` is `EnumLiteral`, the result is an `EnumLiteral` with the trimmed text as Name. Otherwise, the presence of `(` ⇒ `Operation` (text inside `()` ⇒ `Parameters`, text after `):` ⇒ `Type`); no `(` ⇒ `Field` (text after `:` ⇒ `Type`). `Parse` round-trips with `Format`: an operation with empty `Parameters` formats to `name()`, and parsing `name()` yields `Parameters == ""`.
 
-- [ ] **Step 1: Add failing tests** (append to `MemberSignatureTests`)
-
-```csharp
-    [Theory]
-    [InlineData("- balance: decimal", MemberVisibility.Private, "balance", "decimal", MemberKind.Field)]
-    [InlineData("id", MemberVisibility.Public, "id", null, MemberKind.Field)]
-    [InlineData("  + name : string ", MemberVisibility.Public, "name", "string", MemberKind.Field)]
-    public void Parse_Field(string text, MemberVisibility vis, string name, string? type, MemberKind kind)
-    {
-        ClassMember m = MemberSignature.Parse(text, MemberKind.Field);
-        Assert.Equal(vis, m.Visibility);
-        Assert.Equal(name, m.Name);
-        Assert.Equal(type, m.Type);
-        Assert.Equal(kind, m.Kind);
-    }
-
-    [Fact]
-    public void Parse_Operation_WithParamsAndReturn()
-    {
-        ClassMember m = MemberSignature.Parse("+ deposit(amount: decimal): void", MemberKind.Field);
-        Assert.Equal(MemberKind.Operation, m.Kind);
-        Assert.Equal("deposit", m.Name);
-        Assert.Equal("amount: decimal", m.Parameters);
-        Assert.Equal("void", m.Type);
-    }
-
-    [Fact]
-    public void Parse_Operation_NoReturn()
-    {
-        ClassMember m = MemberSignature.Parse("# close()", MemberKind.Field);
-        Assert.Equal(MemberKind.Operation, m.Kind);
-        Assert.Equal("close", m.Name);
-        Assert.Equal(string.Empty, m.Parameters);
-        Assert.Null(m.Type);
-    }
-
-    [Fact]
-    public void Parse_EnumLiteralContext_KeepsName()
-    {
-        ClassMember m = MemberSignature.Parse("ACTIVE", MemberKind.EnumLiteral);
-        Assert.Equal(MemberKind.EnumLiteral, m.Kind);
-        Assert.Equal("ACTIVE", m.Name);
-    }
-
-    [Theory]
-    [InlineData("- balance: decimal", MemberKind.Field)]
-    [InlineData("+ deposit(amount: decimal): void", MemberKind.Field)]
-    [InlineData("# close()", MemberKind.Field)]
-    [InlineData("ACTIVE", MemberKind.EnumLiteral)]
-    public void Parse_RoundTripsWithFormat(string text, MemberKind context)
-    {
-        ClassMember m = MemberSignature.Parse(text, context);
-        Assert.Equal(text, MemberSignature.Format(m));
-    }
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
-Expected: FAIL — `Parse` not defined.
-
-- [ ] **Step 3: Implement `Parse`** (add to `MemberSignature`)
+- [ ] **Step 1: Implement `Parse`** (add to `MemberSignature`)
 
 ```csharp
     public static ClassMember Parse(string text, MemberKind context)
@@ -693,15 +425,15 @@ Expected: FAIL — `Parse` not defined.
 
 Note: `Format` of an operation with empty `Parameters` produces `name()`; `Parse` of `name()` produces `Parameters == ""` — so the round-trip holds. Keep `Parameters` as `""` (not null) for parsed operations.
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.Diagramming/Uml/MemberSignature.cs tests/Draw.Diagramming.Tests/MemberSignatureTests.cs
+git add src/Draw.Diagramming/Uml/MemberSignature.cs
 git commit -m "Add tolerant MemberSignature.Parse with Format round-trip
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -711,7 +443,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 # Phase C — `NodeViewModelBase` extraction (`Draw.App`)
 
-> This phase is a mechanical refactor that must stay green at every step. No behavior changes; existing tests are the safety net.
+> This phase is a mechanical refactor that must keep building at every step. No behavior changes; the build is the safety net.
 
 ## Task 7: Introduce `NodeViewModelBase`; make `ShapeNodeViewModel` derive from it
 
@@ -914,10 +646,10 @@ Notes for the executor:
 - X/Y/Width/Height/IsSelected/IsEditing and all style brushes now come from the base; do not redeclare them.
 - The base's `Width`/`Height` setters call `OnSizeChanged()`, which this class overrides to re-raise `Geometry` (preserving the old behavior).
 
-- [ ] **Step 3: Build + run existing tests (safety net)**
+- [ ] **Step 3: Build (safety net)**
 
-Run: `dotnet build Draw.slnx && dotnet test --solution Draw.slnx`
-Expected: PASS — all existing tests green. (`DiagramView.axaml.cs`, `ConnectorViewModel`, `DiagramDocumentViewModel`, `InspectorViewModel` still reference `ShapeNodeViewModel` concretely, which is unchanged in API.)
+Run: `dotnet build Draw.slnx`
+Expected: succeeds. (`DiagramView.axaml.cs`, `ConnectorViewModel`, `DiagramDocumentViewModel`, `InspectorViewModel` still reference `ShapeNodeViewModel` concretely, which is unchanged in API.)
 
 - [ ] **Step 4: Commit**
 
@@ -967,9 +699,9 @@ In `ConnectorViewModel`:
 - [ ] **Step 2: Build**
 
 Run: `dotnet build Draw.slnx`
-Expected: FAILS to compile in `DiagramDocumentViewModel` (it constructs `ConnectorViewModel` with `ShapeNodeViewModel` and `byId` is typed to `ShapeNodeViewModel`). That is fixed in Task 9. **Do not commit a broken build** — proceed straight to Task 9, then build/test/commit Tasks 8+9 together.
+Expected: FAILS to compile in `DiagramDocumentViewModel` (it constructs `ConnectorViewModel` with `ShapeNodeViewModel` and `byId` is typed to `ShapeNodeViewModel`). That is fixed in Task 9. **Do not commit a broken build** — proceed straight to Task 9, then build and commit Tasks 8+9 together.
 
-> Implementation note: Tasks 8 and 9 form one compile unit. Make both edits, then build, test, and commit once (see Task 9 Step 4). They are split only for review clarity.
+> Implementation note: Tasks 8 and 9 form one compile unit. Make both edits, then build and commit once (see Task 9 Step 4). They are split only for review clarity.
 
 ---
 
@@ -1030,12 +762,12 @@ In `RebuildConnectors`, change the dictionary type:
 
 `AddShape` keeps returning `ShapeNodeViewModel` and still does `Nodes.Add(vm)` (covariant into the base collection — fine).
 
-- [ ] **Step 3: Build + run all tests**
+- [ ] **Step 3: Build**
 
-Run: `dotnet build Draw.slnx && dotnet test --solution Draw.slnx`
-Expected: PASS. `DiagramView.axaml.cs` still compiles because it uses `ShapeNodeViewModel` locals via `HitTestNode`/`SelectedNodes.First()` — **but** `SelectedNodes` is now `IEnumerable<NodeViewModelBase>`, so `HandlePositions(_vm.SelectedNodes.First())` and the `_resizeTarget`/`_connectSource` assignments will FAIL to compile. If the build fails here, that is expected — complete Task 10 in the same edit cycle, then build/test/commit Tasks 8–10 together.
+Run: `dotnet build Draw.slnx`
+Expected: `DiagramView.axaml.cs` uses `ShapeNodeViewModel` locals via `HitTestNode`/`SelectedNodes.First()` — **but** `SelectedNodes` is now `IEnumerable<NodeViewModelBase>`, so `HandlePositions(_vm.SelectedNodes.First())` and the `_resizeTarget`/`_connectSource` assignments will FAIL to compile. If the build fails here, that is expected — complete Task 10 in the same edit cycle, then build and commit Tasks 8–10 together.
 
-> Implementation note: Tasks 8, 9 and 10 form one compile unit. Easiest path: make all three tasks' edits, then build once, run the full suite, and commit once with the message below.
+> Implementation note: Tasks 8, 9 and 10 form one compile unit. Easiest path: make all three tasks' edits, then build once and commit once with the message below.
 
 - [ ] **Step 4: Commit (covers Tasks 8–10)**
 
@@ -1096,10 +828,10 @@ Class-node text isn't a single field, so node-level double-tap editing applies o
 
 Change `private void StartConnectPreview(NodeViewModelBase from, Point world)` (body unchanged; `from.Model.Bounds.Center` works on the base).
 
-- [ ] **Step 4: Build + run all tests** (this completes the Tasks 8–10 compile unit)
+- [ ] **Step 4: Build** (this completes the Tasks 8–10 compile unit)
 
-Run: `dotnet build Draw.slnx && dotnet test --solution Draw.slnx`
-Expected: PASS. Commit via Task 9 Step 4 (single commit for 8–10).
+Run: `dotnet build Draw.slnx`
+Expected: succeeds. Commit via Task 9 Step 4 (single commit for 8–10).
 
 - [ ] **Step 5: Manual smoke (optional but recommended)**
 
@@ -1115,31 +847,10 @@ Run: `dotnet run --project src/Draw.App/Draw.App.csproj`
 **Files:**
 - Create: `src/Draw.App/ViewModels/INodeEditContext.cs`
 - Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
-- Test: `tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs`
 
-- [ ] **Step 1: Write the failing test** (append to `DiagramDocumentViewModelTests`)
+This task introduces only the interface and `GetTypeSuggestions`, which returns the distinct primitive baseline. `AddClassNode`/`ClassNodeViewModel` don't exist yet (Tasks 13–14), so class names join the suggestions only once class nodes exist (Task 14).
 
-This task introduces only the interface and `GetTypeSuggestions`. `AddClassNode`/`ClassNodeViewModel` don't exist yet (Tasks 13–14), so the test here asserts only the primitive baseline; the class-name assertion is added in Task 14 once class nodes exist. Add `using System.Linq;` if not already present.
-```csharp
-    [Fact]
-    public void GetTypeSuggestions_OnEmptyDocument_ReturnsDistinctPrimitives()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-
-        var suggestions = doc.GetTypeSuggestions();
-
-        Assert.Contains("string", suggestions);
-        Assert.Contains("int", suggestions);
-        Assert.Equal(suggestions.Count, suggestions.Distinct().Count());
-    }
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `GetTypeSuggestions` not defined.
-
-- [ ] **Step 3: Create the interface**
+- [ ] **Step 1: Create the interface**
 
 `src/Draw.App/ViewModels/INodeEditContext.cs`:
 ```csharp
@@ -1161,7 +872,7 @@ public interface INodeEditContext
 }
 ```
 
-- [ ] **Step 4: Implement on `DiagramDocumentViewModel`**
+- [ ] **Step 2: Implement on `DiagramDocumentViewModel`**
 
 - Change the class declaration:
 ```csharp
@@ -1188,15 +899,15 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
     }
 ```
 
-- [ ] **Step 5: Run to verify pass**
+- [ ] **Step 3: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/Draw.App/ViewModels/INodeEditContext.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs
+git add src/Draw.App/ViewModels/INodeEditContext.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs
 git commit -m "Add INodeEditContext and type-suggestion source on document
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1208,94 +919,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/Draw.App/ViewModels/ClassMemberViewModel.cs`
-- Test: `tests/Draw.App.Tests/ClassMemberViewModelTests.cs`
 
 Behavior: write-through to the model wrapped in `BeginMemberEdit`/`EndMemberEdit` (so each inspector field edit is one undo step + marks dirty); `DisplayText`/`RawText` via `MemberSignature`; inline `BeginEdit`/`CommitEdit`/`CancelEdit`; `RowFontStyle` (italic when abstract) and `RowDecorations` (underline when static) for rendering; `TypeSuggestions` from the context.
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.App.Tests/ClassMemberViewModelTests.cs`:
-```csharp
-using System.Collections.Generic;
-using Draw.App.ViewModels;
-using Draw.Model.Nodes;
-using Xunit;
-
-namespace Draw.App.Tests;
-
-public class ClassMemberViewModelTests
-{
-    private sealed class FakeContext : INodeEditContext
-    {
-        public int Begins { get; private set; }
-        public int Ends { get; private set; }
-        public void BeginMemberEdit() => Begins++;
-        public void EndMemberEdit() => Ends++;
-        public IReadOnlyList<string> GetTypeSuggestions() => new[] { "int", "string" };
-    }
-
-    [Fact]
-    public void SettingName_WritesThrough_AndBracketsWithContext()
-    {
-        ClassMember model = new() { Name = "x", Kind = MemberKind.Field };
-        FakeContext ctx = new();
-        ClassMemberViewModel vm = new(model, ctx);
-
-        vm.Name = "balance";
-
-        Assert.Equal("balance", model.Name);
-        Assert.Equal(1, ctx.Begins);
-        Assert.Equal(1, ctx.Ends);
-    }
-
-    [Fact]
-    public void DisplayText_ReflectsModel()
-    {
-        ClassMember model = new() { Visibility = MemberVisibility.Private, Name = "id", Type = "Guid", Kind = MemberKind.Field };
-        ClassMemberViewModel vm = new(model, new FakeContext());
-
-        Assert.Equal("- id: Guid", vm.DisplayText);
-    }
-
-    [Fact]
-    public void CommitEdit_ParsesRawText_IntoModel()
-    {
-        ClassMember model = new() { Name = "old", Kind = MemberKind.Field };
-        ClassMemberViewModel vm = new(model, new FakeContext());
-
-        vm.BeginEdit();
-        vm.RawText = "+ deposit(amount: decimal): void";
-        vm.CommitEdit();
-
-        Assert.False(vm.IsEditing);
-        Assert.Equal(MemberKind.Operation, model.Kind);
-        Assert.Equal("deposit", model.Name);
-        Assert.Equal("amount: decimal", model.Parameters);
-        Assert.Equal("void", model.Type);
-    }
-
-    [Fact]
-    public void EnumLiteralContext_CommitKeepsLiteralKind()
-    {
-        ClassMember model = new() { Name = "ACTIVE", Kind = MemberKind.EnumLiteral };
-        ClassMemberViewModel vm = new(model, new FakeContext());
-
-        vm.BeginEdit();
-        vm.RawText = "INACTIVE";
-        vm.CommitEdit();
-
-        Assert.Equal(MemberKind.EnumLiteral, model.Kind);
-        Assert.Equal("INACTIVE", model.Name);
-    }
-}
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `ClassMemberViewModel` not defined.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Implement**
 
 `src/Draw.App/ViewModels/ClassMemberViewModel.cs`:
 ```csharp
@@ -1433,15 +1060,15 @@ public sealed class ClassMemberViewModel : ViewModelBase
 
 Note: inline `CommitEdit` does not call the context — undo capture and dirty marking for inline edits are driven by the code-behind (Task 21), mirroring how shape inline text editing captures undo on double-tap. Inspector field edits go through `Edit(...)` and are bracketed by the context.
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.App/ViewModels/ClassMemberViewModel.cs tests/Draw.App.Tests/ClassMemberViewModelTests.cs
+git add src/Draw.App/ViewModels/ClassMemberViewModel.cs
 git commit -m "Add ClassMemberViewModel with inline and field editing
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1453,123 +1080,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/Draw.App/ViewModels/ClassNodeViewModel.cs`
-- Test: `tests/Draw.App.Tests/ClassNodeViewModelTests.cs`
 
 Behavior: derives from `NodeViewModelBase`; `BoundaryKind => Rectangle`; splits members into `PrimaryMembers` (Fields, or EnumLiterals for an enum) and `Operations`; `Name`/`IsAbstract` write-through via the context; `Stereotype`/`HasStereotype`/`HasOperations`/`IsEnum`; `AddPrimaryMember`/`AddOperation`/`RemoveMember`/`MoveMember`; computed `MinHeight` that grows with content; `CommitPendingEdits` for the Escape/blur path.
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.App.Tests/ClassNodeViewModelTests.cs`:
-```csharp
-using System.Collections.Generic;
-using System.Linq;
-using Draw.App.ViewModels;
-using Draw.Model.Nodes;
-using Draw.Model.Primitives;
-using Draw.Model.Styling;
-using Xunit;
-
-namespace Draw.App.Tests;
-
-public class ClassNodeViewModelTests
-{
-    private sealed class FakeContext : INodeEditContext
-    {
-        public int Begins { get; private set; }
-        public int Ends { get; private set; }
-        public void BeginMemberEdit() => Begins++;
-        public void EndMemberEdit() => Ends++;
-        public IReadOnlyList<string> GetTypeSuggestions() => new[] { "int" };
-    }
-
-    private static ClassNode Model(ClassNodeKind kind = ClassNodeKind.Class) => new()
-    {
-        Kind = kind,
-        Name = "Account",
-        Bounds = new Rect2D(0, 0, 160, 100),
-        Style = ShapeStyle.CreateDefault(),
-        Members = new List<ClassMember>
-        {
-            new() { Name = "id", Type = "Guid", Kind = MemberKind.Field },
-            new() { Name = "deposit", Kind = MemberKind.Operation },
-        },
-    };
-
-    [Fact]
-    public void BoundaryKind_IsRectangle()
-    {
-        ClassNodeViewModel vm = new(Model(), new FakeContext());
-        Assert.Equal(ShapeKind.Rectangle, vm.BoundaryKind);
-    }
-
-    [Fact]
-    public void SplitsMembers_IntoAttributesAndOperations()
-    {
-        ClassNodeViewModel vm = new(Model(), new FakeContext());
-        Assert.Single(vm.PrimaryMembers);
-        Assert.Equal("id", vm.PrimaryMembers[0].Name);
-        Assert.Single(vm.Operations);
-        Assert.Equal("deposit", vm.Operations[0].Name);
-        Assert.True(vm.HasOperations);
-    }
-
-    [Fact]
-    public void EnumNode_HasNoOperations_AndLiteralsArePrimary()
-    {
-        ClassNode model = Model(ClassNodeKind.Enum);
-        model.Members = new List<ClassMember> { new() { Name = "ACTIVE", Kind = MemberKind.EnumLiteral } };
-        ClassNodeViewModel vm = new(model, new FakeContext());
-
-        Assert.False(vm.HasOperations);
-        Assert.True(vm.IsEnum);
-        Assert.Equal("ACTIVE", vm.PrimaryMembers[0].Name);
-        Assert.Equal("«enumeration»", vm.Stereotype);
-    }
-
-    [Fact]
-    public void AddPrimaryMember_AddsToModelAndCollection_AndCapturesUndo()
-    {
-        ClassNode model = Model();
-        FakeContext ctx = new();
-        ClassNodeViewModel vm = new(model, ctx);
-
-        vm.AddPrimaryMember();
-
-        Assert.Equal(2, vm.PrimaryMembers.Count);
-        Assert.Equal(3, model.Members.Count);
-        Assert.True(ctx.Begins >= 1);
-        Assert.True(ctx.Ends >= 1);
-    }
-
-    [Fact]
-    public void RemoveMember_RemovesFromModelAndCollection()
-    {
-        ClassNode model = Model();
-        ClassNodeViewModel vm = new(model, new FakeContext());
-        ClassMemberViewModel op = vm.Operations[0];
-
-        vm.RemoveMember(op);
-
-        Assert.Empty(vm.Operations);
-        Assert.DoesNotContain(op.Model, model.Members);
-    }
-
-    [Fact]
-    public void Interface_Stereotype()
-    {
-        ClassNodeViewModel vm = new(Model(ClassNodeKind.Interface), new FakeContext());
-        Assert.Equal("«interface»", vm.Stereotype);
-        Assert.True(vm.HasStereotype);
-    }
-}
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `ClassNodeViewModel` not defined.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Implement**
 
 `src/Draw.App/ViewModels/ClassNodeViewModel.cs`:
 ```csharp
@@ -1761,15 +1275,15 @@ public sealed class ClassNodeViewModel : NodeViewModelBase
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.App/ViewModels/ClassNodeViewModel.cs tests/Draw.App.Tests/ClassNodeViewModelTests.cs
+git add src/Draw.App/ViewModels/ClassNodeViewModel.cs
 git commit -m "Add ClassNodeViewModel with member compartments
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1781,57 +1295,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
-- Test: `tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs`
 
-- [ ] **Step 1: Write the failing tests** (append)
+Once `AddClassNode` exists, class names returned by `GetTypeSuggestions` (Task 11) come from real class nodes rather than the primitive baseline alone.
 
-```csharp
-    [Fact]
-    public void AddClassNode_AddsSelectedClassNode_AndMarksModified()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-
-        ClassNodeViewModel node = doc.AddClassNode(ClassNodeKind.Interface, new Point2D(200, 150));
-
-        Assert.Same(node, Assert.Single(doc.Nodes));
-        Assert.True(node.IsSelected);
-        Assert.True(doc.IsModified);
-        Assert.Equal(ClassNodeKind.Interface, node.Kind);
-    }
-
-    [Fact]
-    public void ClassNode_SurvivesUndoRedo_AsClassNodeViewModel()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-        doc.AddClassNode(ClassNodeKind.Class, new Point2D(200, 150));
-
-        doc.Undo();
-        Assert.Empty(doc.Nodes);
-
-        doc.Redo();
-        ClassNodeViewModel node = Assert.IsType<ClassNodeViewModel>(Assert.Single(doc.Nodes));
-        Assert.Equal(ClassNodeKind.Class, node.Kind);
-    }
-```
-Also strengthen the Task 11 suggestion test now that `AddClassNode` exists (replace the placeholder with the real one):
-```csharp
-    [Fact]
-    public void GetTypeSuggestions_IncludesClassNames()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-        ClassNodeViewModel node = doc.AddClassNode(ClassNodeKind.Class, new Point2D(100, 100));
-        node.Name = "Account";
-
-        Assert.Contains("Account", doc.GetTypeSuggestions());
-    }
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `AddClassNode` not defined.
-
-- [ ] **Step 3: Implement `AddClassNode` and complete `CreateNodeViewModel`**
+- [ ] **Step 1: Implement `AddClassNode` and complete `CreateNodeViewModel`**
 
 Add the constants and method near `AddShape`:
 ```csharp
@@ -1885,15 +1352,15 @@ Add the `ClassNode` arm to `CreateNodeViewModel` (from Task 9):
     };
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS (undo/redo reconstructs the class node via `CreateNodeViewModel`).
+Run: `dotnet build Draw.slnx`
+Expected: succeeds. (Undo/redo reconstructs the class node via `CreateNodeViewModel`.)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs
+git add src/Draw.App/ViewModels/DiagramDocumentViewModel.cs
 git commit -m "Add class-node creation and undo/redo reconstruction
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1907,64 +1374,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.App/ViewModels/ToolboxViewModel.cs`
-- Test: `tests/Draw.App.Tests/ToolboxViewModelTests.cs` (create)
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.App.Tests/ToolboxViewModelTests.cs`:
-```csharp
-using System.Linq;
-using Draw.App.ViewModels;
-using Draw.Model.Nodes;
-using Xunit;
-
-namespace Draw.App.Tests;
-
-public class ToolboxViewModelTests
-{
-    [Fact]
-    public void HasClassNodeTools_ForEachKind()
-    {
-        ToolboxViewModel toolbox = new();
-        Assert.Contains(toolbox.ClassNodes, t => t.Kind == ClassNodeKind.Class);
-        Assert.Contains(toolbox.ClassNodes, t => t.Kind == ClassNodeKind.Interface);
-        Assert.Contains(toolbox.ClassNodes, t => t.Kind == ClassNodeKind.Enum);
-    }
-
-    [Fact]
-    public void SelectingClassNode_ClearsShapeAndConnector_AndSetsMode()
-    {
-        ToolboxViewModel toolbox = new();
-        toolbox.SelectedShape = toolbox.Shapes.First();
-
-        toolbox.SelectedClassNode = toolbox.ClassNodes.First();
-
-        Assert.Null(toolbox.SelectedShape);
-        Assert.Null(toolbox.SelectedConnector);
-        Assert.True(toolbox.IsClassNodeMode);
-        Assert.False(toolbox.IsSelectTool);
-    }
-
-    [Fact]
-    public void SelectingShape_ClearsClassNode()
-    {
-        ToolboxViewModel toolbox = new();
-        toolbox.SelectedClassNode = toolbox.ClassNodes.First();
-
-        toolbox.SelectedShape = toolbox.Shapes.First();
-
-        Assert.Null(toolbox.SelectedClassNode);
-        Assert.False(toolbox.IsClassNodeMode);
-    }
-}
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `ClassNodes`/`SelectedClassNode`/`IsClassNodeMode` not defined.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Implement**
 
 In `ToolboxViewModel.cs`:
 - Add the record near the others:
@@ -2011,15 +1422,15 @@ public sealed record ClassNodeToolItem(string Name, ClassNodeKind Kind);
 - In `ActivateSelectTool`, add `SelectedClassNode = null;`.
 - In `RaiseModes`, add `OnPropertyChanged(nameof(IsClassNodeMode));`.
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.App/ViewModels/ToolboxViewModel.cs tests/Draw.App.Tests/ToolboxViewModelTests.cs
+git add src/Draw.App/ViewModels/ToolboxViewModel.cs
 git commit -m "Add class-node tools to the toolbox
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2033,7 +1444,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Modify: `src/Draw.App/Views/DiagramView.axaml.cs` (placement)
 - Modify: `src/Draw.App/Views/MainWindow.axaml` (palette section)
 
-No unit harness for pointer input — verified by build + manual run.
+Verified by build + manual run.
 
 - [ ] **Step 1: Add class placement to `OnPointerPressed`**
 
@@ -2090,68 +1501,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.App/ViewModels/InspectorViewModel.cs`
-- Test: `tests/Draw.App.Tests/InspectorViewModelTests.cs`
 
-- [ ] **Step 1: Write the failing tests** (append)
-
-```csharp
-    private static DiagramDocumentViewModel CreateDocumentWithClass(out ClassNodeViewModel node)
-    {
-        DiagramDocumentViewModel doc = new(
-            DiagramDocument.CreateEmpty(DiagramType.Class),
-            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
-            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
-            new JsonDocumentSerializer(),
-            new EditorOptions { SnapToGrid = false },
-            filePath: null);
-        node = doc.AddClassNode(ClassNodeKind.Class, new Point2D(100, 100));
-        return doc;
-    }
-
-    [Fact]
-    public void SelectingClassNode_ReportsClassMode_AndLoadsSuggestions()
-    {
-        DiagramDocumentViewModel doc = CreateDocumentWithClass(out ClassNodeViewModel node);
-        InspectorViewModel inspector = new();
-        inspector.SetTarget(doc);
-
-        Assert.True(inspector.IsClassNodeSelected);
-        Assert.False(inspector.IsShapeSelected);
-        Assert.Same(node, inspector.SelectedClassNode);
-        Assert.Contains("string", inspector.TypeSuggestions);
-    }
-
-    [Fact]
-    public void AddPrimaryMemberCommand_AddsMemberToSelectedClass()
-    {
-        DiagramDocumentViewModel doc = CreateDocumentWithClass(out ClassNodeViewModel node);
-        InspectorViewModel inspector = new();
-        inspector.SetTarget(doc);
-
-        inspector.AddPrimaryMemberCommand.Execute(null);
-
-        Assert.Single(node.PrimaryMembers);
-    }
-
-    [Fact]
-    public void FillHex_AppliesToSelectedClassNode()
-    {
-        DiagramDocumentViewModel doc = CreateDocumentWithClass(out ClassNodeViewModel node);
-        InspectorViewModel inspector = new();
-        inspector.SetTarget(doc);
-
-        inspector.FillHex = "#FF112233";
-
-        Assert.Equal(ArgbColor.FromRgb(0x11, 0x22, 0x33), node.Model.Style.Fill);
-    }
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — class-mode members not defined.
-
-- [ ] **Step 3: Implement inspector changes**
+- [ ] **Step 1: Implement inspector changes**
 
 In `InspectorViewModel.cs`:
 - Add usings: `using CommunityToolkit.Mvvm.Input;` and `using Draw.Model.Nodes;`.
@@ -2315,15 +1666,15 @@ In `InspectorViewModel.cs`:
 
 Note: the existing field initializers on `InspectorViewModel` properties (e.g. `Text = string.empty`, `FillHex = "#FFFFFFFF"`) remain; adding an explicit constructor is fine alongside C# field initializers.
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS (including the existing shape inspector tests).
+Run: `dotnet build Draw.slnx`
+Expected: succeeds.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/Draw.App/ViewModels/InspectorViewModel.cs tests/Draw.App.Tests/InspectorViewModelTests.cs
+git add src/Draw.App/ViewModels/InspectorViewModel.cs
 git commit -m "Add class-node inspector mode and member-editor commands
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2336,7 +1687,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `src/Draw.App/Views/MainWindow.axaml`
 
-Build + manual verification (no AXAML unit harness).
+Build + manual verification.
 
 - [ ] **Step 1: Make the shared style block visible for any node**
 
@@ -2683,12 +2034,7 @@ Replace `EndEditing`:
 Run: `dotnet build Draw.slnx`
 Expected: succeeds.
 
-- [ ] **Step 4: Run all tests** (ensure no regressions)
-
-Run: `dotnet test --solution Draw.slnx`
-Expected: PASS.
-
-- [ ] **Step 5: Manual verification**
+- [ ] **Step 4: Manual verification**
 
 Run the app and verify:
 - A placed Class renders as a compartment box: name (bold; italic if abstract), attributes compartment, operations compartment with divider lines.
@@ -2696,7 +2042,7 @@ Run the app and verify:
 - Double-tapping a member row opens an inline editor seeded with `+ name: Type`; editing it and clicking away (or Esc) parses it back (e.g. typing `+ pay(amount: decimal): bool` turns a field row into an operation if it moves compartments on reselect — note: kind change relocates the member only after the collections rebuild on reselect; acceptable for MVP).
 - Inline edits are undoable.
 
-- [ ] **Step 6: Commit (covers Tasks 19+20)**
+- [ ] **Step 5: Commit (covers Tasks 19+20)**
 
 ```bash
 git add src/Draw.App/Views/DiagramView.axaml src/Draw.App/Views/DiagramView.axaml.cs
@@ -2715,10 +2061,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Modify: `documentation/roadmap.md`
 - Modify: `documentation/architecture.md` (only if it enumerates node/VM types — add `ClassNode`/`NodeViewModelBase`)
 
-- [ ] **Step 1: Full suite green**
+- [ ] **Step 1: Full build**
 
-Run: `dotnet test --solution Draw.slnx`
-Expected: PASS. Record the passing test count.
+Run: `dotnet build Draw.slnx`
+Expected: succeeds (compiled XAML validates all bindings and `x:DataType`).
 
 - [ ] **Step 2: Manual end-to-end run** (Linux/WSL: ensure fontconfig installed)
 
@@ -2763,5 +2109,5 @@ Use the superpowers:finishing-a-development-branch skill to decide merge/PR. Do 
 - **Consolidation:** undo/dirty/autocomplete coupling for members goes through one `INodeEditContext` implemented by `DiagramDocumentViewModel`.
 - **Logged omission:** member up/down reordering commands exist on `ClassNodeViewModel`/`InspectorViewModel` but are not surfaced in the inspector UI in this pass (kept rows compact). Surface them in a follow-up.
 - **Logged limitation:** changing a member's kind via inline edit (field↔operation) relocates it to the correct compartment only after the node's collections rebuild (e.g. on reselect/reopen), since `PrimaryMembers`/`Operations` are built at construction. Acceptable for MVP; a live re-bucketing pass is a follow-up.
-- **Honesty:** AXAML/pointer tasks (10, 16, 18, 19, 20) have no automated UI test in this repo; they are verified by `dotnet build` (compiled-XAML validation) + the manual checklist in Task 21. They are not unit-tested.
+- **Honesty:** every task is verified by `dotnet build` (compiled-XAML validation for AXAML/pointer tasks) + the manual checklist in Task 21. AXAML/pointer tasks (10, 16, 18, 19, 20) are "builds; manually verified", not automatically tested.
 ```

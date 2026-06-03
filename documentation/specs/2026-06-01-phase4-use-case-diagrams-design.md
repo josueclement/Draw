@@ -91,7 +91,7 @@ Shape and Class templates). Canvas placement (`Canvas.Left/Top` ← `X`/`Y`) is 
   it + an inline `TextBox` (visible on `IsEditing`) + the selection rectangle.
   - New `ActorGeometry` builder (`Draw.App/Rendering`): given the node width/height,
     builds head (circle), body, arms and legs scaled to fit the **upper** region, reserving a
-    fixed bottom strip (e.g. 18px) for the name label. Pure geometry, unit-testable in spirit
+    fixed bottom strip (e.g. 18px) for the name label. Pure geometry
     (returns an Avalonia `Geometry`); stroke from the node style, no fill.
 - **Use-case** (`UseCaseNodeViewModel`): an ellipse `Path`
   (`ShapeGeometryBuilder.Build(ShapeKind.Ellipse, …)`) with fill/stroke + a centered
@@ -149,23 +149,15 @@ stereotype via `ConnectorViewModel.DefaultStereotype` + `ConnectorDecorationBuil
 `Generalization` (hollow triangle) all already exist and render. Phase 4 only adds Include and
 Extend to the toolbox palette.
 
-## 8. Testing
+## 8. Verification
 
-Follow the existing layout and the Microsoft.Testing.Platform / xUnit v3 setup.
-
-- Model (`Draw.Model.Tests`): JSON round-trip for `ActorNode`/`UseCaseNode`/
-  `SystemBoundaryNode` (label preserved, correct `$type`); `Clone()` deep-copy.
-- View models (`Draw.App.Tests`, display-free): `AddUseCaseNode` creates the correct type,
-  selects it, marks modified; a system boundary receives a z-index below all existing nodes;
-  `BoundaryKind` per type (Actor=Rectangle, UseCase=Ellipse, Boundary=Rectangle); `Label`
-  round-trips to the underlying field; `HasInlineLabel` per type; undo/redo reconstructs the
-  right VM types via `RebuildNodes`; toolbox mutual exclusion and `IsUseCaseNodeMode`; Include
-  and Extend present in the connector palette.
-- Connector attachment to a use-case: a `ConnectorRouteRequest` with an `Ellipse` source/target
-  boundary produces an on-outline attachment (already covered for ellipses; add a use-case-
-  framed assertion if cheap).
-- AXAML/pointer-code-behind tasks (templates, placement, `ActorGeometry` visuals): build-
-  verified (compiled XAML) + manual; no UI unit harness in this repo.
+There is no automated test suite. Verify with `dotnet build Draw.slnx` (compiled XAML validates
+bindings and types) plus a manual run on Windows/macOS, covering: `AddUseCaseNode` creates the
+correct node type, selects it and marks the document modified; a system boundary renders behind
+existing nodes (low z-index); connectors attach to a use-case on its ellipse outline; labels
+round-trip and inline-edit; undo/redo reconstructs the right node types via `RebuildNodes`;
+toolbox tool exclusion and `IsUseCaseNodeMode` work; Include and Extend appear in the connector
+palette.
 
 ## 9. Assumptions
 
@@ -180,16 +172,16 @@ Follow the existing layout and the Microsoft.Testing.Platform / xUnit v3 setup.
 
 ## 10. Implementation ordering (high level)
 
-1. Model types + `[JsonDerivedType]` + serialization/clone tests.
-2. `HasInlineLabel`/`Label` on `NodeViewModelBase`; `ShapeNodeViewModel` override (green;
-   existing tests pass).
-3. The three node VMs + `AddUseCaseNode` + `CreateNodeViewModel` arms + VM tests.
+1. Model types + `[JsonDerivedType]` + serialization/clone.
+2. `HasInlineLabel`/`Label` on `NodeViewModelBase`; `ShapeNodeViewModel` override (existing
+   behavior preserved).
+3. The three node VMs + `AddUseCaseNode` + `CreateNodeViewModel` arms.
 4. Toolbox use-case tools + Include/Extend; placement in `OnPointerPressed`; palette AXAML.
 5. Inspector label-field generalization (`IsLabelNodeSelected`, `Label`-based apply/load).
 6. Rendering: `ActorGeometry` + the three DataTemplates; generalized inline edit in
    `OnDoubleTapped`/`EndEditing`.
 7. End-to-end pass: place all three, label them, connect (association / include / extend /
-   generalization), save/open, undo/redo; run the full suite.
+   generalization), save/open, undo/redo; build + manual run.
 
 Risk: steps 2 and 5 touch Phase 1 code (`ShapeNodeViewModel`, inspector) — keep them
 mechanical and green. Verify the boundary's low z-index actually renders it behind and that

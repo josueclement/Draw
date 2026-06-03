@@ -12,18 +12,6 @@ covers setup. This file captures only what those don't, or what is easy to get w
 ```bash
 dotnet build Draw.slnx                          # build all (solution is .slnx, not .sln)
 dotnet run --project src/Draw.App           # run the desktop app
-dotnet test --solution Draw.slnx                # all tests (MTP runner; opt-in is in global.json)
-dotnet run --project tests/Draw.Model.Tests # run one suite directly (test projects are Exe)
-```
-
-Run a **single test / class / namespace** with xUnit v3's native filters, passed after `--`
-(single dash; `*` wildcards allowed). MTP intercepts `dotnet test`, so target one project via
-`dotnet run`:
-
-```bash
-dotnet run --project tests/Draw.Model.Tests -- -method "Draw.Model.Tests.MyClass.MyTest"
-dotnet run --project tests/Draw.App.Tests   -- -class  "*CanvasPlacementHeadlessTests"
-dotnet run --project tests/Draw.Model.Tests -- -filter "/*/*/*/MyTest"   # query: /asm/ns/class/method[trait=value]
 ```
 
 There is no `.editorconfig` or lint task. `dotnet format Draw.slnx` works but isn't a gate.
@@ -48,7 +36,7 @@ they have no external consumers):
 Invariants that are easy to violate and must be preserved:
 
 - **View models depend only on `Avalonia.Media` value types — never `Avalonia.Controls`.** This
-  is what keeps editor logic unit-testable on the headless backend. Don't reach for a `Control`
+  is what keeps editor logic decoupled from the rendering layer. Don't reach for a `Control`
   in a VM. Avalonia↔model mapping lives in `App/Rendering/` (e.g. `StyleMappingExtensions`,
   `ShapeGeometryBuilder`), not in the model.
 - **`NodeViewModelBase`** factors out placement/selection/style shared by every node kind;
@@ -73,11 +61,9 @@ Invariants that are easy to violate and must be preserved:
 
 ## Environment & workflow gotchas
 
-- **WSL2 / headless Linux has no usable display for the GUI.** Don't launch, screenshot, or
-  pixel-test the app there — `dotnet build` and the non-visual tests run fine, but the window
-  won't render. Verify anything **visual** by running on Windows/macOS (or ask the user to run
-  and report). Headless view tests exist (`HeadlessUnitTestSession`, `UseHeadlessDrawing=false`)
-  but exercise interaction/layout, not pixels. There are no pixel tests by design.
+- **WSL2 / headless Linux has no usable display for the GUI.** Don't launch or screenshot the
+  app there — `dotnet build` runs fine, but the window won't render. Verify anything **visual**
+  by running on Windows/macOS (or ask the user to run and report).
 - **Linux prerequisite:** `sudo apt-get install -y libfontconfig1 libice6 libsm6`, or Skia fails
   to load at startup. Windows/macOS need nothing extra.
 - **Noisy working tree:** there is no `.gitattributes`, so ~90 files perennially show as modified

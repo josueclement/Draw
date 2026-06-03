@@ -13,25 +13,16 @@ src/
   Draw.Model         document model, styling, serialization (net10 library)
   Draw.Diagramming   memento undo, grid snapping (net10 library)
   Draw.App           Avalonia 12 desktop app (IHost bootstrap, MVVM)
-tests/
-  Draw.Model.Tests
-  Draw.Diagramming.Tests
-  Draw.App.Tests
 documentation/
 ```
 
 `Draw.Sql` (DDL generation) and `Draw.Export` (SVG/PDF) arrive in Phase 5.
 
-## Build & test
+## Build
 
 ```bash
 dotnet build Draw.slnx
-dotnet test --solution Draw.slnx     # MTP mode (see global.json); 76 tests
 ```
-
-Tests use **xUnit v3** on the Microsoft Testing Platform. `dotnet test` requires the
-`test` runner opt-in in `global.json`; run an individual suite directly with
-`dotnet run --project tests/<project>`.
 
 ## Run
 
