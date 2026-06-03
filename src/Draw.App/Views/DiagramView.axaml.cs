@@ -656,6 +656,17 @@ public partial class DiagramView : UserControl
         }
     }
 
+    private void OnClassBodyLoaded(object? sender, RoutedEventArgs e)
+    {
+        // Class/interface: fields compartment shrinks to its content, operations fills the slack.
+        // Enums keep the XAML default (literals fill), so they are untouched.
+        if (sender is Grid grid && grid.DataContext is ClassNodeViewModel node && node.HasOperations)
+        {
+            grid.RowDefinitions[2].Height = GridLength.Auto;                      // fields
+            grid.RowDefinitions[4].Height = new GridLength(1, GridUnitType.Star); // operations
+        }
+    }
+
     private void OnCompartmentDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (_vm is null || (sender as Control)?.DataContext is not ClassNodeViewModel node)

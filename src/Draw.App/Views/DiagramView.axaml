@@ -89,7 +89,7 @@
                             <Border Background="{Binding Fill}"
                                     BorderBrush="{Binding Stroke}"
                                     BorderThickness="{Binding BorderThickness}">
-                                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+                                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Loaded="OnClassBodyLoaded">
                                     <StackPanel Grid.Row="0" Margin="6,4" HorizontalAlignment="Center">
                                         <TextBlock Text="{Binding Stereotype}" FontSize="10" FontStyle="Italic"
                                                    HorizontalAlignment="Center"
