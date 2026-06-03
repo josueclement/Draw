@@ -58,7 +58,7 @@ public sealed class ThemeService : IThemeService
     // Resolves a theme-scoped brush for the app's current ActualThemeVariant.
     private static IBrush? Resolve(string key)
         => Application.Current is { } app
-            && app.TryFindResource(key, out object? value)
+            && app.TryFindResource(key, app.ActualThemeVariant, out object? value)
             && value is IBrush brush
                 ? brush
                 : null;
