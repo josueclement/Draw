@@ -286,7 +286,7 @@
 
                     <DataTemplate DataType="vm:SystemBoundaryNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
-                            <Border Background="Transparent"
+                            <Border Background="{Binding Fill}"
                                     BorderBrush="{Binding Stroke}"
                                     BorderThickness="{Binding StrokeThickness}" />
                             <TextBlock Text="{Binding Title}"
