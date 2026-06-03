@@ -42,22 +42,22 @@ white-fill/black-stroke shape default — using the author's own `Carbon.Avaloni
 
 ## Files changed
 
-- `Directory.Packages.props`, `src/Jcl.Draw.App/Jcl.Draw.App.csproj` — add the two packages
+- `Directory.Packages.props`, `src/Draw.App/Draw.App.csproj` — add the two packages
   (restore unifies Carbon's transitive deps cleanly; no extra pins needed).
-- `src/Jcl.Draw.Model/Styling/{ShapeStyle,StrokeStyle,FontSpec}.cs` — new default fill/stroke/text
+- `src/Draw.Model/Styling/{ShapeStyle,StrokeStyle,FontSpec}.cs` — new default fill/stroke/text
   (single source; affects new shapes + connectors only — saved files keep their colors).
-- `src/Jcl.Draw.App/ViewModels/ToolboxViewModel.cs` — ctor + four `RelayCommand<TKind>`
+- `src/Draw.App/ViewModels/ToolboxViewModel.cs` — ctor + four `RelayCommand<TKind>`
   ("arm tool by kind", reusing the existing mutually-exclusive setters), `*Header` strings, `IsShapeMode`.
-- `src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs` — `ZoomIn/Out/Reset` commands
+- `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs` — `ZoomIn/Out/Reset` commands
   (clamp `[0.1, 8]`, mirroring the Ctrl+wheel handler).
-- `src/Jcl.Draw.App/Resources/ToolIcons.axaml` (new) — `StreamGeometry`/`GeometryGroup` glyphs for
+- `src/Draw.App/Resources/ToolIcons.axaml` (new) — `StreamGeometry`/`GeometryGroup` glyphs for
   the 9 relationship caps (matched to `ConnectorDecorationBuilder`), ellipse, rounded-rect,
   trapezoid, interface lollipop.
-- `src/Jcl.Draw.App/App.axaml` — merge Carbon theme + ToolIcons via `ResourceInclude`.
-- `src/Jcl.Draw.App/Views/MainWindow.axaml` (+ `.axaml.cs`) — the 3-tab ribbon, grid re-index to
+- `src/Draw.App/App.axaml` — merge Carbon theme + ToolIcons via `ResourceInclude`.
+- `src/Draw.App/Views/MainWindow.axaml` (+ `.axaml.cs`) — the 3-tab ribbon, grid re-index to
   `*,260`, chrome recolor, Phosphor icons on menu/tab-close/inspector buttons; code-behind
   `WireToolDropdowns` assigns each dropdown's shared command.
-- Tests: `tests/Jcl.Draw.Model.Tests/ShapeStyleTests.cs` (new defaults) and additions to
+- Tests: `tests/Draw.Model.Tests/ShapeStyleTests.cs` (new defaults) and additions to
   `ToolboxViewModelTests` / `DiagramDocumentViewModelTests` (tool commands, headers, zoom).
 
 ## Verification

@@ -1,4 +1,4 @@
-# JCL Draw
+# Draw
 
 A cross-platform (Windows / Linux / macOS) desktop application for drawing schemas and
 UML/ER diagrams, built with **Avalonia 12** on **.NET 10**. Diagrams with a semantic
@@ -10,17 +10,17 @@ model (UML class/ER) can generate SQL DDL.
 
 ```
 src/
-  Jcl.Draw.Model         document model, styling, serialization (net10 library)
-  Jcl.Draw.Diagramming   memento undo, grid snapping (net10 library)
-  Jcl.Draw.App           Avalonia 12 desktop app (IHost bootstrap, MVVM)
+  Draw.Model         document model, styling, serialization (net10 library)
+  Draw.Diagramming   memento undo, grid snapping (net10 library)
+  Draw.App           Avalonia 12 desktop app (IHost bootstrap, MVVM)
 tests/
-  Jcl.Draw.Model.Tests
-  Jcl.Draw.Diagramming.Tests
-  Jcl.Draw.App.Tests
+  Draw.Model.Tests
+  Draw.Diagramming.Tests
+  Draw.App.Tests
 documentation/
 ```
 
-`Jcl.Draw.Sql` (DDL generation) and `Jcl.Draw.Export` (SVG/PDF) arrive in Phase 5.
+`Draw.Sql` (DDL generation) and `Draw.Export` (SVG/PDF) arrive in Phase 5.
 
 ## Build & test
 
@@ -36,7 +36,7 @@ Tests use **xUnit v3** on the Microsoft Testing Platform. `dotnet test` requires
 ## Run
 
 ```bash
-dotnet run --project src/Jcl.Draw.App
+dotnet run --project src/Draw.App
 ```
 
 **Linux prerequisite:** Avalonia's Skia backend needs fontconfig. On a headless/minimal

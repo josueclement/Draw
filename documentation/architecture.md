@@ -4,9 +4,9 @@
 
 | Project | TFM | Responsibility |
 |---|---|---|
-| `Jcl.Draw.Model` | net10 | Framework-agnostic document model (`DiagramDocument`, `NodeBase`/`ShapeNode`/`ClassNode`, `Connector`), value primitives (`Point2D`/`Rect2D`/`ArgbColor`), styling, and `System.Text.Json` serialization with polymorphic `$type` discriminators. |
-| `Jcl.Draw.Diagramming` | net10 | UI-agnostic behavior: memento `IUndoService`, grid-snapping, connector routing (`Routing`) + shape-boundary geometry, and UML member-signature parsing (`Uml.MemberSignature`). |
-| `Jcl.Draw.App` | net10 / Avalonia 12 | `IHost` bootstrap, DI, MVVM view models, services, and the canvas editor. |
+| `Draw.Model` | net10 | Framework-agnostic document model (`DiagramDocument`, `NodeBase`/`ShapeNode`/`ClassNode`, `Connector`), value primitives (`Point2D`/`Rect2D`/`ArgbColor`), styling, and `System.Text.Json` serialization with polymorphic `$type` discriminators. |
+| `Draw.Diagramming` | net10 | UI-agnostic behavior: memento `IUndoService`, grid-snapping, connector routing (`Routing`) + shape-boundary geometry, and UML member-signature parsing (`Uml.MemberSignature`). |
+| `Draw.App` | net10 / Avalonia 12 | `IHost` bootstrap, DI, MVVM view models, services, and the canvas editor. |
 
 > **TFM deviation:** the libraries target `net10` rather than the house default of
 > `netstandard2.0` because they have no external consumers (documented in each `.csproj`).
@@ -21,7 +21,7 @@ the outline for each of the 7 shape kinds (sharing `ShapeOutline` with the route
 
 ## Connectors (Phase 2)
 
-`Jcl.Draw.Diagramming.Routing` computes connector geometry independently of the UI:
+`Draw.Diagramming.Routing` computes connector geometry independently of the UI:
 `ShapeBoundary` finds where a ray from a shape's centre crosses its outline (the floating
 attachment point), and `IConnectorRouter` dispatches to a `StraightRouter` /
 `OrthogonalRouter` / `BezierRouter` strategy (registered in DI) returning a `ConnectorRoute`
@@ -63,7 +63,7 @@ provides DI, configuration, logging and (later) hosted services. `App` resolves
 
 ## Key decisions (from the requirements interview)
 
-- **Document = one diagram per file** (`.jcld`, JSON). Multiple open files via tabs.
+- **Document = one diagram per file** (`.draw`, JSON). Multiple open files via tabs.
 - **Undo = memento snapshots** (whole-document clones via the serializer), captured once
   per completed gesture; depth-capped via `UndoOptions`.
 - **Each document tab owns its own `IUndoService`** (created by `DiagramDocumentViewModelFactory`).

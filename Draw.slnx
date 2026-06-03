@@ -1,12 +1,12 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Jcl.Draw.App/Jcl.Draw.App.csproj" />
-    <Project Path="src/Jcl.Draw.Diagramming/Jcl.Draw.Diagramming.csproj" />
-    <Project Path="src/Jcl.Draw.Model/Jcl.Draw.Model.csproj" />
+    <Project Path="src/Draw.App/Draw.App.csproj" />
+    <Project Path="src/Draw.Diagramming/Draw.Diagramming.csproj" />
+    <Project Path="src/Draw.Model/Draw.Model.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj" />
-    <Project Path="tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj" />
-    <Project Path="tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj" />
+    <Project Path="tests/Draw.App.Tests/Draw.App.Tests.csproj" />
+    <Project Path="tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj" />
+    <Project Path="tests/Draw.Model.Tests/Draw.Model.Tests.csproj" />
   </Folder>
 </Solution>

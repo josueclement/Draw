@@ -14,7 +14,7 @@
 
 - **Branch:** work on `feature/phase4-use-case-diagrams` (already created; the spec is committed there). Git identity is already configured locally.
 - **Build:** `dotnet build Draw.slnx`
-- **Test a project:** `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj` (swap project). Whole suite: `dotnet test --solution Draw.slnx`. The repo's `global.json` opts into Microsoft.Testing.Platform.
+- **Test a project:** `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj` (swap project). Whole suite: `dotnet test --solution Draw.slnx`. The repo's `global.json` opts into Microsoft.Testing.Platform.
 - **TDD:** strict red→green→commit for model + view-model logic. AXAML/pointer-code-behind tasks have **no UI test harness** — verify with `dotnet build` (compiled XAML validates bindings) + a manual run; say "builds; manually verified", never "tested".
 - **Line endings — CRITICAL:** this Windows/WSL checkout has a CRLF artifact (~90+ files show "modified"; committed blobs are LF; there is no `.gitattributes`). Write source as **LF**; before committing a file you touched, `sed -i 's/\r$//' <file>` it so the diff is only your real change. **Stage only the specific files you changed** (`git add <files>`), never `git add -A`/`git add .`.
 - **Git scope — CRITICAL:** stay on `feature/phase4-use-case-diagrams`. Do NOT checkout/switch/create branches, merge, rebase, reset, cherry-pick, push, or touch `main`. Only `git add <files>` + `git commit`.
@@ -24,33 +24,33 @@
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 ```
 
-- **Running the app (Linux/WSL, manual tasks only):** `sudo apt-get install -y libfontconfig1 libice6 libsm6` then `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`.
+- **Running the app (Linux/WSL, manual tasks only):** `sudo apt-get install -y libfontconfig1 libice6 libsm6` then `dotnet run --project src/Draw.App/Draw.App.csproj`.
 
 ---
 
-# Phase A — Model layer (`Jcl.Draw.Model`)
+# Phase A — Model layer (`Draw.Model`)
 
 ## Task 1: Three use-case node types + polymorphic registration
 
 **Files:**
-- Create: `src/Jcl.Draw.Model/Nodes/ActorNode.cs`
-- Create: `src/Jcl.Draw.Model/Nodes/UseCaseNode.cs`
-- Create: `src/Jcl.Draw.Model/Nodes/SystemBoundaryNode.cs`
-- Modify: `src/Jcl.Draw.Model/Nodes/NodeBase.cs:15` (add three `[JsonDerivedType]`)
-- Test: `tests/Jcl.Draw.Model.Tests/UseCaseNodesTests.cs`
+- Create: `src/Draw.Model/Nodes/ActorNode.cs`
+- Create: `src/Draw.Model/Nodes/UseCaseNode.cs`
+- Create: `src/Draw.Model/Nodes/SystemBoundaryNode.cs`
+- Modify: `src/Draw.Model/Nodes/NodeBase.cs:15` (add three `[JsonDerivedType]`)
+- Test: `tests/Draw.Model.Tests/UseCaseNodesTests.cs`
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.Model.Tests/UseCaseNodesTests.cs`:
+`tests/Draw.Model.Tests/UseCaseNodesTests.cs`:
 ```csharp
 using System;
-using Jcl.Draw.Model.Documents;
-using Jcl.Draw.Model.Nodes;
-using Jcl.Draw.Model.Primitives;
-using Jcl.Draw.Model.Serialization;
+using Draw.Model.Documents;
+using Draw.Model.Nodes;
+using Draw.Model.Primitives;
+using Draw.Model.Serialization;
 using Xunit;
 
-namespace Jcl.Draw.Model.Tests;
+namespace Draw.Model.Tests;
 
 public class UseCaseNodesTests
 {
@@ -91,14 +91,14 @@ public class UseCaseNodesTests
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
 Expected: FAIL — the three types don't exist.
 
 - [ ] **Step 3: Create the three node types**
 
-`src/Jcl.Draw.Model/Nodes/ActorNode.cs`:
+`src/Draw.Model/Nodes/ActorNode.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>A UML actor — a stick figure with a name label.</summary>
 public sealed class ActorNode : NodeBase
@@ -114,9 +114,9 @@ public sealed class ActorNode : NodeBase
 }
 ```
 
-`src/Jcl.Draw.Model/Nodes/UseCaseNode.cs`:
+`src/Draw.Model/Nodes/UseCaseNode.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>A UML use case — an ellipse with centered text.</summary>
 public sealed class UseCaseNode : NodeBase
@@ -132,9 +132,9 @@ public sealed class UseCaseNode : NodeBase
 }
 ```
 
-`src/Jcl.Draw.Model/Nodes/SystemBoundaryNode.cs`:
+`src/Draw.Model/Nodes/SystemBoundaryNode.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>A UML system boundary — a titled rectangle drawn behind the use cases it groups.</summary>
 public sealed class SystemBoundaryNode : NodeBase
@@ -152,7 +152,7 @@ public sealed class SystemBoundaryNode : NodeBase
 
 - [ ] **Step 4: Register the derived types**
 
-Modify `src/Jcl.Draw.Model/Nodes/NodeBase.cs` — add three attributes after the existing `class` registration (line 15):
+Modify `src/Draw.Model/Nodes/NodeBase.cs` — add three attributes after the existing `class` registration (line 15):
 ```csharp
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(ShapeNode), "shape")]
@@ -165,14 +165,14 @@ public abstract class NodeBase
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 6: Commit** (normalize LF first)
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.Model/Nodes/NodeBase.cs
-git add src/Jcl.Draw.Model/Nodes/ActorNode.cs src/Jcl.Draw.Model/Nodes/UseCaseNode.cs src/Jcl.Draw.Model/Nodes/SystemBoundaryNode.cs src/Jcl.Draw.Model/Nodes/NodeBase.cs tests/Jcl.Draw.Model.Tests/UseCaseNodesTests.cs
+sed -i 's/\r$//' src/Draw.Model/Nodes/NodeBase.cs
+git add src/Draw.Model/Nodes/ActorNode.cs src/Draw.Model/Nodes/UseCaseNode.cs src/Draw.Model/Nodes/SystemBoundaryNode.cs src/Draw.Model/Nodes/NodeBase.cs tests/Draw.Model.Tests/UseCaseNodesTests.cs
 git commit -m "Add actor, use-case and system-boundary node types
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -180,13 +180,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase B — Inline-label generalization (`Jcl.Draw.App`)
+# Phase B — Inline-label generalization (`Draw.App`)
 
 ## Task 2: `HasInlineLabel` / `Label` on `NodeViewModelBase`; `ShapeNodeViewModel` overrides
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/NodeViewModelBase.cs`
-- Modify: `src/Jcl.Draw.App/ViewModels/ShapeNodeViewModel.cs`
+- Modify: `src/Draw.App/ViewModels/NodeViewModelBase.cs`
+- Modify: `src/Draw.App/ViewModels/ShapeNodeViewModel.cs`
 
 Mechanical, no behavior change; the existing suite is the safety net.
 
@@ -242,8 +242,8 @@ Expected: PASS (no behavior change).
 - [ ] **Step 4: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/ViewModels/NodeViewModelBase.cs src/Jcl.Draw.App/ViewModels/ShapeNodeViewModel.cs
-git add src/Jcl.Draw.App/ViewModels/NodeViewModelBase.cs src/Jcl.Draw.App/ViewModels/ShapeNodeViewModel.cs
+sed -i 's/\r$//' src/Draw.App/ViewModels/NodeViewModelBase.cs src/Draw.App/ViewModels/ShapeNodeViewModel.cs
+git add src/Draw.App/ViewModels/NodeViewModelBase.cs src/Draw.App/ViewModels/ShapeNodeViewModel.cs
 git commit -m "Add inline-label abstraction to NodeViewModelBase
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -251,24 +251,24 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase C — Actor geometry + node view-models (`Jcl.Draw.App`)
+# Phase C — Actor geometry + node view-models (`Draw.App`)
 
 ## Task 3: `ActorGeometry` builder
 
 **Files:**
-- Create: `src/Jcl.Draw.App/Rendering/ActorGeometry.cs`
+- Create: `src/Draw.App/Rendering/ActorGeometry.cs`
 
 `ActorGeometry` is rendering-layer code (it builds an Avalonia `Geometry` using `StreamGeometry`/`EllipseGeometry`), exactly like `ShapeGeometryBuilder`. The repo does NOT unit-test geometry builders: the test harness has no Avalonia render backend, so `StreamGeometry.Open()` and `Geometry.Bounds` throw `Unable to locate 'IPlatformRenderInterface'` when run headless, and no existing test touches `.Geometry`/`.Bounds`. So this task is **build-verified** (the App compiles it) and exercised by the manual run in Task 9 — there is no unit test. Do NOT add a unit test for it and do NOT add Avalonia.Headless.
 
 - [ ] **Step 1: Create `ActorGeometry`**
 
-`src/Jcl.Draw.App/Rendering/ActorGeometry.cs`:
+`src/Draw.App/Rendering/ActorGeometry.cs`:
 ```csharp
 using System;
 using Avalonia;
 using Avalonia.Media;
 
-namespace Jcl.Draw.App.Rendering;
+namespace Draw.App.Rendering;
 
 /// <summary>Builds the stick-figure outline for an actor node, scaled to its bounds and
 /// reserving a bottom strip for the name label.</summary>
@@ -323,8 +323,8 @@ Expected: Build succeeded, 0 errors (the 5 pre-existing AVLN5001 Watermark warni
 - [ ] **Step 3: Commit** (ActorGeometry.cs only — no test file)
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/Rendering/ActorGeometry.cs
-git add src/Jcl.Draw.App/Rendering/ActorGeometry.cs
+sed -i 's/\r$//' src/Draw.App/Rendering/ActorGeometry.cs
+git add src/Draw.App/Rendering/ActorGeometry.cs
 git commit -m "Add actor stick-figure geometry builder
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -335,22 +335,22 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 4: The three node view-models
 
 **Files:**
-- Create: `src/Jcl.Draw.App/ViewModels/ActorNodeViewModel.cs`
-- Create: `src/Jcl.Draw.App/ViewModels/UseCaseNodeViewModel.cs`
-- Create: `src/Jcl.Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/UseCaseNodeViewModelTests.cs`
+- Create: `src/Draw.App/ViewModels/ActorNodeViewModel.cs`
+- Create: `src/Draw.App/ViewModels/UseCaseNodeViewModel.cs`
+- Create: `src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs`
+- Test: `tests/Draw.App.Tests/UseCaseNodeViewModelTests.cs`
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.App.Tests/UseCaseNodeViewModelTests.cs`:
+`tests/Draw.App.Tests/UseCaseNodeViewModelTests.cs`:
 ```csharp
-using Jcl.Draw.App.ViewModels;
-using Jcl.Draw.Model.Nodes;
-using Jcl.Draw.Model.Primitives;
-using Jcl.Draw.Model.Styling;
+using Draw.App.ViewModels;
+using Draw.Model.Nodes;
+using Draw.Model.Primitives;
+using Draw.Model.Styling;
 using Xunit;
 
-namespace Jcl.Draw.App.Tests;
+namespace Draw.App.Tests;
 
 public class UseCaseNodeViewModelTests
 {
@@ -397,19 +397,19 @@ public class UseCaseNodeViewModelTests
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — the three VMs don't exist.
 
 - [ ] **Step 3: Implement the three VMs**
 
-`src/Jcl.Draw.App/ViewModels/ActorNodeViewModel.cs`:
+`src/Draw.App/ViewModels/ActorNodeViewModel.cs`:
 ```csharp
 using System;
 using Avalonia.Media;
-using Jcl.Draw.App.Rendering;
-using Jcl.Draw.Model.Nodes;
+using Draw.App.Rendering;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable wrapper over an <see cref="ActorNode"/>: stick figure + name label.</summary>
 public sealed class ActorNodeViewModel : NodeViewModelBase
@@ -454,14 +454,14 @@ public sealed class ActorNodeViewModel : NodeViewModelBase
 }
 ```
 
-`src/Jcl.Draw.App/ViewModels/UseCaseNodeViewModel.cs`:
+`src/Draw.App/ViewModels/UseCaseNodeViewModel.cs`:
 ```csharp
 using System;
 using Avalonia.Media;
-using Jcl.Draw.App.Rendering;
-using Jcl.Draw.Model.Nodes;
+using Draw.App.Rendering;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable wrapper over a <see cref="UseCaseNode"/>: ellipse + centered text.</summary>
 public sealed class UseCaseNodeViewModel : NodeViewModelBase
@@ -507,12 +507,12 @@ public sealed class UseCaseNodeViewModel : NodeViewModelBase
 }
 ```
 
-`src/Jcl.Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs`:
+`src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs`:
 ```csharp
 using System;
-using Jcl.Draw.Model.Nodes;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable wrapper over a <see cref="SystemBoundaryNode"/>: a titled box drawn behind.</summary>
 public sealed class SystemBoundaryNodeViewModel : NodeViewModelBase
@@ -555,14 +555,14 @@ public sealed class SystemBoundaryNodeViewModel : NodeViewModelBase
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/ViewModels/ActorNodeViewModel.cs src/Jcl.Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Jcl.Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs
-git add src/Jcl.Draw.App/ViewModels/ActorNodeViewModel.cs src/Jcl.Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Jcl.Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs tests/Jcl.Draw.App.Tests/UseCaseNodeViewModelTests.cs
+sed -i 's/\r$//' src/Draw.App/ViewModels/ActorNodeViewModel.cs src/Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs
+git add src/Draw.App/ViewModels/ActorNodeViewModel.cs src/Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs tests/Draw.App.Tests/UseCaseNodeViewModelTests.cs
 git commit -m "Add actor, use-case and system-boundary view-models
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -570,13 +570,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase D — Document creation (`Jcl.Draw.App`)
+# Phase D — Document creation (`Draw.App`)
 
 ## Task 5: `AddUseCaseNode` + `CreateNodeViewModel` arms (boundary behind)
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/DiagramDocumentViewModelTests.cs`
+- Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
+- Test: `tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs`
 
 The `UseCaseNodeKind` enum lives in the toolbox file (Task 6), but `AddUseCaseNode` needs it. To keep Task 5 self-contained and compiling, **define the enum here in this task** (in its own file) and reuse it in Task 6.
 
@@ -625,14 +625,14 @@ The `UseCaseNodeKind` enum lives in the toolbox file (Task 6), but `AddUseCaseNo
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `UseCaseNodeKind`/`AddUseCaseNode` not defined.
 
 - [ ] **Step 3: Create the kind enum**
 
-`src/Jcl.Draw.App/ViewModels/UseCaseNodeKind.cs`:
+`src/Draw.App/ViewModels/UseCaseNodeKind.cs`:
 ```csharp
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Which use-case node a toolbox tool creates (toolbox/creation dispatch only).</summary>
 public enum UseCaseNodeKind
@@ -726,14 +726,14 @@ Note: `LowestZIndex()` is computed before the node is added to `_document.Nodes`
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs
-git add src/Jcl.Draw.App/ViewModels/UseCaseNodeKind.cs src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Jcl.Draw.App.Tests/DiagramDocumentViewModelTests.cs
+sed -i 's/\r$//' src/Draw.App/ViewModels/DiagramDocumentViewModel.cs
+git add src/Draw.App/ViewModels/UseCaseNodeKind.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs
 git commit -m "Add use-case node creation with boundary drawn behind
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -741,13 +741,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase E — Toolbox (`Jcl.Draw.App`)
+# Phase E — Toolbox (`Draw.App`)
 
 ## Task 6: Use-case tools + Include/Extend in the palette
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/ToolboxViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/ToolboxViewModelTests.cs`
+- Modify: `src/Draw.App/ViewModels/ToolboxViewModel.cs`
+- Test: `tests/Draw.App.Tests/ToolboxViewModelTests.cs`
 
 - [ ] **Step 1: Write the failing tests** (append to `ToolboxViewModelTests`)
 
@@ -797,11 +797,11 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
         Assert.False(toolbox.IsUseCaseNodeMode);
     }
 ```
-(`RelationshipKind` is already imported in this test file via `using Jcl.Draw.Model.Nodes;`? Add `using Jcl.Draw.Model.Connectors;` if missing.)
+(`RelationshipKind` is already imported in this test file via `using Draw.Model.Nodes;`? Add `using Draw.Model.Connectors;` if missing.)
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `UseCaseNodes`/`SelectedUseCaseNode`/`IsUseCaseNodeMode` not defined; Include/Extend absent.
 
 - [ ] **Step 3: Implement**
@@ -860,14 +860,14 @@ public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind);
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/ViewModels/ToolboxViewModel.cs
-git add src/Jcl.Draw.App/ViewModels/ToolboxViewModel.cs tests/Jcl.Draw.App.Tests/ToolboxViewModelTests.cs
+sed -i 's/\r$//' src/Draw.App/ViewModels/ToolboxViewModel.cs
+git add src/Draw.App/ViewModels/ToolboxViewModel.cs tests/Draw.App.Tests/ToolboxViewModelTests.cs
 git commit -m "Add use-case tools and include/extend to the toolbox
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -875,13 +875,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase F — Inspector (`Jcl.Draw.App`)
+# Phase F — Inspector (`Draw.App`)
 
 ## Task 7: Generalize the label field to all label-bearing nodes
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/InspectorViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/InspectorViewModelTests.cs`
+- Modify: `src/Draw.App/ViewModels/InspectorViewModel.cs`
+- Test: `tests/Draw.App.Tests/InspectorViewModelTests.cs`
 
 - [ ] **Step 1: Write the failing tests** (append to `InspectorViewModelTests`)
 
@@ -931,7 +931,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `IsLabelNodeSelected` not defined; `Text` apply only hits shapes.
 
 - [ ] **Step 3: Implement**
@@ -1000,14 +1000,14 @@ In `InspectorViewModel.cs`:
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS (including existing shape/class inspector tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/ViewModels/InspectorViewModel.cs
-git add src/Jcl.Draw.App/ViewModels/InspectorViewModel.cs tests/Jcl.Draw.App.Tests/InspectorViewModelTests.cs
+sed -i 's/\r$//' src/Draw.App/ViewModels/InspectorViewModel.cs
+git add src/Draw.App/ViewModels/InspectorViewModel.cs tests/Draw.App.Tests/InspectorViewModelTests.cs
 git commit -m "Generalize inspector label field to all label-bearing nodes
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1015,12 +1015,12 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase G — Placement, inline edit, rendering (`Jcl.Draw.App`)
+# Phase G — Placement, inline edit, rendering (`Draw.App`)
 
 ## Task 8: Code-behind — use-case placement; generalize inline editing
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/DiagramView.axaml.cs`
+- Modify: `src/Draw.App/Views/DiagramView.axaml.cs`
 
 Build-verified (logic; no UI harness).
 
@@ -1096,8 +1096,8 @@ Expected: PASS (the suite covers the VM logic; this task is wiring).
 - [ ] **Step 5: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/Views/DiagramView.axaml.cs
-git add src/Jcl.Draw.App/Views/DiagramView.axaml.cs
+sed -i 's/\r$//' src/Draw.App/Views/DiagramView.axaml.cs
+git add src/Draw.App/Views/DiagramView.axaml.cs
 git commit -m "Place use-case nodes and generalize inline label editing
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1108,8 +1108,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 9: AXAML — node templates, use-case palette, broadened text field
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/DiagramView.axaml`
-- Modify: `src/Jcl.Draw.App/Views/MainWindow.axaml`
+- Modify: `src/Draw.App/Views/DiagramView.axaml`
+- Modify: `src/Draw.App/Views/MainWindow.axaml`
 
 Build + manual verification (no UI harness).
 
@@ -1230,14 +1230,14 @@ Expected: succeeds (compiled XAML validates the new templates, the `UseCaseToolI
 
 - [ ] **Step 5: Manual verification**
 
-Run: `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`
+Run: `dotnet run --project src/Draw.App/Draw.App.csproj`
 Confirm: the Use-case palette places an actor (stick figure + editable name below), a use-case (ellipse + centered text), and a system boundary (titled box that renders **behind** use-cases and is still selectable on its empty interior). Double-tap edits each label. Draw association / include / extend / generalization between them. Fill/stroke/font apply. Save/open and undo/redo round-trip. Each is undoable.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-sed -i 's/\r$//' src/Jcl.Draw.App/Views/DiagramView.axaml src/Jcl.Draw.App/Views/MainWindow.axaml
-git add src/Jcl.Draw.App/Views/DiagramView.axaml src/Jcl.Draw.App/Views/MainWindow.axaml
+sed -i 's/\r$//' src/Draw.App/Views/DiagramView.axaml src/Draw.App/Views/MainWindow.axaml
+git add src/Draw.App/Views/DiagramView.axaml src/Draw.App/Views/MainWindow.axaml
 git commit -m "Render actor, use-case and boundary nodes; add use-case palette
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1260,7 +1260,7 @@ Expected: PASS. Record the count.
 
 - [ ] **Step 2: Manual end-to-end** (Linux/WSL: fontconfig installed)
 
-Run: `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`
+Run: `dotnet run --project src/Draw.App/Draw.App.csproj`
 Checklist (report failures honestly): place actor/use-case/boundary; rename each; connect actor→use-case (association), use-case→use-case (include/extend), actor→actor (generalization); confirm boundary stays behind and selectable; save/open; undo/redo; theme toggle.
 
 - [ ] **Step 3: Update docs**

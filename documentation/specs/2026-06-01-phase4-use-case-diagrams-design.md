@@ -29,7 +29,7 @@ Out of scope (later or never):
   Phase 3's decision).
 - Vector export / DDL (Phase 5).
 
-## 2. Model layer (`Jcl.Draw.Model/Nodes`)
+## 2. Model layer (`Draw.Model/Nodes`)
 
 Three new sealed `NodeBase` subtypes, each mirroring `ClassNode`/`ShapeNode`: a label field,
 a `Clone()` that copies it and calls `CopyBaseTo`, and one `[JsonDerivedType]` registration
@@ -50,7 +50,7 @@ on `NodeBase`.
 The existing `JsonDocumentSerializer` (camelCase, enum-as-string, polymorphic `$type` list)
 covers these with no other change. `DiagramType.UseCase` already exists.
 
-## 3. View-models (`Jcl.Draw.App/ViewModels`)
+## 3. View-models (`Draw.App/ViewModels`)
 
 ### 3.1 Inline-label generalization on `NodeViewModelBase`
 
@@ -82,14 +82,14 @@ and `HasInlineLabel`, and provides `BoundaryKind` + a `Geometry`:
 - `SystemBoundaryNodeViewModel` — `Title`; `BoundaryKind => ShapeKind.Rectangle`; the template
   draws a `Border`, so no `Geometry` is strictly required (the VM may omit it).
 
-## 4. Rendering (`Jcl.Draw.App`)
+## 4. Rendering (`Draw.App`)
 
 Three new `DataTemplate`s added to the nodes `ItemsControl.DataTemplates` (alongside the
 Shape and Class templates). Canvas placement (`Canvas.Left/Top` ← `X`/`Y`) is unchanged.
 
 - **Actor** (`ActorNodeViewModel`): a `Path` for the stick figure + a name `TextBlock` below
   it + an inline `TextBox` (visible on `IsEditing`) + the selection rectangle.
-  - New `ActorGeometry` builder (`Jcl.Draw.App/Rendering`): given the node width/height,
+  - New `ActorGeometry` builder (`Draw.App/Rendering`): given the node width/height,
     builds head (circle), body, arms and legs scaled to fit the **upper** region, reserving a
     fixed bottom strip (e.g. 18px) for the name label. Pure geometry, unit-testable in spirit
     (returns an Avalonia `Geometry`); stroke from the node style, no fill.
@@ -106,7 +106,7 @@ Shape and Class templates). Canvas placement (`Canvas.Left/Top` ← `X`/`Y`) is 
   orders by `ZIndex`, and the existing `HitTestNode` (`LastOrDefault` by z-order) therefore
   lets clicks select use-cases on top while empty interior clicks select the boundary.
 
-## 5. Toolbox, document, inspector (`Jcl.Draw.App`)
+## 5. Toolbox, document, inspector (`Draw.App`)
 
 - `UseCaseNodeKind { Actor, UseCase, SystemBoundary }` (App-layer enum, toolbox/creation
   dispatch only — the model uses three distinct types).
@@ -153,9 +153,9 @@ Extend to the toolbox palette.
 
 Follow the existing layout and the Microsoft.Testing.Platform / xUnit v3 setup.
 
-- Model (`Jcl.Draw.Model.Tests`): JSON round-trip for `ActorNode`/`UseCaseNode`/
+- Model (`Draw.Model.Tests`): JSON round-trip for `ActorNode`/`UseCaseNode`/
   `SystemBoundaryNode` (label preserved, correct `$type`); `Clone()` deep-copy.
-- View models (`Jcl.Draw.App.Tests`, display-free): `AddUseCaseNode` creates the correct type,
+- View models (`Draw.App.Tests`, display-free): `AddUseCaseNode` creates the correct type,
   selects it, marks modified; a system boundary receives a z-index below all existing nodes;
   `BoundaryKind` per type (Actor=Rectangle, UseCase=Ellipse, Boundary=Rectangle); `Label`
   round-trips to the underlying field; `HasInlineLabel` per type; undo/redo reconstructs the

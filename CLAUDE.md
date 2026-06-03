@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-JCL Draw is a cross-platform Avalonia 12 / .NET 10 desktop app for drawing schema and UML/ER
+Draw is a cross-platform Avalonia 12 / .NET 10 desktop app for drawing schema and UML/ER
 diagrams. Read `documentation/architecture.md` first (canonical architecture) and
 `documentation/roadmap.md` (phased plan; per-phase specs in `documentation/specs/`). The README
 covers setup. This file captures only what those don't, or what is easy to get wrong.
@@ -11,9 +11,9 @@ covers setup. This file captures only what those don't, or what is easy to get w
 
 ```bash
 dotnet build Draw.slnx                          # build all (solution is .slnx, not .sln)
-dotnet run --project src/Jcl.Draw.App           # run the desktop app
+dotnet run --project src/Draw.App           # run the desktop app
 dotnet test --solution Draw.slnx                # all tests (MTP runner; opt-in is in global.json)
-dotnet run --project tests/Jcl.Draw.Model.Tests # run one suite directly (test projects are Exe)
+dotnet run --project tests/Draw.Model.Tests # run one suite directly (test projects are Exe)
 ```
 
 Run a **single test / class / namespace** with xUnit v3's native filters, passed after `--`
@@ -21,9 +21,9 @@ Run a **single test / class / namespace** with xUnit v3's native filters, passed
 `dotnet run`:
 
 ```bash
-dotnet run --project tests/Jcl.Draw.Model.Tests -- -method "Jcl.Draw.Model.Tests.MyClass.MyTest"
-dotnet run --project tests/Jcl.Draw.App.Tests   -- -class  "*CanvasPlacementHeadlessTests"
-dotnet run --project tests/Jcl.Draw.Model.Tests -- -filter "/*/*/*/MyTest"   # query: /asm/ns/class/method[trait=value]
+dotnet run --project tests/Draw.Model.Tests -- -method "Draw.Model.Tests.MyClass.MyTest"
+dotnet run --project tests/Draw.App.Tests   -- -class  "*CanvasPlacementHeadlessTests"
+dotnet run --project tests/Draw.Model.Tests -- -filter "/*/*/*/MyTest"   # query: /asm/ns/class/method[trait=value]
 ```
 
 There is no `.editorconfig` or lint task. `dotnet format Draw.slnx` works but isn't a gate.
@@ -35,13 +35,13 @@ Analyzers are on (`AnalysisLevel=latest`) and **nullable warnings are build erro
 Three layers (`src/`), all `net10` on purpose (the libraries target net10, not netstandard —
 they have no external consumers):
 
-- **`Jcl.Draw.Model`** — framework-agnostic document model + `System.Text.Json` serialization
-  with polymorphic `$type` discriminators. One diagram per `.jcld` file (JSON). Uses its own
+- **`Draw.Model`** — framework-agnostic document model + `System.Text.Json` serialization
+  with polymorphic `$type` discriminators. One diagram per `.draw` file (JSON). Uses its own
   value primitives (`Point2D`/`Rect2D`/`ArgbColor`), **never** Avalonia types.
-- **`Jcl.Draw.Diagramming`** — UI-agnostic behavior: memento `IUndoService`, grid snapping,
+- **`Draw.Diagramming`** — UI-agnostic behavior: memento `IUndoService`, grid snapping,
   connector routing (`Routing`, with `ShapeBoundary`/`ShapeOutline`), UML signature parsing.
   No Avalonia dependency.
-- **`Jcl.Draw.App`** — Avalonia 12 MVVM editor, bootstrapped via `Microsoft.Extensions.Hosting`
+- **`Draw.App`** — Avalonia 12 MVVM editor, bootstrapped via `Microsoft.Extensions.Hosting`
   (`Program.Main` builds an `IHost`, runs the Avalonia desktop lifetime, then stops the host;
   `App` resolves `MainWindow` from DI). This is the only project that touches Avalonia.
 

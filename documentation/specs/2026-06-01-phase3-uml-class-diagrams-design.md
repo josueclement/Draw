@@ -30,9 +30,9 @@ Out of scope (later phases):
 - Diagram-type gating of the toolbox (class tools are always available).
 - Code generation / reverse engineering.
 
-## 2. Model layer (`Jcl.Draw.Model`)
+## 2. Model layer (`Draw.Model`)
 
-New types under `src/Jcl.Draw.Model/Nodes/`:
+New types under `src/Draw.Model/Nodes/`:
 
 - `ClassNode : NodeBase` (sealed). Adds:
   - `ClassNodeKind Kind`
@@ -55,7 +55,7 @@ New types under `src/Jcl.Draw.Model/Nodes/`:
   - `MemberKind { Field, Operation, EnumLiteral }`
 
 Serialization: add one attribute to `NodeBase`
-(`src/Jcl.Draw.Model/Nodes/NodeBase.cs`):
+(`src/Draw.Model/Nodes/NodeBase.cs`):
 
 ```csharp
 [JsonDerivedType(typeof(ClassNode), "class")]
@@ -65,7 +65,7 @@ No other serialization change is required. The existing `JsonDocumentSerializer`
 (camelCase, `JsonStringEnumConverter`, polymorphic `$type` list, null-omitting)
 already covers the new type and its members. `DiagramType.Class` already exists.
 
-## 3. Member signature parser/formatter (`Jcl.Draw.Diagramming/Uml/`)
+## 3. Member signature parser/formatter (`Draw.Diagramming/Uml/`)
 
 A pure, display-free unit — the central reusable piece, fully unit-tested:
 
@@ -81,10 +81,10 @@ A pure, display-free unit — the central reusable piece, fully unit-tested:
     (returns a best-effort member; truly empty input yields `false`/no member).
 - Round-trips: `TryParse(Format(m)) == m` for all well-formed members.
 
-Lives in `Jcl.Draw.Diagramming` (logic layer, no Avalonia dependency) so both the
+Lives in `Draw.Diagramming` (logic layer, no Avalonia dependency) so both the
 view models and the unit tests can use it without a display.
 
-## 4. View-model layer (`Jcl.Draw.App/ViewModels`)
+## 4. View-model layer (`Draw.App/ViewModels`)
 
 ### 4.1 Extract `NodeViewModelBase`
 
@@ -157,7 +157,7 @@ the existing style-edit pattern.
 - `RebuildNodes()` instantiates `ClassNodeViewModel` vs `ShapeNodeViewModel` by
   inspecting the model type, so undo/redo and open/save reconstruct class nodes.
 
-## 5. Rendering (`Jcl.Draw.App`)
+## 5. Rendering (`Draw.App`)
 
 - Add a second `DataTemplate DataType="vm:ClassNodeViewModel"` to the nodes
   `ItemsControl` in `Views/DiagramView.axaml`. Avalonia selects the template by data
@@ -188,7 +188,7 @@ relationship set, so drag-to-connect, the connector inspector, and orphan-prunin
 work for class nodes once `ConnectorViewModel.Source/Target` are `NodeViewModelBase`.
 
 For routing/attachment, a class node is treated as its bounding **rectangle**:
-`ShapeBoundary` / `ShapeOutline` (`Jcl.Draw.Diagramming/Geometry/`) get a rectangle
+`ShapeBoundary` / `ShapeOutline` (`Draw.Diagramming/Geometry/`) get a rectangle
 path for class nodes, reusing the existing `Rectangle` intersection logic. No new
 routing strategy is introduced.
 
@@ -212,9 +212,9 @@ ensures class nodes survive undo/redo and save/open round-trips.
 
 Follow the existing test layout and the Microsoft.Testing.Platform / xUnit v3 setup.
 
-- Model (`Jcl.Draw.Model.Tests`): `ClassNode` JSON round-trip including members,
+- Model (`Draw.Model.Tests`): `ClassNode` JSON round-trip including members,
   enum literals and flags; `Clone()` deep-copy independence.
-- Parser (`Jcl.Draw.Diagramming.Tests`): `Format`/`TryParse` round-trips; tolerant
+- Parser (`Draw.Diagramming.Tests`): `Format`/`TryParse` round-trips; tolerant
   parsing (missing visibility, operations vs fields, malformed/empty input).
 - View models (display-free): add/remove/reorder members; inline raw-text
   commit → parse; auto-height bump; autocomplete suggestion set (diagram names ∪

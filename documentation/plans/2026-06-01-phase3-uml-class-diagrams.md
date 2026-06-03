@@ -14,9 +14,9 @@
 
 - **Branch:** work on `feature/phase3-uml-class-diagrams` (already created; the design spec is committed there).
 - **Build:** `dotnet build Draw.slnx`
-- **Test a project:** `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj` (swap project as needed). The repo's `global.json` already opts into Microsoft.Testing.Platform, so `dotnet test --project <csproj>` is correct. To run everything: `dotnet test --solution Draw.slnx`.
+- **Test a project:** `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj` (swap project as needed). The repo's `global.json` already opts into Microsoft.Testing.Platform, so `dotnet test --project <csproj>` is correct. To run everything: `dotnet test --solution Draw.slnx`.
 - **TDD granularity:** for pure logic (model, parser, view-model logic) follow strict red→green→commit. AXAML templates and pointer code-behind have **no UI test harness in this repo**, so those tasks are verified by `dotnet build` (compiled XAML catches binding/type errors) plus a manual run; this is called out explicitly per task. Do not claim a UI task is "tested" — say "builds; manually verified".
-- **Running the app (Linux/WSL only):** native fontconfig is required or SkiaSharp fails — `sudo apt-get install -y libfontconfig1 libice6 libsm6`. Not needed on Windows/macOS. Launch with `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`.
+- **Running the app (Linux/WSL only):** native fontconfig is required or SkiaSharp fails — `sudo apt-get install -y libfontconfig1 libice6 libsm6`. Not needed on Windows/macOS. Launch with `dotnet run --project src/Draw.App/Draw.App.csproj`.
 - **Commits:** git has no global identity in this environment. **Task 0** sets a local identity once; afterward `git commit` works. Every commit message ends with the trailer shown in Task 0.
 - **Member is a class, not a record** (matches `ShapeStyle`). **`ClassMember.Type` is free text.** **`BoundaryKind` for class nodes is `ShapeKind.Rectangle`** (no Diagramming change).
 
@@ -46,20 +46,20 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 
 ---
 
-# Phase A — Model layer (`Jcl.Draw.Model`)
+# Phase A — Model layer (`Draw.Model`)
 
 ## Task 1: Member enums
 
 **Files:**
-- Create: `src/Jcl.Draw.Model/Nodes/ClassNodeKind.cs`
-- Create: `src/Jcl.Draw.Model/Nodes/MemberVisibility.cs`
-- Create: `src/Jcl.Draw.Model/Nodes/MemberKind.cs`
+- Create: `src/Draw.Model/Nodes/ClassNodeKind.cs`
+- Create: `src/Draw.Model/Nodes/MemberVisibility.cs`
+- Create: `src/Draw.Model/Nodes/MemberKind.cs`
 
 - [ ] **Step 1: Create the three enums**
 
-`src/Jcl.Draw.Model/Nodes/ClassNodeKind.cs`:
+`src/Draw.Model/Nodes/ClassNodeKind.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>The kind of UML classifier a <see cref="ClassNode"/> represents.</summary>
 public enum ClassNodeKind
@@ -70,9 +70,9 @@ public enum ClassNodeKind
 }
 ```
 
-`src/Jcl.Draw.Model/Nodes/MemberVisibility.cs`:
+`src/Draw.Model/Nodes/MemberVisibility.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>UML member visibility, rendered as + - # ~ respectively.</summary>
 public enum MemberVisibility
@@ -84,9 +84,9 @@ public enum MemberVisibility
 }
 ```
 
-`src/Jcl.Draw.Model/Nodes/MemberKind.cs`:
+`src/Draw.Model/Nodes/MemberKind.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>Which compartment a class member belongs to.</summary>
 public enum MemberKind
@@ -105,7 +105,7 @@ Expected: succeeds (enums are unused so far).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/Jcl.Draw.Model/Nodes/ClassNodeKind.cs src/Jcl.Draw.Model/Nodes/MemberVisibility.cs src/Jcl.Draw.Model/Nodes/MemberKind.cs
+git add src/Draw.Model/Nodes/ClassNodeKind.cs src/Draw.Model/Nodes/MemberVisibility.cs src/Draw.Model/Nodes/MemberKind.cs
 git commit -m "Add UML class member enums
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -116,17 +116,17 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 2: `ClassMember` (mutable, cloneable)
 
 **Files:**
-- Create: `src/Jcl.Draw.Model/Nodes/ClassMember.cs`
-- Test: `tests/Jcl.Draw.Model.Tests/ClassMemberTests.cs`
+- Create: `src/Draw.Model/Nodes/ClassMember.cs`
+- Test: `tests/Draw.Model.Tests/ClassMemberTests.cs`
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.Model.Tests/ClassMemberTests.cs`:
+`tests/Draw.Model.Tests/ClassMemberTests.cs`:
 ```csharp
-using Jcl.Draw.Model.Nodes;
+using Draw.Model.Nodes;
 using Xunit;
 
-namespace Jcl.Draw.Model.Tests;
+namespace Draw.Model.Tests;
 
 public class ClassMemberTests
 {
@@ -161,14 +161,14 @@ public class ClassMemberTests
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
 Expected: FAIL — `ClassMember` does not exist (compile error).
 
 - [ ] **Step 3: Implement `ClassMember`**
 
-`src/Jcl.Draw.Model/Nodes/ClassMember.cs`:
+`src/Draw.Model/Nodes/ClassMember.cs`:
 ```csharp
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>
 /// One member of a <see cref="ClassNode"/>. <see cref="Type"/> is free text (the return type
@@ -205,13 +205,13 @@ public sealed class ClassMember
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.Model/Nodes/ClassMember.cs tests/Jcl.Draw.Model.Tests/ClassMemberTests.cs
+git add src/Draw.Model/Nodes/ClassMember.cs tests/Draw.Model.Tests/ClassMemberTests.cs
 git commit -m "Add ClassMember model with deep clone
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -222,23 +222,23 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 3: `ClassNode` + polymorphic serialization
 
 **Files:**
-- Create: `src/Jcl.Draw.Model/Nodes/ClassNode.cs`
-- Modify: `src/Jcl.Draw.Model/Nodes/NodeBase.cs:14` (add `[JsonDerivedType]`)
-- Test: `tests/Jcl.Draw.Model.Tests/ClassNodeTests.cs`
+- Create: `src/Draw.Model/Nodes/ClassNode.cs`
+- Modify: `src/Draw.Model/Nodes/NodeBase.cs:14` (add `[JsonDerivedType]`)
+- Test: `tests/Draw.Model.Tests/ClassNodeTests.cs`
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.Model.Tests/ClassNodeTests.cs`:
+`tests/Draw.Model.Tests/ClassNodeTests.cs`:
 ```csharp
 using System;
 using System.Collections.Generic;
-using Jcl.Draw.Model.Documents;
-using Jcl.Draw.Model.Nodes;
-using Jcl.Draw.Model.Primitives;
-using Jcl.Draw.Model.Serialization;
+using Draw.Model.Documents;
+using Draw.Model.Nodes;
+using Draw.Model.Primitives;
+using Draw.Model.Serialization;
 using Xunit;
 
-namespace Jcl.Draw.Model.Tests;
+namespace Draw.Model.Tests;
 
 public class ClassNodeTests
 {
@@ -292,17 +292,17 @@ public class ClassNodeTests
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
 Expected: FAIL — `ClassNode` does not exist.
 
 - [ ] **Step 3: Implement `ClassNode`**
 
-`src/Jcl.Draw.Model/Nodes/ClassNode.cs`:
+`src/Draw.Model/Nodes/ClassNode.cs`:
 ```csharp
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Jcl.Draw.Model.Nodes;
+namespace Draw.Model.Nodes;
 
 /// <summary>A UML classifier (class, interface or enum) drawn as a compartment box.</summary>
 public sealed class ClassNode : NodeBase
@@ -332,7 +332,7 @@ public sealed class ClassNode : NodeBase
 
 - [ ] **Step 4: Register the derived type**
 
-Modify `src/Jcl.Draw.Model/Nodes/NodeBase.cs` — add the attribute directly below the existing `[JsonDerivedType(typeof(ShapeNode), "shape")]` (line 14):
+Modify `src/Draw.Model/Nodes/NodeBase.cs` — add the attribute directly below the existing `[JsonDerivedType(typeof(ShapeNode), "shape")]` (line 14):
 ```csharp
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(ShapeNode), "shape")]
@@ -342,13 +342,13 @@ public abstract class NodeBase
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `dotnet test --project tests/Jcl.Draw.Model.Tests/Jcl.Draw.Model.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
 Expected: PASS (both new tests + existing serializer tests).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/Jcl.Draw.Model/Nodes/ClassNode.cs src/Jcl.Draw.Model/Nodes/NodeBase.cs tests/Jcl.Draw.Model.Tests/ClassNodeTests.cs
+git add src/Draw.Model/Nodes/ClassNode.cs src/Draw.Model/Nodes/NodeBase.cs tests/Draw.Model.Tests/ClassNodeTests.cs
 git commit -m "Add ClassNode model and register it for polymorphic JSON
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -356,22 +356,22 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase B — Member signature parser (`Jcl.Draw.Diagramming/Uml`)
+# Phase B — Member signature parser (`Draw.Diagramming/Uml`)
 
 ## Task 4: Primitive type list
 
 **Files:**
-- Create: `src/Jcl.Draw.Diagramming/Uml/PrimitiveTypes.cs`
-- Test: `tests/Jcl.Draw.Diagramming.Tests/PrimitiveTypesTests.cs`
+- Create: `src/Draw.Diagramming/Uml/PrimitiveTypes.cs`
+- Test: `tests/Draw.Diagramming.Tests/PrimitiveTypesTests.cs`
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.Diagramming.Tests/PrimitiveTypesTests.cs`:
+`tests/Draw.Diagramming.Tests/PrimitiveTypesTests.cs`:
 ```csharp
-using Jcl.Draw.Diagramming.Uml;
+using Draw.Diagramming.Uml;
 using Xunit;
 
-namespace Jcl.Draw.Diagramming.Tests;
+namespace Draw.Diagramming.Tests;
 
 public class PrimitiveTypesTests
 {
@@ -390,16 +390,16 @@ public class PrimitiveTypesTests
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `dotnet test --project tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
 Expected: FAIL — `PrimitiveTypes` does not exist.
 
 - [ ] **Step 3: Implement**
 
-`src/Jcl.Draw.Diagramming/Uml/PrimitiveTypes.cs`:
+`src/Draw.Diagramming/Uml/PrimitiveTypes.cs`:
 ```csharp
 using System.Collections.Generic;
 
-namespace Jcl.Draw.Diagramming.Uml;
+namespace Draw.Diagramming.Uml;
 
 /// <summary>Common primitive/type names offered as autocomplete suggestions for member types.</summary>
 public static class PrimitiveTypes
@@ -415,13 +415,13 @@ public static class PrimitiveTypes
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `dotnet test --project tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.Diagramming/Uml/PrimitiveTypes.cs tests/Jcl.Draw.Diagramming.Tests/PrimitiveTypesTests.cs
+git add src/Draw.Diagramming/Uml/PrimitiveTypes.cs tests/Draw.Diagramming.Tests/PrimitiveTypesTests.cs
 git commit -m "Add primitive type suggestion list
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -432,18 +432,18 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 5: `MemberSignature.Format`
 
 **Files:**
-- Create: `src/Jcl.Draw.Diagramming/Uml/MemberSignature.cs`
-- Test: `tests/Jcl.Draw.Diagramming.Tests/MemberSignatureTests.cs`
+- Create: `src/Draw.Diagramming/Uml/MemberSignature.cs`
+- Test: `tests/Draw.Diagramming.Tests/MemberSignatureTests.cs`
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.Diagramming.Tests/MemberSignatureTests.cs`:
+`tests/Draw.Diagramming.Tests/MemberSignatureTests.cs`:
 ```csharp
-using Jcl.Draw.Diagramming.Uml;
-using Jcl.Draw.Model.Nodes;
+using Draw.Diagramming.Uml;
+using Draw.Model.Nodes;
 using Xunit;
 
-namespace Jcl.Draw.Diagramming.Tests;
+namespace Draw.Diagramming.Tests;
 
 public class MemberSignatureTests
 {
@@ -490,17 +490,17 @@ public class MemberSignatureTests
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `dotnet test --project tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
 Expected: FAIL — `MemberSignature` does not exist.
 
 - [ ] **Step 3: Implement `Format` (and the visibility marker helper)**
 
-`src/Jcl.Draw.Diagramming/Uml/MemberSignature.cs`:
+`src/Draw.Diagramming/Uml/MemberSignature.cs`:
 ```csharp
 using System;
-using Jcl.Draw.Model.Nodes;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.Diagramming.Uml;
+namespace Draw.Diagramming.Uml;
 
 /// <summary>Formats and parses class members to/from their UML text representation.</summary>
 public static class MemberSignature
@@ -545,13 +545,13 @@ public static class MemberSignature
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `dotnet test --project tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.Diagramming/Uml/MemberSignature.cs tests/Jcl.Draw.Diagramming.Tests/MemberSignatureTests.cs
+git add src/Draw.Diagramming/Uml/MemberSignature.cs tests/Draw.Diagramming.Tests/MemberSignatureTests.cs
 git commit -m "Add MemberSignature.Format for UML member text
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -562,8 +562,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 6: `MemberSignature.Parse` (tolerant, round-trips with Format)
 
 **Files:**
-- Modify: `src/Jcl.Draw.Diagramming/Uml/MemberSignature.cs`
-- Modify: `tests/Jcl.Draw.Diagramming.Tests/MemberSignatureTests.cs`
+- Modify: `src/Draw.Diagramming/Uml/MemberSignature.cs`
+- Modify: `tests/Draw.Diagramming.Tests/MemberSignatureTests.cs`
 
 `Parse(string text, MemberKind context)` always returns a `ClassMember` (best-effort; never throws). Rules: a leading `+ - # ~` sets visibility (default Public). If `context` is `EnumLiteral`, the result is an `EnumLiteral` with the trimmed text as Name. Otherwise, the presence of `(` ⇒ `Operation` (text inside `()` ⇒ `Parameters`, text after `):` ⇒ `Type`); no `(` ⇒ `Field` (text after `:` ⇒ `Type`).
 
@@ -625,7 +625,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
 Expected: FAIL — `Parse` not defined.
 
 - [ ] **Step 3: Implement `Parse`** (add to `MemberSignature`)
@@ -695,13 +695,13 @@ Note: `Format` of an operation with empty `Parameters` produces `name()`; `Parse
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.Diagramming.Tests/Jcl.Draw.Diagramming.Tests.csproj`
+Run: `dotnet test --project tests/Draw.Diagramming.Tests/Draw.Diagramming.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.Diagramming/Uml/MemberSignature.cs tests/Jcl.Draw.Diagramming.Tests/MemberSignatureTests.cs
+git add src/Draw.Diagramming/Uml/MemberSignature.cs tests/Draw.Diagramming.Tests/MemberSignatureTests.cs
 git commit -m "Add tolerant MemberSignature.Parse with Format round-trip
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -709,28 +709,28 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase C — `NodeViewModelBase` extraction (`Jcl.Draw.App`)
+# Phase C — `NodeViewModelBase` extraction (`Draw.App`)
 
 > This phase is a mechanical refactor that must stay green at every step. No behavior changes; existing tests are the safety net.
 
 ## Task 7: Introduce `NodeViewModelBase`; make `ShapeNodeViewModel` derive from it
 
 **Files:**
-- Create: `src/Jcl.Draw.App/ViewModels/NodeViewModelBase.cs`
-- Modify: `src/Jcl.Draw.App/ViewModels/ShapeNodeViewModel.cs` (rewrite to derive)
+- Create: `src/Draw.App/ViewModels/NodeViewModelBase.cs`
+- Modify: `src/Draw.App/ViewModels/ShapeNodeViewModel.cs` (rewrite to derive)
 
 - [ ] **Step 1: Create the base class**
 
-`src/Jcl.Draw.App/ViewModels/NodeViewModelBase.cs`:
+`src/Draw.App/ViewModels/NodeViewModelBase.cs`:
 ```csharp
 using System;
 using Avalonia.Collections;
 using Avalonia.Media;
-using Jcl.Draw.App.Rendering;
-using Jcl.Draw.Model.Nodes;
-using Jcl.Draw.Model.Primitives;
+using Draw.App.Rendering;
+using Draw.Model.Nodes;
+using Draw.Model.Primitives;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable concerns shared by every node kind: placement, selection and style.</summary>
 public abstract class NodeViewModelBase : ViewModelBase
@@ -864,13 +864,13 @@ public abstract class NodeViewModelBase : ViewModelBase
 
 - [ ] **Step 2: Rewrite `ShapeNodeViewModel` to derive from the base**
 
-Replace the entire body of `src/Jcl.Draw.App/ViewModels/ShapeNodeViewModel.cs` with:
+Replace the entire body of `src/Draw.App/ViewModels/ShapeNodeViewModel.cs` with:
 ```csharp
 using Avalonia.Media;
-using Jcl.Draw.App.Rendering;
-using Jcl.Draw.Model.Nodes;
+using Draw.App.Rendering;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable wrapper over a <see cref="ShapeNode"/>; the model is the backing store.</summary>
 public sealed class ShapeNodeViewModel : NodeViewModelBase
@@ -922,7 +922,7 @@ Expected: PASS — all existing tests green. (`DiagramView.axaml.cs`, `Connector
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/NodeViewModelBase.cs src/Jcl.Draw.App/ViewModels/ShapeNodeViewModel.cs
+git add src/Draw.App/ViewModels/NodeViewModelBase.cs src/Draw.App/ViewModels/ShapeNodeViewModel.cs
 git commit -m "Extract NodeViewModelBase from ShapeNodeViewModel
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -933,7 +933,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 8: Retype `ConnectorViewModel` endpoints to `NodeViewModelBase`
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/ConnectorViewModel.cs`
+- Modify: `src/Draw.App/ViewModels/ConnectorViewModel.cs`
 
 - [ ] **Step 1: Change endpoint types and routing inputs**
 
@@ -976,7 +976,7 @@ Expected: FAILS to compile in `DiagramDocumentViewModel` (it constructs `Connect
 ## Task 9: Retype `DiagramDocumentViewModel` collections; type-aware `RebuildNodes`
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs`
+- Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
 
 - [ ] **Step 1: Retype the node collection and node-typed members**
 
@@ -1040,7 +1040,7 @@ Expected: PASS. `DiagramView.axaml.cs` still compiles because it uses `ShapeNode
 - [ ] **Step 4: Commit (covers Tasks 8–10)**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/ConnectorViewModel.cs src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs src/Jcl.Draw.App/Views/DiagramView.axaml.cs
+git add src/Draw.App/ViewModels/ConnectorViewModel.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs src/Draw.App/Views/DiagramView.axaml.cs
 git commit -m "Retype node view-models to NodeViewModelBase across app
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1051,7 +1051,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 10: Retype `DiagramView.axaml.cs`; class-safe double-tap; per-node resize minimum
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/DiagramView.axaml.cs`
+- Modify: `src/Draw.App/Views/DiagramView.axaml.cs`
 
 - [ ] **Step 1: Retype fields and node helpers**
 
@@ -1104,18 +1104,18 @@ Expected: PASS. Commit via Task 9 Step 4 (single commit for 8–10).
 - [ ] **Step 5: Manual smoke (optional but recommended)**
 
 Run the app and confirm Phase 1/2 behavior is unchanged: place shapes, move/resize, draw connectors, double-tap a shape to edit text, undo/redo.
-Run: `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`
+Run: `dotnet run --project src/Draw.App/Draw.App.csproj`
 
 ---
 
-# Phase D — Edit context + class view-models (`Jcl.Draw.App`)
+# Phase D — Edit context + class view-models (`Draw.App`)
 
 ## Task 11: `INodeEditContext`; document implements it; `GetTypeSuggestions`
 
 **Files:**
-- Create: `src/Jcl.Draw.App/ViewModels/INodeEditContext.cs`
-- Modify: `src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/DiagramDocumentViewModelTests.cs`
+- Create: `src/Draw.App/ViewModels/INodeEditContext.cs`
+- Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
+- Test: `tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs`
 
 - [ ] **Step 1: Write the failing test** (append to `DiagramDocumentViewModelTests`)
 
@@ -1136,16 +1136,16 @@ This task introduces only the interface and `GetTypeSuggestions`. `AddClassNode`
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `GetTypeSuggestions` not defined.
 
 - [ ] **Step 3: Create the interface**
 
-`src/Jcl.Draw.App/ViewModels/INodeEditContext.cs`:
+`src/Draw.App/ViewModels/INodeEditContext.cs`:
 ```csharp
 using System.Collections.Generic;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>
 /// The document-level services a class node and its members need: undo capture before an edit,
@@ -1167,7 +1167,7 @@ public interface INodeEditContext
 ```csharp
 public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
 ```
-- Add `using Jcl.Draw.Diagramming.Uml;` to the file's usings.
+- Add `using Draw.Diagramming.Uml;` to the file's usings.
 - Add the members (place near `NotifyStyleEditStarting`):
 ```csharp
     void INodeEditContext.BeginMemberEdit() => CaptureUndo();
@@ -1190,13 +1190,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext
 
 - [ ] **Step 5: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/INodeEditContext.cs src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Jcl.Draw.App.Tests/DiagramDocumentViewModelTests.cs
+git add src/Draw.App/ViewModels/INodeEditContext.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs
 git commit -m "Add INodeEditContext and type-suggestion source on document
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1207,21 +1207,21 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 12: `ClassMemberViewModel`
 
 **Files:**
-- Create: `src/Jcl.Draw.App/ViewModels/ClassMemberViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/ClassMemberViewModelTests.cs`
+- Create: `src/Draw.App/ViewModels/ClassMemberViewModel.cs`
+- Test: `tests/Draw.App.Tests/ClassMemberViewModelTests.cs`
 
 Behavior: write-through to the model wrapped in `BeginMemberEdit`/`EndMemberEdit` (so each inspector field edit is one undo step + marks dirty); `DisplayText`/`RawText` via `MemberSignature`; inline `BeginEdit`/`CommitEdit`/`CancelEdit`; `RowFontStyle` (italic when abstract) and `RowDecorations` (underline when static) for rendering; `TypeSuggestions` from the context.
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.App.Tests/ClassMemberViewModelTests.cs`:
+`tests/Draw.App.Tests/ClassMemberViewModelTests.cs`:
 ```csharp
 using System.Collections.Generic;
-using Jcl.Draw.App.ViewModels;
-using Jcl.Draw.Model.Nodes;
+using Draw.App.ViewModels;
+using Draw.Model.Nodes;
 using Xunit;
 
-namespace Jcl.Draw.App.Tests;
+namespace Draw.App.Tests;
 
 public class ClassMemberViewModelTests
 {
@@ -1292,20 +1292,20 @@ public class ClassMemberViewModelTests
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `ClassMemberViewModel` not defined.
 
 - [ ] **Step 3: Implement**
 
-`src/Jcl.Draw.App/ViewModels/ClassMemberViewModel.cs`:
+`src/Draw.App/ViewModels/ClassMemberViewModel.cs`:
 ```csharp
 using System;
 using System.Collections.Generic;
 using Avalonia.Media;
-using Jcl.Draw.Diagramming.Uml;
-using Jcl.Draw.Model.Nodes;
+using Draw.Diagramming.Uml;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable wrapper over a <see cref="ClassMember"/>, editable inline (raw text) or field-by-field.</summary>
 public sealed class ClassMemberViewModel : ViewModelBase
@@ -1435,13 +1435,13 @@ Note: inline `CommitEdit` does not call the context — undo capture and dirty m
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/ClassMemberViewModel.cs tests/Jcl.Draw.App.Tests/ClassMemberViewModelTests.cs
+git add src/Draw.App/ViewModels/ClassMemberViewModel.cs tests/Draw.App.Tests/ClassMemberViewModelTests.cs
 git commit -m "Add ClassMemberViewModel with inline and field editing
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1452,24 +1452,24 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 13: `ClassNodeViewModel`
 
 **Files:**
-- Create: `src/Jcl.Draw.App/ViewModels/ClassNodeViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/ClassNodeViewModelTests.cs`
+- Create: `src/Draw.App/ViewModels/ClassNodeViewModel.cs`
+- Test: `tests/Draw.App.Tests/ClassNodeViewModelTests.cs`
 
 Behavior: derives from `NodeViewModelBase`; `BoundaryKind => Rectangle`; splits members into `PrimaryMembers` (Fields, or EnumLiterals for an enum) and `Operations`; `Name`/`IsAbstract` write-through via the context; `Stereotype`/`HasStereotype`/`HasOperations`/`IsEnum`; `AddPrimaryMember`/`AddOperation`/`RemoveMember`/`MoveMember`; computed `MinHeight` that grows with content; `CommitPendingEdits` for the Escape/blur path.
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.App.Tests/ClassNodeViewModelTests.cs`:
+`tests/Draw.App.Tests/ClassNodeViewModelTests.cs`:
 ```csharp
 using System.Collections.Generic;
 using System.Linq;
-using Jcl.Draw.App.ViewModels;
-using Jcl.Draw.Model.Nodes;
-using Jcl.Draw.Model.Primitives;
-using Jcl.Draw.Model.Styling;
+using Draw.App.ViewModels;
+using Draw.Model.Nodes;
+using Draw.Model.Primitives;
+using Draw.Model.Styling;
 using Xunit;
 
-namespace Jcl.Draw.App.Tests;
+namespace Draw.App.Tests;
 
 public class ClassNodeViewModelTests
 {
@@ -1566,19 +1566,19 @@ public class ClassNodeViewModelTests
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `ClassNodeViewModel` not defined.
 
 - [ ] **Step 3: Implement**
 
-`src/Jcl.Draw.App/ViewModels/ClassNodeViewModel.cs`:
+`src/Draw.App/ViewModels/ClassNodeViewModel.cs`:
 ```csharp
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Jcl.Draw.Model.Nodes;
+using Draw.Model.Nodes;
 
-namespace Jcl.Draw.App.ViewModels;
+namespace Draw.App.ViewModels;
 
 /// <summary>Bindable wrapper over a <see cref="ClassNode"/>: name, stereotype and member compartments.</summary>
 public sealed class ClassNodeViewModel : NodeViewModelBase
@@ -1763,13 +1763,13 @@ public sealed class ClassNodeViewModel : NodeViewModelBase
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/ClassNodeViewModel.cs tests/Jcl.Draw.App.Tests/ClassNodeViewModelTests.cs
+git add src/Draw.App/ViewModels/ClassNodeViewModel.cs tests/Draw.App.Tests/ClassNodeViewModelTests.cs
 git commit -m "Add ClassNodeViewModel with member compartments
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1780,8 +1780,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 14: `AddClassNode`; wire `ClassNodeViewModel` into `RebuildNodes`
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/DiagramDocumentViewModelTests.cs`
+- Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
+- Test: `tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs`
 
 - [ ] **Step 1: Write the failing tests** (append)
 
@@ -1828,7 +1828,7 @@ Also strengthen the Task 11 suggestion test now that `AddClassNode` exists (repl
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `AddClassNode` not defined.
 
 - [ ] **Step 3: Implement `AddClassNode` and complete `CreateNodeViewModel`**
@@ -1887,13 +1887,13 @@ Add the `ClassNode` arm to `CreateNodeViewModel` (from Task 9):
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS (undo/redo reconstructs the class node via `CreateNodeViewModel`).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Jcl.Draw.App.Tests/DiagramDocumentViewModelTests.cs
+git add src/Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs
 git commit -m "Add class-node creation and undo/redo reconstruction
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1901,24 +1901,24 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase E — Toolbox (`Jcl.Draw.App`)
+# Phase E — Toolbox (`Draw.App`)
 
 ## Task 15: `ClassNodeToolItem` + toolbox state
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/ToolboxViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/ToolboxViewModelTests.cs` (create)
+- Modify: `src/Draw.App/ViewModels/ToolboxViewModel.cs`
+- Test: `tests/Draw.App.Tests/ToolboxViewModelTests.cs` (create)
 
 - [ ] **Step 1: Write the failing test**
 
-`tests/Jcl.Draw.App.Tests/ToolboxViewModelTests.cs`:
+`tests/Draw.App.Tests/ToolboxViewModelTests.cs`:
 ```csharp
 using System.Linq;
-using Jcl.Draw.App.ViewModels;
-using Jcl.Draw.Model.Nodes;
+using Draw.App.ViewModels;
+using Draw.Model.Nodes;
 using Xunit;
 
-namespace Jcl.Draw.App.Tests;
+namespace Draw.App.Tests;
 
 public class ToolboxViewModelTests
 {
@@ -1961,7 +1961,7 @@ public class ToolboxViewModelTests
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — `ClassNodes`/`SelectedClassNode`/`IsClassNodeMode` not defined.
 
 - [ ] **Step 3: Implement**
@@ -2013,13 +2013,13 @@ public sealed record ClassNodeToolItem(string Name, ClassNodeKind Kind);
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/ToolboxViewModel.cs tests/Jcl.Draw.App.Tests/ToolboxViewModelTests.cs
+git add src/Draw.App/ViewModels/ToolboxViewModel.cs tests/Draw.App.Tests/ToolboxViewModelTests.cs
 git commit -m "Add class-node tools to the toolbox
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2030,8 +2030,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 16: Place class nodes on canvas; toolbox palette UI
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/DiagramView.axaml.cs` (placement)
-- Modify: `src/Jcl.Draw.App/Views/MainWindow.axaml` (palette section)
+- Modify: `src/Draw.App/Views/DiagramView.axaml.cs` (placement)
+- Modify: `src/Draw.App/Views/MainWindow.axaml` (palette section)
 
 No unit harness for pointer input — verified by build + manual run.
 
@@ -2070,13 +2070,13 @@ Expected: succeeds.
 
 - [ ] **Step 4: Manual verification**
 
-Run: `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`
+Run: `dotnet run --project src/Draw.App/Draw.App.csproj`
 Confirm: selecting "Class"/"Interface"/"Enum" then clicking the canvas places a compartment box (it will render as a plain box until Task 20), it is selected, and it is undoable. (Selecting a class tool must clear any shape/connector tool selection.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/Views/DiagramView.axaml.cs src/Jcl.Draw.App/Views/MainWindow.axaml
+git add src/Draw.App/Views/DiagramView.axaml.cs src/Draw.App/Views/MainWindow.axaml
 git commit -m "Place class nodes from the toolbox
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2084,13 +2084,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase F — Inspector (`Jcl.Draw.App`)
+# Phase F — Inspector (`Draw.App`)
 
 ## Task 17: Inspector third mode + member-editor commands
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/ViewModels/InspectorViewModel.cs`
-- Test: `tests/Jcl.Draw.App.Tests/InspectorViewModelTests.cs`
+- Modify: `src/Draw.App/ViewModels/InspectorViewModel.cs`
+- Test: `tests/Draw.App.Tests/InspectorViewModelTests.cs`
 
 - [ ] **Step 1: Write the failing tests** (append)
 
@@ -2148,13 +2148,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 - [ ] **Step 2: Run to verify failure**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: FAIL — class-mode members not defined.
 
 - [ ] **Step 3: Implement inspector changes**
 
 In `InspectorViewModel.cs`:
-- Add usings: `using CommunityToolkit.Mvvm.Input;` and `using Jcl.Draw.Model.Nodes;`.
+- Add usings: `using CommunityToolkit.Mvvm.Input;` and `using Draw.Model.Nodes;`.
 - Add the visibility options static list near the others:
 ```csharp
     public static IReadOnlyList<MemberVisibility> VisibilityOptions { get; } =
@@ -2317,13 +2317,13 @@ Note: the existing field initializers on `InspectorViewModel` properties (e.g. `
 
 - [ ] **Step 4: Run to verify pass**
 
-Run: `dotnet test --project tests/Jcl.Draw.App.Tests/Jcl.Draw.App.Tests.csproj`
+Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
 Expected: PASS (including the existing shape inspector tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/ViewModels/InspectorViewModel.cs tests/Jcl.Draw.App.Tests/InspectorViewModelTests.cs
+git add src/Draw.App/ViewModels/InspectorViewModel.cs tests/Draw.App.Tests/InspectorViewModelTests.cs
 git commit -m "Add class-node inspector mode and member-editor commands
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2334,7 +2334,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ## Task 18: Inspector AXAML — shared style for nodes + class member editor
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/MainWindow.axaml`
+- Modify: `src/Draw.App/Views/MainWindow.axaml`
 
 Build + manual verification (no AXAML unit harness).
 
@@ -2474,7 +2474,7 @@ Run the app; select a placed class node and confirm: Name edits, Abstract toggle
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/Jcl.Draw.App/Views/MainWindow.axaml
+git add src/Draw.App/Views/MainWindow.axaml
 git commit -m "Add class-node inspector UI with member editor
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2482,12 +2482,12 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-# Phase G — Rendering + inline member editing (`Jcl.Draw.App`)
+# Phase G — Rendering + inline member editing (`Draw.App`)
 
 ## Task 19: Node DataTemplates — shape + class compartment box
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/DiagramView.axaml`
+- Modify: `src/Draw.App/Views/DiagramView.axaml`
 
 Build + manual verification.
 
@@ -2607,7 +2607,7 @@ Notes:
 ## Task 20: Member-row double-tap + commit handlers; extend `EndEditing`
 
 **Files:**
-- Modify: `src/Jcl.Draw.App/Views/DiagramView.axaml.cs`
+- Modify: `src/Draw.App/Views/DiagramView.axaml.cs`
 
 - [ ] **Step 1: Add the handlers**
 
@@ -2699,7 +2699,7 @@ Run the app and verify:
 - [ ] **Step 6: Commit (covers Tasks 19+20)**
 
 ```bash
-git add src/Jcl.Draw.App/Views/DiagramView.axaml src/Jcl.Draw.App/Views/DiagramView.axaml.cs
+git add src/Draw.App/Views/DiagramView.axaml src/Draw.App/Views/DiagramView.axaml.cs
 git commit -m "Render class compartment nodes with inline member editing
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -2722,13 +2722,13 @@ Expected: PASS. Record the passing test count.
 
 - [ ] **Step 2: Manual end-to-end run** (Linux/WSL: ensure fontconfig installed)
 
-Run: `dotnet run --project src/Jcl.Draw.App/Jcl.Draw.App.csproj`
+Run: `dotnet run --project src/Draw.App/Draw.App.csproj`
 Checklist (note any failures honestly):
 - Place a Class, an Interface, and an Enum; add fields/operations/literals via the inspector.
 - Draw a Generalization from one class to another (Phase 2 connector tool) — confirm the line attaches to the rectangular class-box boundary and re-routes when a class node is moved/resized.
 - Draw a Realization to an Interface, a Dependency, and an Association.
 - Resize a class node — confirm it cannot shrink below its member content (per-node `MinHeight`).
-- Save to `.jcld`, close, reopen — confirm class nodes, members, flags and connectors round-trip.
+- Save to `.draw`, close, reopen — confirm class nodes, members, flags and connectors round-trip.
 - Undo/redo across creation, member edits, and connector creation.
 - Toggle theme — confirm class box fill/stroke/text adapt.
 
@@ -2757,7 +2757,7 @@ Use the superpowers:finishing-a-development-branch skill to decide merge/PR. Do 
 
 ## Notes, deviations from the spec, and logged omissions
 
-- **Deviation (better):** No `Jcl.Draw.Diagramming` change for class-node routing. `NodeViewModelBase.BoundaryKind` returns `ShapeKind.Rectangle` for class nodes, so existing rectangle attachment is reused. (Spec §6 anticipated a `ShapeOutline`/`ShapeBoundary` change — unnecessary.)
+- **Deviation (better):** No `Draw.Diagramming` change for class-node routing. `NodeViewModelBase.BoundaryKind` returns `ShapeKind.Rectangle` for class nodes, so existing rectangle attachment is reused. (Spec §6 anticipated a `ShapeOutline`/`ShapeBoundary` change — unnecessary.)
 - **Deviation (fits codebase):** `ClassMember` is a mutable `sealed class` (like `ShapeStyle`), not a record — enables field-by-field write-through from the inspector.
 - **Deviation (simpler):** Parser is `MemberSignature.Parse` (always returns a best-effort member) rather than `TryParse`; there is no "empty means delete" path because add/remove is inspector-driven (per the approved Q4 answer).
 - **Consolidation:** undo/dirty/autocomplete coupling for members goes through one `INodeEditContext` implemented by `DiagramDocumentViewModel`.

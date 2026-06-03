@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Internal net10 library (see Draw.Model for the netstandard-default deviation rationale). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Draw.Diagramming</RootNamespace>
+    <AssemblyName>Draw.Diagramming</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Draw.Model\Draw.Model.csproj" />
+  </ItemGroup>
+
+</Project>

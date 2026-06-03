@@ -1,0 +1,383 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Draw.App.ViewModels"
+        xmlns:v="using:Draw.App.Views"
+        xmlns:ribbon="using:Carbon.Avalonia.Desktop.Controls.Ribbon"
+        xmlns:pia="using:PhosphorIconsAvalonia.Markup"
+        xmlns:nodes="using:Draw.Model.Nodes"
+        xmlns:rel="using:Draw.Model.Connectors"
+        x:Class="Draw.App.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Title="{Binding Title}"
+        Width="1200" Height="780"
+        Background="{DynamicResource CarbonBackgroundBrush}"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
+    </Window.KeyBindings>
+
+    <DockPanel>
+
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New" Command="{Binding NewCommand}" InputGesture="Ctrl+N">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=file_plus}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGesture="Ctrl+O">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=folder_open}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem x:Name="OpenRecentMenu" Header="Open _Recent" ItemsSource="{Binding RecentFiles}">
+                    <MenuItem.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                    </MenuItem.ItemTemplate>
+                    <MenuItem.Styles>
+                        <!-- Target only the generated child items, not the "Open Recent" container itself.
+                             A bare "MenuItem > MenuItem" also matches this container (it is a child of the
+                             File MenuItem), which would bind the string-typed OpenRecentCommand to it with the
+                             ShellViewModel as parameter and throw when the File menu opens. -->
+                        <Style Selector="MenuItem#OpenRecentMenu > MenuItem">
+                            <Setter Property="Command" Value="{Binding $parent[Menu].((vm:ShellViewModel)DataContext).OpenRecentCommand}" />
+                            <Setter Property="CommandParameter" Value="{ReflectionBinding}" />
+                        </Style>
+                    </MenuItem.Styles>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Save" Command="{Binding SaveCommand}" InputGesture="Ctrl+S">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=floppy_disk}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Save _As…" Command="{Binding SaveAsCommand}" InputGesture="Ctrl+Shift+S">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=floppy_disk_back}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Export PNG…" Command="{Binding ExportPngCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=image}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Copy as Image" Command="{Binding CopyImageCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Close" Command="{Binding CloseDocumentCommand}" InputGesture="Ctrl+W">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=x}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="E_xit" Click="OnExitClick" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=arrow_counter_clockwise}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=arrow_clockwise}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="_Delete" Command="{Binding DeleteCommand}" InputGesture="Delete">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=trash}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Toggle _Theme" Command="{Binding ToggleThemeCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=moon}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+
+        <!-- Ribbon: replaces the former top toolbar and left tool palette. Tool dropdown items carry their
+             CommandParameter (kind) here; their shared Command is assigned in code-behind because Carbon's
+             RibbonMenuItem is a plain AvaloniaObject with no DataContext to bind against. -->
+        <ribbon:Ribbon x:Name="MainRibbon" DockPanel.Dock="Top">
+            <ribbon:RibbonTab Header="Home">
+                <ribbon:RibbonGroup Header="File">
+                    <ribbon:RibbonButton Header="New" Command="{Binding NewCommand}" IconData="{pia:IconGeometry Icon=file_plus}" />
+                    <ribbon:RibbonButton Header="Open" Command="{Binding OpenCommand}" IconData="{pia:IconGeometry Icon=folder_open}" />
+                    <ribbon:RibbonButton Header="Save" Command="{Binding SaveCommand}" IconData="{pia:IconGeometry Icon=floppy_disk}" />
+                    <ribbon:RibbonButton Header="Save As" Command="{Binding SaveAsCommand}" IconData="{pia:IconGeometry Icon=floppy_disk_back}" />
+                    <ribbon:RibbonButton Header="Close" Command="{Binding CloseDocumentCommand}" IconData="{pia:IconGeometry Icon=x}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Edit">
+                    <ribbon:RibbonButton Header="Undo" Command="{Binding UndoCommand}" IconData="{pia:IconGeometry Icon=arrow_counter_clockwise}" />
+                    <ribbon:RibbonButton Header="Redo" Command="{Binding RedoCommand}" IconData="{pia:IconGeometry Icon=arrow_clockwise}" />
+                    <ribbon:RibbonButton Header="Delete" Command="{Binding DeleteCommand}" IconData="{pia:IconGeometry Icon=trash}" />
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="Insert">
+                <ribbon:RibbonGroup Header="Tools">
+                    <ribbon:RibbonToggleButton Header="Select"
+                                               IsChecked="{Binding Toolbox.IsSelectTool, Mode=OneWay}"
+                                               Command="{Binding ActivateSelectToolCommand}"
+                                               IconData="{pia:IconGeometry Icon=cursor}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Shapes">
+                    <ribbon:RibbonDropDownButton x:Name="ShapesDropDown" Header="{Binding Toolbox.ShapesHeader}" IconData="{pia:IconGeometry Icon=shapes}">
+                        <ribbon:RibbonMenuItem Header="Rectangle" CommandParameter="{x:Static nodes:ShapeKind.Rectangle}" IconData="{pia:IconGeometry Icon=rectangle}" />
+                        <ribbon:RibbonMenuItem Header="Rounded rectangle" CommandParameter="{x:Static nodes:ShapeKind.RoundedRectangle}" IconData="{StaticResource ToolIcon.RoundedRectangle}" />
+                        <ribbon:RibbonMenuItem Header="Ellipse" CommandParameter="{x:Static nodes:ShapeKind.Ellipse}" IconData="{StaticResource ToolIcon.Ellipse}" />
+                        <ribbon:RibbonMenuItem Header="Circle" CommandParameter="{x:Static nodes:ShapeKind.Circle}" IconData="{pia:IconGeometry Icon=circle}" />
+                        <ribbon:RibbonMenuItem Header="Diamond" CommandParameter="{x:Static nodes:ShapeKind.Diamond}" IconData="{pia:IconGeometry Icon=diamond}" />
+                        <ribbon:RibbonMenuItem Header="Parallelogram" CommandParameter="{x:Static nodes:ShapeKind.Parallelogram}" IconData="{pia:IconGeometry Icon=parallelogram}" />
+                        <ribbon:RibbonMenuItem Header="Trapezoid" CommandParameter="{x:Static nodes:ShapeKind.Trapezoid}" IconData="{StaticResource ToolIcon.Trapezoid}" />
+                        <ribbon:RibbonMenuItem Header="Triangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}" IconData="{pia:IconGeometry Icon=triangle}" />
+                    </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Connectors">
+                    <ribbon:RibbonDropDownButton x:Name="ConnectorsDropDown" Header="{Binding Toolbox.ConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
+                        <ribbon:RibbonMenuItem Header="Association" CommandParameter="{x:Static rel:RelationshipKind.Association}" IconData="{StaticResource ToolIcon.Association}" />
+                        <ribbon:RibbonMenuItem Header="Directed association" CommandParameter="{x:Static rel:RelationshipKind.DirectedAssociation}" IconData="{StaticResource ToolIcon.DirectedAssociation}" />
+                        <ribbon:RibbonMenuItem Header="Aggregation" CommandParameter="{x:Static rel:RelationshipKind.Aggregation}" IconData="{StaticResource ToolIcon.Aggregation}" />
+                        <ribbon:RibbonMenuItem Header="Composition" CommandParameter="{x:Static rel:RelationshipKind.Composition}" IconData="{StaticResource ToolIcon.Composition}" />
+                        <ribbon:RibbonMenuItem Header="Generalization" CommandParameter="{x:Static rel:RelationshipKind.Generalization}" IconData="{StaticResource ToolIcon.Generalization}" />
+                        <ribbon:RibbonMenuItem Header="Realization" CommandParameter="{x:Static rel:RelationshipKind.Realization}" IconData="{StaticResource ToolIcon.Realization}" />
+                        <ribbon:RibbonMenuItem Header="Dependency" CommandParameter="{x:Static rel:RelationshipKind.Dependency}" IconData="{StaticResource ToolIcon.Dependency}" />
+                        <ribbon:RibbonMenuItem Header="Include" CommandParameter="{x:Static rel:RelationshipKind.Include}" IconData="{StaticResource ToolIcon.Dependency}" />
+                        <ribbon:RibbonMenuItem Header="Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}" IconData="{StaticResource ToolIcon.Dependency}" />
+                    </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Class diagram">
+                    <ribbon:RibbonDropDownButton x:Name="ClassDropDown" Header="{Binding Toolbox.ClassHeader}" IconData="{pia:IconGeometry Icon=square_split_horizontal}">
+                        <ribbon:RibbonMenuItem Header="Class" CommandParameter="{x:Static nodes:ClassNodeKind.Class}" IconData="{pia:IconGeometry Icon=square_split_horizontal}" />
+                        <ribbon:RibbonMenuItem Header="Interface" CommandParameter="{x:Static nodes:ClassNodeKind.Interface}" IconData="{StaticResource ToolIcon.Interface}" />
+                        <ribbon:RibbonMenuItem Header="Enum" CommandParameter="{x:Static nodes:ClassNodeKind.Enum}" IconData="{pia:IconGeometry Icon=list_numbers}" />
+                    </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Use case">
+                    <ribbon:RibbonDropDownButton x:Name="UseCaseDropDown" Header="{Binding Toolbox.UseCaseHeader}" IconData="{pia:IconGeometry Icon=user}">
+                        <ribbon:RibbonMenuItem Header="Actor" CommandParameter="{x:Static vm:UseCaseNodeKind.Actor}" IconData="{pia:IconGeometry Icon=user}" />
+                        <ribbon:RibbonMenuItem Header="Use case" CommandParameter="{x:Static vm:UseCaseNodeKind.UseCase}" IconData="{StaticResource ToolIcon.Ellipse}" />
+                        <ribbon:RibbonMenuItem Header="System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}" IconData="{pia:IconGeometry Icon=bounding_box}" />
+                    </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="View">
+                <ribbon:RibbonGroup Header="Zoom">
+                    <ribbon:RibbonButton Header="Zoom In" Command="{Binding ActiveDocument.ZoomInCommand}" IconData="{pia:IconGeometry Icon=magnifying_glass_plus}" />
+                    <ribbon:RibbonButton Header="Zoom Out" Command="{Binding ActiveDocument.ZoomOutCommand}" IconData="{pia:IconGeometry Icon=magnifying_glass_minus}" />
+                    <ribbon:RibbonButton Header="Reset" Command="{Binding ActiveDocument.ZoomResetCommand}" IconData="{pia:IconGeometry Icon=arrows_out}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Appearance">
+                    <ribbon:RibbonButton Header="Toggle theme" Command="{Binding ToggleThemeCommand}" IconData="{pia:IconGeometry Icon=moon}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Export">
+                    <ribbon:RibbonButton Header="Export PNG" Command="{Binding ExportPngCommand}" IconData="{pia:IconGeometry Icon=image}" />
+                    <ribbon:RibbonButton Header="Copy image" Command="{Binding CopyImageCommand}" IconData="{pia:IconGeometry Icon=copy}" />
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+        </ribbon:Ribbon>
+
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource CarbonSurfaceBrush}"
+                BorderBrush="{DynamicResource CarbonBorderBrush}" BorderThickness="0,1,0,0" Padding="8,3">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="{Binding ActiveDocument.DisplayName, FallbackValue='No document'}" />
+                <TextBlock Text="{Binding ActiveDocument.Zoom, StringFormat='Zoom: {0:P0}', FallbackValue=''}" />
+                <TextBlock Text="{Binding Toolbox.ActiveToolHint}" FontWeight="SemiBold" />
+            </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,260">
+
+            <!-- Document tabs -->
+            <TabControl Grid.Column="0"
+                        ItemsSource="{Binding Documents}"
+                        SelectedItem="{Binding ActiveDocument, Mode=TwoWay}">
+                <TabControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DiagramDocumentViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                            <Button Padding="4,0"
+                                    Background="Transparent" BorderThickness="0"
+                                    Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).CloseDocumentCommand}"
+                                    CommandParameter="{Binding}">
+                                <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                            </Button>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+                <TabControl.ContentTemplate>
+                    <DataTemplate x:DataType="vm:DiagramDocumentViewModel">
+                        <v:DiagramView />
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+            </TabControl>
+
+            <!-- Inspector -->
+            <Border Grid.Column="1" Background="{DynamicResource CarbonSurfaceBrush}"
+                    BorderBrush="{DynamicResource CarbonBorderBrush}" BorderThickness="1,0,0,0" Padding="10">
+                <ScrollViewer>
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Properties" FontWeight="SemiBold" />
+                        <TextBlock Text="No selection" Opacity="0.6"
+                                   IsVisible="{Binding Inspector.HasNoSelection}" />
+
+                        <!-- Label (all label-bearing nodes) -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsLabelNodeSelected}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Text" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.Text, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Shared node style (shapes and class nodes) -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsNodeSelected}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Fill (#AARRGGBB)" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.FillHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.StrokeHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke thickness" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.StrokeThickness, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Font size" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.FontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="14">
+                                <CheckBox Content="Bold" IsChecked="{Binding Inspector.Bold, Mode=TwoWay}" />
+                                <CheckBox Content="Italic" IsChecked="{Binding Inspector.Italic, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Text alignment" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.AlignmentOptions}"
+                                          SelectedItem="{Binding Inspector.Alignment, Mode=TwoWay}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Class node properties -->
+                        <StackPanel IsVisible="{Binding Inspector.IsClassNodeSelected}">
+                        <StackPanel Spacing="10" DataContext="{Binding Inspector.SelectedClassNode}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Name" Opacity="0.7" />
+                                <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                            <CheckBox Content="Abstract" IsChecked="{Binding IsAbstract, Mode=TwoWay}" />
+
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Members" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddPrimaryMemberCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
+                                        <TextBlock Text="Field/Literal" />
+                                    </StackPanel>
+                                </Button>
+                                <Button IsVisible="{Binding HasOperations}"
+                                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddOperationCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
+                                        <TextBlock Text="Operation" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding PrimaryMembers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                        <StackPanel Spacing="2" Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
+                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
+                                                <TextBox Width="90" Watermark="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <AutoCompleteBox Width="120" Watermark="type"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <CheckBox Content="stat" IsChecked="{Binding IsStatic, Mode=TwoWay}" />
+                                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                </Button>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Operations" Opacity="0.7" IsVisible="{Binding HasOperations}" />
+                            <ItemsControl ItemsSource="{Binding Operations}" IsVisible="{Binding HasOperations}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                        <StackPanel Spacing="2" Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
+                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
+                                                <TextBox Width="90" Watermark="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBox Width="86" Watermark="params"
+                                                         Text="{Binding Parameters, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                <AutoCompleteBox Width="80" Watermark="ret"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                </Button>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        </StackPanel>
+
+                        <!-- Connector properties -->
+                        <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsConnectorSelected}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Relationship" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.RelationshipOptions}"
+                                          SelectedItem="{Binding Inspector.ConnectorKind, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Route" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.RouteStyleOptions}"
+                                          SelectedItem="{Binding Inspector.ConnectorRouteStyle, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Source label" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.SourceLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Center label" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.CenterLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Target label" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.TargetLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.ConnectorStrokeHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Stroke thickness" Opacity="0.7" />
+                                <TextBox Text="{Binding Inspector.ConnectorThickness, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

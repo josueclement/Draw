@@ -31,8 +31,8 @@ Actor, use-case, system boundary; association, include/extend, generalization.
 ## Phase 5 — ER diagrams + DB schema + vector export
 
 `EntityNode` with columns (PK/FK/nullable/unique) and crow's-foot cardinality;
-`Jcl.Draw.Sql` with `ISqlDialect` for PostgreSQL / SQL Server / SQLite / MySQL,
-ER→DDL (primary) and optional class→table mapping; `Jcl.Draw.Export` adds SVG/PDF
+`Draw.Sql` with `ISqlDialect` for PostgreSQL / SQL Server / SQLite / MySQL,
+ER→DDL (primary) and optional class→table mapping; `Draw.Export` adds SVG/PDF
 (SkiaSharp).
 
 ## UI shell — Ribbon, icons & theming ✅ (cross-cutting)
