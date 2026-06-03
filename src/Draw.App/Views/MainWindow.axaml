@@ -109,12 +109,6 @@
             </ribbon:RibbonTab>
 
             <ribbon:RibbonTab Header="Insert">
-                <ribbon:RibbonGroup Header="Tools">
-                    <ribbon:RibbonToggleButton Header="Select"
-                                               IsChecked="{Binding Toolbox.IsSelectTool, Mode=OneWay}"
-                                               Command="{Binding ActivateSelectToolCommand}"
-                                               IconData="{pia:IconGeometry Icon=cursor}" />
-                </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Shapes">
                     <ribbon:RibbonDropDownButton x:Name="ShapesDropDown" Header="{Binding Toolbox.ShapesHeader}" IconData="{pia:IconGeometry Icon=shapes}">
                         <ribbon:RibbonMenuItem Header="Rectangle" CommandParameter="{x:Static nodes:ShapeKind.Rectangle}" IconData="{pia:IconGeometry Icon=rectangle}" />

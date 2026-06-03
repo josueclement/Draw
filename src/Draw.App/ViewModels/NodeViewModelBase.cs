@@ -2,17 +2,22 @@ using System;
 using Avalonia.Collections;
 using Avalonia.Media;
 using Draw.App.Rendering;
+using Draw.App.Services;
 using Draw.Model.Nodes;
 using Draw.Model.Primitives;
+using ModelStyle = Draw.Model.Styling;
 
 namespace Draw.App.ViewModels;
 
 /// <summary>Bindable concerns shared by every node kind: placement, selection and style.</summary>
 public abstract class NodeViewModelBase : ViewModelBase
 {
-    protected NodeViewModelBase(NodeBase model)
+    private readonly IThemeService _theme;
+
+    protected NodeViewModelBase(NodeBase model, IThemeService theme)
     {
         Model = model ?? throw new ArgumentNullException(nameof(model));
+        _theme = theme ?? throw new ArgumentNullException(nameof(theme));
     }
 
     public NodeBase Model { get; }
@@ -105,7 +110,13 @@ public abstract class NodeViewModelBase : ViewModelBase
         set => SetProperty(ref field, value);
     }
 
-    public IBrush Fill => Model.Style.Fill.ToBrush();
+    /// <summary>True when the fill is the un-customised default, so it follows the active theme.</summary>
+    public bool UsesDefaultFill => Model.Style.Fill == ModelStyle.ShapeStyle.DefaultFill;
+
+    /// <summary>True when the text colour is the un-customised default, so it follows the active theme.</summary>
+    public bool UsesDefaultForeground => Model.Style.Font.Color == ModelStyle.FontSpec.DefaultColor;
+
+    public IBrush Fill => UsesDefaultFill && _theme.DefaultNodeFill is { } fill ? fill : Model.Style.Fill.ToBrush();
 
     public IBrush Stroke => Model.Style.Stroke.Color.ToBrush();
 
@@ -113,7 +124,7 @@ public abstract class NodeViewModelBase : ViewModelBase
 
     public AvaloniaList<double>? StrokeDashArray => Model.Style.Stroke.Dash.ToDashArray();
 
-    public IBrush Foreground => Model.Style.Font.Color.ToBrush();
+    public IBrush Foreground => UsesDefaultForeground && _theme.DefaultNodeText is { } text ? text : Model.Style.Font.Color.ToBrush();
 
     public FontFamily FontFamily => new(Model.Style.Font.Family);
 

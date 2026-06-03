@@ -3,8 +3,11 @@ namespace Draw.Model.Styling;
 /// <summary>Fill, stroke, font and text alignment for a shape node.</summary>
 public sealed class ShapeStyle
 {
-    // Default fill: Carbon "surface" tone (#EBEDF0) — a soft grey that reads on both light and dark canvases.
-    public ArgbColor Fill { get; set; } = new(0xFF, 0xEB, 0xED, 0xF0);
+    // Default fill: Carbon light-theme "surface" tone (#EBEDF0). Doubles as the sentinel the App
+    // layer uses to detect an un-customised fill and swap in the theme-aware brush (dark: #2B2D30).
+    public static readonly ArgbColor DefaultFill = new(0xFF, 0xEB, 0xED, 0xF0);
+
+    public ArgbColor Fill { get; set; } = DefaultFill;
 
     public StrokeStyle Stroke { get; set; } = new();
 

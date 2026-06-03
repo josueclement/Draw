@@ -1,6 +1,6 @@
 # UI Revamp — Ribbon Shell, Phosphor Icons & Carbon Theming
 
-**Status:** Implemented on `feature/ribbon-ui-revamp` (non-headless tests green; visual pass pending on Windows/macOS — see Verification).
+**Status:** Implemented on `feature/ribbon-ui-revamp` (visual pass pending on Windows/macOS — see Verification).
 
 **Goal:** Replace the top text-button toolbar and the left-side ListBox tool palette with a
 ribbon, give the whole app a consistent icon set and color palette, and drop the dull
@@ -8,7 +8,7 @@ white-fill/black-stroke shape default — using the author's own `Carbon.Avaloni
 (ribbon + palette) and `PhosphorIconsAvalonia` (icons) libraries.
 
 **Tech stack:** .NET 10, C# 14, Avalonia 12.0.4, CommunityToolkit.Mvvm, `Carbon.Avalonia.Desktop`
-0.2.0, `PhosphorIconsAvalonia` 1.2.0, xUnit v3 on Microsoft.Testing.Platform.
+0.2.0, `PhosphorIconsAvalonia` 1.2.0.
 
 ## Decisions (from the requirements interview)
 
@@ -57,16 +57,12 @@ white-fill/black-stroke shape default — using the author's own `Carbon.Avaloni
 - `src/Draw.App/Views/MainWindow.axaml` (+ `.axaml.cs`) — the 3-tab ribbon, grid re-index to
   `*,260`, chrome recolor, Phosphor icons on menu/tab-close/inspector buttons; code-behind
   `WireToolDropdowns` assigns each dropdown's shared command.
-- Tests: `tests/Draw.Model.Tests/ShapeStyleTests.cs` (new defaults) and additions to
-  `ToolboxViewModelTests` / `DiagramDocumentViewModelTests` (tool commands, headers, zoom).
-
 ## Verification
 
 - `dotnet build Draw.slnx` — clean (0 errors; pre-existing `AVLN5001` Watermark warnings only).
-- Non-headless suites green: Model 30/30, App (all 7 `*ViewModelTests`) 60/60, Diagramming 50/50.
-- Custom glyph paths were parse-verified headlessly (correct bounds) before wiring.
-- **Pending (must run on Windows/macOS):** the visual pass and `CanvasPlacementHeadlessTests` —
-  that test uses real Skia rendering, which does not run under WSL2 (documented in CLAUDE.md).
+- Custom glyph paths were parse-verified (correct bounds) before wiring.
+- **Pending (must run on Windows/macOS):** the visual pass — real Skia rendering does not run
+  under WSL2 (documented in CLAUDE.md).
   Visual checklist: 3 ribbon tabs render; each dropdown arms its tool (status-bar hint + header
   update); Select toggle reflects state; Zoom In/Out/Reset + `%`; theme toggle recolors ribbon and
   chrome; new shapes use the accent style; menu + keybindings still work; custom UML glyphs read

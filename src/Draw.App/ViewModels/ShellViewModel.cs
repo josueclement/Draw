@@ -52,7 +52,6 @@ public sealed class ShellViewModel : ViewModelBase
         ExportPngCommand = new RelayCommand(OnExportPng, () => HasActiveDocument);
         CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
-        ActivateSelectToolCommand = new RelayCommand(() => Toolbox.ActivateSelectTool());
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
         RefreshRecentFiles();
@@ -80,7 +79,6 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand ExportPngCommand { get; }
     public RelayCommand CopyImageCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
-    public RelayCommand ActivateSelectToolCommand { get; }
 
     public event EventHandler? ExportPngRequested;
 
@@ -217,6 +215,8 @@ public sealed class ShellViewModel : ViewModelBase
         {
             ActiveDocument = Documents.Count > 0 ? Documents[Math.Min(index, Documents.Count - 1)] : null;
         }
+
+        document.Dispose();
     }
 
     private void OnUndo() => ActiveDocument?.Undo();

@@ -6,7 +6,7 @@
 
 **Architecture:** Three new `NodeBase` subtypes (`ActorNode`/`UseCaseNode`/`SystemBoundaryNode`) join the polymorphic document; three VMs derive `NodeViewModelBase`; inline label editing is generalized onto the base via `HasInlineLabel`/`Label`; the system boundary is a visual-only box rendered behind (low z-index + inserted at the front of the node collection). Include/Extend (already rendered since Phase 2) are surfaced in the toolbox.
 
-**Tech Stack:** .NET 10, C# 13, Avalonia 12, CommunityToolkit.Mvvm, System.Text.Json (polymorphic), xUnit v3 on Microsoft.Testing.Platform.
+**Tech Stack:** .NET 10, C# 13, Avalonia 12, CommunityToolkit.Mvvm, System.Text.Json (polymorphic).
 
 ---
 
@@ -14,8 +14,7 @@
 
 - **Branch:** work on `feature/phase4-use-case-diagrams` (already created; the spec is committed there). Git identity is already configured locally.
 - **Build:** `dotnet build Draw.slnx`
-- **Test a project:** `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj` (swap project). Whole suite: `dotnet test --solution Draw.slnx`. The repo's `global.json` opts into Microsoft.Testing.Platform.
-- **TDD:** strict red→green→commit for model + view-model logic. AXAML/pointer-code-behind tasks have **no UI test harness** — verify with `dotnet build` (compiled XAML validates bindings) + a manual run; say "builds; manually verified", never "tested".
+- **Verification:** all work is verified by `dotnet build Draw.slnx` (compiled XAML validates bindings/types) plus a manual run; say "builds; manually verified", never "tested".
 - **Line endings — CRITICAL:** this Windows/WSL checkout has a CRLF artifact (~90+ files show "modified"; committed blobs are LF; there is no `.gitattributes`). Write source as **LF**; before committing a file you touched, `sed -i 's/\r$//' <file>` it so the diff is only your real change. **Stage only the specific files you changed** (`git add <files>`), never `git add -A`/`git add .`.
 - **Git scope — CRITICAL:** stay on `feature/phase4-use-case-diagrams`. Do NOT checkout/switch/create branches, merge, rebase, reset, cherry-pick, push, or touch `main`. Only `git add <files>` + `git commit`.
 - **Commit trailer** (end every commit body):
@@ -37,64 +36,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 - Create: `src/Draw.Model/Nodes/UseCaseNode.cs`
 - Create: `src/Draw.Model/Nodes/SystemBoundaryNode.cs`
 - Modify: `src/Draw.Model/Nodes/NodeBase.cs:15` (add three `[JsonDerivedType]`)
-- Test: `tests/Draw.Model.Tests/UseCaseNodesTests.cs`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.Model.Tests/UseCaseNodesTests.cs`:
-```csharp
-using System;
-using Draw.Model.Documents;
-using Draw.Model.Nodes;
-using Draw.Model.Primitives;
-using Draw.Model.Serialization;
-using Xunit;
-
-namespace Draw.Model.Tests;
-
-public class UseCaseNodesTests
-{
-    [Fact]
-    public void Clone_Actor_CopiesNameAndBase()
-    {
-        ActorNode node = new() { Id = Guid.NewGuid(), Name = "Customer", Bounds = new Rect2D(1, 2, 48, 84) };
-
-        ActorNode clone = Assert.IsType<ActorNode>(node.Clone());
-        clone.Name = "Admin";
-
-        Assert.Equal(node.Id, clone.Id);
-        Assert.Equal("Customer", node.Name);
-        Assert.Equal("Admin", clone.Name);
-        Assert.Equal(new Rect2D(1, 2, 48, 84), clone.Bounds);
-    }
-
-    [Fact]
-    public void RoundTrip_PreservesAllThreeNodeKinds()
-    {
-        JsonDocumentSerializer serializer = new();
-        DiagramDocument doc = new() { DiagramType = DiagramType.UseCase };
-        doc.Nodes.Add(new ActorNode { Name = "Customer", Bounds = new Rect2D(0, 0, 48, 84) });
-        doc.Nodes.Add(new UseCaseNode { Text = "Place order", Bounds = new Rect2D(80, 0, 130, 72) });
-        doc.Nodes.Add(new SystemBoundaryNode { Title = "Shop", Bounds = new Rect2D(0, 0, 320, 220) });
-
-        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
-
-        ActorNode actor = Assert.IsType<ActorNode>(back.Nodes[0]);
-        Assert.Equal("Customer", actor.Name);
-        UseCaseNode useCase = Assert.IsType<UseCaseNode>(back.Nodes[1]);
-        Assert.Equal("Place order", useCase.Text);
-        SystemBoundaryNode boundary = Assert.IsType<SystemBoundaryNode>(back.Nodes[2]);
-        Assert.Equal("Shop", boundary.Title);
-    }
-}
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
-Expected: FAIL — the three types don't exist.
-
-- [ ] **Step 3: Create the three node types**
+- [ ] **Step 1: Create the three node types**
 
 `src/Draw.Model/Nodes/ActorNode.cs`:
 ```csharp
@@ -150,7 +93,7 @@ public sealed class SystemBoundaryNode : NodeBase
 }
 ```
 
-- [ ] **Step 4: Register the derived types**
+- [ ] **Step 2: Register the derived types**
 
 Modify `src/Draw.Model/Nodes/NodeBase.cs` — add three attributes after the existing `class` registration (line 15):
 ```csharp
@@ -163,16 +106,16 @@ Modify `src/Draw.Model/Nodes/NodeBase.cs` — add three attributes after the exi
 public abstract class NodeBase
 ```
 
-- [ ] **Step 5: Run to verify pass**
+- [ ] **Step 3: Build**
 
-Run: `dotnet test --project tests/Draw.Model.Tests/Draw.Model.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded.
 
-- [ ] **Step 6: Commit** (normalize LF first)
+- [ ] **Step 4: Commit** (normalize LF first)
 
 ```bash
 sed -i 's/\r$//' src/Draw.Model/Nodes/NodeBase.cs
-git add src/Draw.Model/Nodes/ActorNode.cs src/Draw.Model/Nodes/UseCaseNode.cs src/Draw.Model/Nodes/SystemBoundaryNode.cs src/Draw.Model/Nodes/NodeBase.cs tests/Draw.Model.Tests/UseCaseNodesTests.cs
+git add src/Draw.Model/Nodes/ActorNode.cs src/Draw.Model/Nodes/UseCaseNode.cs src/Draw.Model/Nodes/SystemBoundaryNode.cs src/Draw.Model/Nodes/NodeBase.cs
 git commit -m "Add actor, use-case and system-boundary node types
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -188,7 +131,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Modify: `src/Draw.App/ViewModels/NodeViewModelBase.cs`
 - Modify: `src/Draw.App/ViewModels/ShapeNodeViewModel.cs`
 
-Mechanical, no behavior change; the existing suite is the safety net.
+Mechanical, no behavior change.
 
 - [ ] **Step 1: Add the two virtual members to the base**
 
@@ -234,10 +177,10 @@ And in the existing `Text` setter, after `OnPropertyChanged();`, add `OnProperty
     }
 ```
 
-- [ ] **Step 3: Build + run the full suite**
+- [ ] **Step 3: Build**
 
-Run: `dotnet build Draw.slnx && dotnet test --solution Draw.slnx`
-Expected: PASS (no behavior change).
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded (no behavior change).
 
 - [ ] **Step 4: Commit**
 
@@ -258,7 +201,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `src/Draw.App/Rendering/ActorGeometry.cs`
 
-`ActorGeometry` is rendering-layer code (it builds an Avalonia `Geometry` using `StreamGeometry`/`EllipseGeometry`), exactly like `ShapeGeometryBuilder`. The repo does NOT unit-test geometry builders: the test harness has no Avalonia render backend, so `StreamGeometry.Open()` and `Geometry.Bounds` throw `Unable to locate 'IPlatformRenderInterface'` when run headless, and no existing test touches `.Geometry`/`.Bounds`. So this task is **build-verified** (the App compiles it) and exercised by the manual run in Task 9 — there is no unit test. Do NOT add a unit test for it and do NOT add Avalonia.Headless.
+`ActorGeometry` is rendering-layer code (it builds an Avalonia `Geometry` using `StreamGeometry`/`EllipseGeometry`), exactly like `ShapeGeometryBuilder`. `StreamGeometry.Open()` and `Geometry.Bounds` require an Avalonia render backend (`IPlatformRenderInterface`), which only exists in a running app. So this task is **build-verified** (the App compiles it) and exercised by the manual run in Task 9.
 
 - [ ] **Step 1: Create `ActorGeometry`**
 
@@ -320,7 +263,7 @@ public static class ActorGeometry
 Run: `dotnet build Draw.slnx`
 Expected: Build succeeded, 0 errors (the 5 pre-existing AVLN5001 Watermark warnings are unrelated).
 
-- [ ] **Step 3: Commit** (ActorGeometry.cs only — no test file)
+- [ ] **Step 3: Commit**
 
 ```bash
 sed -i 's/\r$//' src/Draw.App/Rendering/ActorGeometry.cs
@@ -338,69 +281,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Create: `src/Draw.App/ViewModels/ActorNodeViewModel.cs`
 - Create: `src/Draw.App/ViewModels/UseCaseNodeViewModel.cs`
 - Create: `src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs`
-- Test: `tests/Draw.App.Tests/UseCaseNodeViewModelTests.cs`
 
-- [ ] **Step 1: Write the failing test**
-
-`tests/Draw.App.Tests/UseCaseNodeViewModelTests.cs`:
-```csharp
-using Draw.App.ViewModels;
-using Draw.Model.Nodes;
-using Draw.Model.Primitives;
-using Draw.Model.Styling;
-using Xunit;
-
-namespace Draw.App.Tests;
-
-public class UseCaseNodeViewModelTests
-{
-    [Fact]
-    public void Actor_BoundaryRectangle_LabelMapsToName_HasInlineLabel()
-    {
-        ActorNode model = new() { Name = "Customer", Bounds = new Rect2D(0, 0, 48, 84), Style = ShapeStyle.CreateDefault() };
-        ActorNodeViewModel vm = new(model);
-
-        Assert.Equal(ShapeKind.Rectangle, vm.BoundaryKind);
-        Assert.True(vm.HasInlineLabel);
-        Assert.Equal("Customer", vm.Label);
-        vm.Label = "Admin";
-        Assert.Equal("Admin", model.Name);
-    }
-
-    [Fact]
-    public void UseCase_BoundaryEllipse_LabelMapsToText()
-    {
-        UseCaseNode model = new() { Text = "Place order", Bounds = new Rect2D(0, 0, 130, 72), Style = ShapeStyle.CreateDefault() };
-        UseCaseNodeViewModel vm = new(model);
-
-        Assert.Equal(ShapeKind.Ellipse, vm.BoundaryKind);
-        Assert.True(vm.HasInlineLabel);
-        Assert.Equal("Place order", vm.Label);
-        vm.Label = "Cancel order";
-        Assert.Equal("Cancel order", model.Text);
-    }
-
-    [Fact]
-    public void SystemBoundary_BoundaryRectangle_LabelMapsToTitle()
-    {
-        SystemBoundaryNode model = new() { Title = "Shop", Bounds = new Rect2D(0, 0, 320, 220), Style = ShapeStyle.CreateDefault() };
-        SystemBoundaryNodeViewModel vm = new(model);
-
-        Assert.Equal(ShapeKind.Rectangle, vm.BoundaryKind);
-        Assert.True(vm.HasInlineLabel);
-        Assert.Equal("Shop", vm.Label);
-        vm.Label = "Store";
-        Assert.Equal("Store", model.Title);
-    }
-}
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — the three VMs don't exist.
-
-- [ ] **Step 3: Implement the three VMs**
+- [ ] **Step 1: Implement the three VMs**
 
 `src/Draw.App/ViewModels/ActorNodeViewModel.cs`:
 ```csharp
@@ -553,16 +435,16 @@ public sealed class SystemBoundaryNodeViewModel : NodeViewModelBase
 }
 ```
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 sed -i 's/\r$//' src/Draw.App/ViewModels/ActorNodeViewModel.cs src/Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs
-git add src/Draw.App/ViewModels/ActorNodeViewModel.cs src/Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs tests/Draw.App.Tests/UseCaseNodeViewModelTests.cs
+git add src/Draw.App/ViewModels/ActorNodeViewModel.cs src/Draw.App/ViewModels/UseCaseNodeViewModel.cs src/Draw.App/ViewModels/SystemBoundaryNodeViewModel.cs
 git commit -m "Add actor, use-case and system-boundary view-models
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -576,59 +458,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`
-- Test: `tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs`
 
 The `UseCaseNodeKind` enum lives in the toolbox file (Task 6), but `AddUseCaseNode` needs it. To keep Task 5 self-contained and compiling, **define the enum here in this task** (in its own file) and reuse it in Task 6.
 
-- [ ] **Step 1: Write the failing tests** (append to `DiagramDocumentViewModelTests`)
-
-```csharp
-    [Fact]
-    public void AddUseCaseNode_Actor_AddsSelectedActor_AndMarksModified()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-
-        NodeViewModelBase node = doc.AddUseCaseNode(UseCaseNodeKind.Actor, new Point2D(100, 100));
-
-        Assert.IsType<ActorNodeViewModel>(node);
-        Assert.Same(node, Assert.Single(doc.Nodes));
-        Assert.True(node.IsSelected);
-        Assert.True(doc.IsModified);
-    }
-
-    [Fact]
-    public void AddUseCaseNode_SystemBoundary_GoesBehind_WithLowestZIndex()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-        doc.AddShape(ShapeKind.Rectangle, new Point2D(100, 100));
-
-        NodeViewModelBase boundary = doc.AddUseCaseNode(UseCaseNodeKind.SystemBoundary, new Point2D(150, 150));
-
-        Assert.IsType<SystemBoundaryNodeViewModel>(boundary);
-        Assert.Same(boundary, doc.Nodes[0]); // inserted at front -> renders behind
-        Assert.True(boundary.Model.ZIndex < doc.Nodes[1].Model.ZIndex);
-    }
-
-    [Fact]
-    public void AddUseCaseNode_SurvivesUndoRedo_AsCorrectType()
-    {
-        DiagramDocumentViewModel doc = CreateDocument();
-        doc.AddUseCaseNode(UseCaseNodeKind.UseCase, new Point2D(200, 150));
-
-        doc.Undo();
-        Assert.Empty(doc.Nodes);
-
-        doc.Redo();
-        Assert.IsType<UseCaseNodeViewModel>(Assert.Single(doc.Nodes));
-    }
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `UseCaseNodeKind`/`AddUseCaseNode` not defined.
-
-- [ ] **Step 3: Create the kind enum**
+- [ ] **Step 1: Create the kind enum**
 
 `src/Draw.App/ViewModels/UseCaseNodeKind.cs`:
 ```csharp
@@ -643,7 +476,7 @@ public enum UseCaseNodeKind
 }
 ```
 
-- [ ] **Step 4: Add `AddUseCaseNode`, the arms, and `LowestZIndex`**
+- [ ] **Step 2: Add `AddUseCaseNode`, the arms, and `LowestZIndex`**
 
 In `DiagramDocumentViewModel.cs`, add after `DefaultClassName` (around line 205):
 ```csharp
@@ -724,16 +557,16 @@ Extend `CreateNodeViewModel` (currently lines 463-468) with three arms — place
 
 Note: `LowestZIndex()` is computed before the node is added to `_document.Nodes`, so it reflects the existing nodes. After undo/redo/open, `RebuildNodes` orders by `ZIndex`, so the low z-index keeps the boundary behind.
 
-- [ ] **Step 5: Run to verify pass**
+- [ ] **Step 3: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 sed -i 's/\r$//' src/Draw.App/ViewModels/DiagramDocumentViewModel.cs
-git add src/Draw.App/ViewModels/UseCaseNodeKind.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs tests/Draw.App.Tests/DiagramDocumentViewModelTests.cs
+git add src/Draw.App/ViewModels/UseCaseNodeKind.cs src/Draw.App/ViewModels/DiagramDocumentViewModel.cs
 git commit -m "Add use-case node creation with boundary drawn behind
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -747,64 +580,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.App/ViewModels/ToolboxViewModel.cs`
-- Test: `tests/Draw.App.Tests/ToolboxViewModelTests.cs`
 
-- [ ] **Step 1: Write the failing tests** (append to `ToolboxViewModelTests`)
-
-```csharp
-    [Fact]
-    public void HasUseCaseTools_ForEachKind()
-    {
-        ToolboxViewModel toolbox = new();
-        Assert.Contains(toolbox.UseCaseNodes, t => t.Kind == UseCaseNodeKind.Actor);
-        Assert.Contains(toolbox.UseCaseNodes, t => t.Kind == UseCaseNodeKind.UseCase);
-        Assert.Contains(toolbox.UseCaseNodes, t => t.Kind == UseCaseNodeKind.SystemBoundary);
-    }
-
-    [Fact]
-    public void Connectors_IncludeIncludeAndExtend()
-    {
-        ToolboxViewModel toolbox = new();
-        Assert.Contains(toolbox.Connectors, c => c.Kind == RelationshipKind.Include);
-        Assert.Contains(toolbox.Connectors, c => c.Kind == RelationshipKind.Extend);
-    }
-
-    [Fact]
-    public void SelectingUseCaseNode_ClearsOthers_AndSetsMode()
-    {
-        ToolboxViewModel toolbox = new();
-        toolbox.SelectedShape = toolbox.Shapes.First();
-        toolbox.SelectedClassNode = toolbox.ClassNodes.First();
-
-        toolbox.SelectedUseCaseNode = toolbox.UseCaseNodes.First();
-
-        Assert.Null(toolbox.SelectedShape);
-        Assert.Null(toolbox.SelectedConnector);
-        Assert.Null(toolbox.SelectedClassNode);
-        Assert.True(toolbox.IsUseCaseNodeMode);
-        Assert.False(toolbox.IsSelectTool);
-    }
-
-    [Fact]
-    public void SelectingShape_ClearsUseCaseNode()
-    {
-        ToolboxViewModel toolbox = new();
-        toolbox.SelectedUseCaseNode = toolbox.UseCaseNodes.First();
-
-        toolbox.SelectedShape = toolbox.Shapes.First();
-
-        Assert.Null(toolbox.SelectedUseCaseNode);
-        Assert.False(toolbox.IsUseCaseNodeMode);
-    }
-```
-(`RelationshipKind` is already imported in this test file via `using Draw.Model.Nodes;`? Add `using Draw.Model.Connectors;` if missing.)
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `UseCaseNodes`/`SelectedUseCaseNode`/`IsUseCaseNodeMode` not defined; Include/Extend absent.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Implement**
 
 In `ToolboxViewModel.cs`:
 - Add the record near the others (after `ClassNodeToolItem`):
@@ -858,16 +635,16 @@ public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind);
 - In `ActivateSelectTool`, add `SelectedUseCaseNode = null;`.
 - In `RaiseModes`, add `OnPropertyChanged(nameof(IsUseCaseNodeMode));`.
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS.
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 sed -i 's/\r$//' src/Draw.App/ViewModels/ToolboxViewModel.cs
-git add src/Draw.App/ViewModels/ToolboxViewModel.cs tests/Draw.App.Tests/ToolboxViewModelTests.cs
+git add src/Draw.App/ViewModels/ToolboxViewModel.cs
 git commit -m "Add use-case tools and include/extend to the toolbox
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -881,60 +658,8 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Draw.App/ViewModels/InspectorViewModel.cs`
-- Test: `tests/Draw.App.Tests/InspectorViewModelTests.cs`
 
-- [ ] **Step 1: Write the failing tests** (append to `InspectorViewModelTests`)
-
-```csharp
-    [Fact]
-    public void SelectingActor_ReportsLabelNode_AndLoadsName()
-    {
-        DiagramDocumentViewModel doc = new(
-            DiagramDocument.CreateEmpty(DiagramType.UseCase),
-            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
-            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
-            new JsonDocumentSerializer(),
-            new EditorOptions { SnapToGrid = false },
-            filePath: null);
-        ActorNodeViewModel actor = (ActorNodeViewModel)doc.AddUseCaseNode(UseCaseNodeKind.Actor, new Point2D(100, 100));
-        actor.Name = "Customer";
-
-        InspectorViewModel inspector = new();
-        inspector.SetTarget(doc);
-
-        Assert.True(inspector.IsLabelNodeSelected);
-        Assert.True(inspector.IsNodeSelected);     // shared style applies
-        Assert.False(inspector.IsShapeSelected);
-        Assert.False(inspector.HasNoSelection);
-        Assert.Equal("Customer", inspector.Text);
-    }
-
-    [Fact]
-    public void SettingText_AppliesToSelectedUseCaseNode()
-    {
-        DiagramDocumentViewModel doc = new(
-            DiagramDocument.CreateEmpty(DiagramType.UseCase),
-            new MementoUndoService(new JsonDocumentSerializer(), new UndoOptions()),
-            new ConnectorRouter(new IConnectorRouteStrategy[] { new StraightRouter() }),
-            new JsonDocumentSerializer(),
-            new EditorOptions { SnapToGrid = false },
-            filePath: null);
-        UseCaseNodeViewModel useCase = (UseCaseNodeViewModel)doc.AddUseCaseNode(UseCaseNodeKind.UseCase, new Point2D(100, 100));
-
-        InspectorViewModel inspector = new();
-        inspector.SetTarget(doc);
-        inspector.Text = "Place order";
-
-        Assert.Equal("Place order", useCase.Model.Text);
-    }
-```
-
-- [ ] **Step 2: Run to verify failure**
-
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: FAIL — `IsLabelNodeSelected` not defined; `Text` apply only hits shapes.
-
-- [ ] **Step 3: Implement**
+- [ ] **Step 1: Implement**
 
 In `InspectorViewModel.cs`:
 - Add the new flag (after `IsClassNodeSelected`):
@@ -996,18 +721,18 @@ In `InspectorViewModel.cs`:
     }
 ```
 
-(`IsShapeSelected` stays as-is — still set from `shape is not null` and asserted by existing tests, but it no longer drives `IsNodeSelected`/`HasNoSelection`.)
+(`IsShapeSelected` stays as-is — still set from `shape is not null`, but it no longer drives `IsNodeSelected`/`HasNoSelection`.)
 
-- [ ] **Step 4: Run to verify pass**
+- [ ] **Step 2: Build**
 
-Run: `dotnet test --project tests/Draw.App.Tests/Draw.App.Tests.csproj`
-Expected: PASS (including existing shape/class inspector tests).
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 sed -i 's/\r$//' src/Draw.App/ViewModels/InspectorViewModel.cs
-git add src/Draw.App/ViewModels/InspectorViewModel.cs tests/Draw.App.Tests/InspectorViewModelTests.cs
+git add src/Draw.App/ViewModels/InspectorViewModel.cs
 git commit -m "Generalize inspector label field to all label-bearing nodes
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -1022,7 +747,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `src/Draw.App/Views/DiagramView.axaml.cs`
 
-Build-verified (logic; no UI harness).
+Verified by build + manual run (pointer-code-behind wiring).
 
 - [ ] **Step 1: Add use-case placement to `OnPointerPressed`**
 
@@ -1088,10 +813,10 @@ Replace the body (currently lines 477-499):
     }
 ```
 
-- [ ] **Step 4: Build + run the full suite**
+- [ ] **Step 4: Build + manual run**
 
-Run: `dotnet build Draw.slnx && dotnet test --solution Draw.slnx`
-Expected: PASS (the suite covers the VM logic; this task is wiring).
+Run: `dotnet build Draw.slnx` + manual run.
+Expected: builds; manually verified (this task is pointer wiring over the VM logic).
 
 - [ ] **Step 5: Commit**
 
@@ -1111,7 +836,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Modify: `src/Draw.App/Views/DiagramView.axaml`
 - Modify: `src/Draw.App/Views/MainWindow.axaml`
 
-Build + manual verification (no UI harness).
+Build + manual verification.
 
 - [ ] **Step 1: Add three node DataTemplates**
 
@@ -1253,10 +978,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Modify: `documentation/roadmap.md`
 - Modify: `documentation/architecture.md` (add a one-line note on use-case nodes)
 
-- [ ] **Step 1: Full suite green**
+- [ ] **Step 1: Full build green**
 
-Run: `dotnet test --solution Draw.slnx`
-Expected: PASS. Record the count.
+Run: `dotnet build Draw.slnx`
+Expected: Build succeeded, 0 errors.
 
 - [ ] **Step 2: Manual end-to-end** (Linux/WSL: fontconfig installed)
 
@@ -1288,5 +1013,5 @@ Use the superpowers:finishing-a-development-branch skill. Do not merge to `main`
 - **Reuse over new code:** Phase 4 adds no parser, no member editor, no retype. The connector rendering for association/include/extend/generalization already existed (Phase 2); only the toolbox palette gains Include/Extend.
 - **Boundary z-order** depends on BOTH a low `ZIndex` (survives rebuild) AND front-insertion into the `Nodes` collection (survives the live session before any rebuild). Both are in Task 5.
 - **Inline label editing** is generalized: `OnDoubleTapped`/`EndEditing` key off `HasInlineLabel`, so shapes, actors, use-cases and boundaries all edit the same way, and inline commits now mark the document dirty (a small correctness improvement over the prior shape-only path).
-- **AXAML/pointer tasks (8, 9)** have no UI unit harness; verified by `dotnet build` (compiled XAML) + the manual checklist. Not unit-tested — say so.
+- **Verification** is uniform across tasks: `dotnet build Draw.slnx` (compiled XAML validates bindings/types) + a manual run. The AXAML/pointer tasks (8, 9) especially lean on the manual checklist; say "builds; manually verified", never "tested".
 - **Logged limitation:** the system boundary does not group/move its contents (visual-only, per the approved spec A1).

@@ -67,7 +67,7 @@ already covers the new type and its members. `DiagramType.Class` already exists.
 
 ## 3. Member signature parser/formatter (`Draw.Diagramming/Uml/`)
 
-A pure, display-free unit — the central reusable piece, fully unit-tested:
+A pure, display-free unit — the central reusable piece:
 
 - `string Format(ClassMember member)`:
   - Field → `"+ balance: decimal"` (omits `: type` when `Type` is null/empty).
@@ -81,8 +81,8 @@ A pure, display-free unit — the central reusable piece, fully unit-tested:
     (returns a best-effort member; truly empty input yields `false`/no member).
 - Round-trips: `TryParse(Format(m)) == m` for all well-formed members.
 
-Lives in `Draw.Diagramming` (logic layer, no Avalonia dependency) so both the
-view models and the unit tests can use it without a display.
+Lives in `Draw.Diagramming` (logic layer, no Avalonia dependency) so the
+view models can use it without a display.
 
 ## 4. View-model layer (`Draw.App/ViewModels`)
 
@@ -208,18 +208,15 @@ mutate → `RaiseStyleChanged()` → `MarkModified()` seam. Because undo restore
 document and rebuilds view models, `RebuildNodes()`'s type-aware instantiation
 ensures class nodes survive undo/redo and save/open round-trips.
 
-## 9. Testing (TDD)
+## 9. Verification
 
-Follow the existing test layout and the Microsoft.Testing.Platform / xUnit v3 setup.
-
-- Model (`Draw.Model.Tests`): `ClassNode` JSON round-trip including members,
-  enum literals and flags; `Clone()` deep-copy independence.
-- Parser (`Draw.Diagramming.Tests`): `Format`/`TryParse` round-trips; tolerant
-  parsing (missing visibility, operations vs fields, malformed/empty input).
-- View models (display-free): add/remove/reorder members; inline raw-text
-  commit → parse; auto-height bump; autocomplete suggestion set (diagram names ∪
-  primitives, distinct); inspector third-mode switch; undo/redo of member edits;
-  connector endpoint retype against `NodeViewModelBase`.
+There is no automated test suite. Verify with `dotnet build Draw.slnx` (compiled XAML validates
+bindings and types) plus a manual run on Windows/macOS, covering: `ClassNode` JSON round-trip
+(members, enum literals, flags) and `Clone()` deep-copy independence; the `Format`/`TryParse`
+member parser (tolerant of missing visibility, operations vs fields, malformed/empty input);
+add/remove/reorder members; inline raw-text commit → parse; auto-height bump; the autocomplete
+suggestion set (diagram names ∪ primitives, distinct); the inspector third mode; undo/redo of
+member edits; and connector endpoints against `NodeViewModelBase`.
 
 ## 10. Assumptions
 
@@ -235,15 +232,15 @@ Follow the existing test layout and the Microsoft.Testing.Platform / xUnit v3 se
 
 ## 11. Implementation ordering (high level)
 
-1. Model types + `[JsonDerivedType]` + serialization/clone tests.
-2. Member parser/formatter + tests.
-3. `NodeViewModelBase` extraction + retype ripples (shapes/connectors keep passing).
+1. Model types + `[JsonDerivedType]` + serialization/clone.
+2. Member parser/formatter.
+3. `NodeViewModelBase` extraction + retype ripples (shapes/connectors keep working).
 4. `ClassNodeViewModel` / `ClassMemberViewModel` + document `AddClassNode`,
-   `RebuildNodes`, autocomplete + VM tests.
+   `RebuildNodes`, autocomplete.
 5. Inspector third mode + member editor.
 6. Rendering template + inline row editing.
 7. Connector/routing rectangle attachment for class nodes.
-8. End-to-end pass: create, edit, connect, save/open, undo/redo; run full suite.
+8. End-to-end pass: create, edit, connect, save/open, undo/redo; build + manual run.
 
 Risks: the `NodeViewModelBase` extraction touches Phase 1/2 code (step 3) — keep it
 mechanical and green before adding class-node behavior. Inline row double-tap routing

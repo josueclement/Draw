@@ -14,8 +14,11 @@ public sealed class FontSpec
 
     public bool Italic { get; set; }
 
-    // Default text: Carbon "foreground" near-black (#1E1F22) — readable on the default grey fill.
-    public ArgbColor Color { get; set; } = new(0xFF, 0x1E, 0x1F, 0x22);
+    // Default text: Carbon light-theme "foreground" near-black (#1E1F22). Doubles as the sentinel the
+    // App layer uses to detect un-customised text and swap in the theme-aware brush (dark: #BCBEC4).
+    public static readonly ArgbColor DefaultColor = new(0xFF, 0x1E, 0x1F, 0x22);
+
+    public ArgbColor Color { get; set; } = DefaultColor;
 
     public FontSpec Clone() => new()
     {

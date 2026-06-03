@@ -1,5 +1,6 @@
 using Avalonia.Media;
 using Draw.App.Rendering;
+using Draw.App.Services;
 using Draw.Model.Nodes;
 
 namespace Draw.App.ViewModels;
@@ -9,8 +10,8 @@ public sealed class ShapeNodeViewModel : NodeViewModelBase
 {
     private readonly ShapeNode _model;
 
-    public ShapeNodeViewModel(ShapeNode model)
-        : base(model)
+    public ShapeNodeViewModel(ShapeNode model, IThemeService theme)
+        : base(model, theme)
     {
         _model = model;
     }

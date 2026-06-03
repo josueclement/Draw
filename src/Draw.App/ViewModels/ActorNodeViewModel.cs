@@ -1,6 +1,7 @@
 using System;
 using Avalonia.Media;
 using Draw.App.Rendering;
+using Draw.App.Services;
 using Draw.Model.Nodes;
 
 namespace Draw.App.ViewModels;
@@ -10,8 +11,8 @@ public sealed class ActorNodeViewModel : NodeViewModelBase
 {
     private readonly ActorNode _model;
 
-    public ActorNodeViewModel(ActorNode model)
-        : base(model)
+    public ActorNodeViewModel(ActorNode model, IThemeService theme)
+        : base(model, theme)
     {
         _model = model;
     }
