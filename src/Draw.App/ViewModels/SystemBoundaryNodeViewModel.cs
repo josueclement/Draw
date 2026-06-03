@@ -19,6 +19,9 @@ public sealed class SystemBoundaryNodeViewModel : NodeViewModelBase
 
     public override ShapeKind BoundaryKind => ShapeKind.Rectangle;
 
+    /// <summary>Boundaries are background containers: they render behind the nodes they enclose.</summary>
+    public override int ZIndex => -1;
+
     public override bool HasInlineLabel => true;
 
     public override string Label

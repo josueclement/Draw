@@ -15,49 +15,10 @@
                        Width="6000" Height="6000"
                        IsHitTestVisible="False" />
 
-            <!-- Connectors and Nodes are unbounded world-space layers. Their Canvas ItemsPanel has
+            <!-- Nodes and Connectors are unbounded world-space layers. Their Canvas ItemsPanel has
                  zero desired size, so the ItemsControl measures to 0x0; since ItemsControl defaults
                  ClipToBounds=true, it would otherwise clip every item away. Keep it false — the
                  Viewport border above is what actually clips to the visible region. -->
-            <ItemsControl ItemsSource="{Binding Connectors}" IsHitTestVisible="False" ClipToBounds="False">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:ConnectorViewModel">
-                        <Canvas>
-                            <Path Data="{Binding Geometry}" Stretch="None"
-                                  Stroke="#663D7EFF" StrokeThickness="6"
-                                  IsVisible="{Binding IsSelected}" />
-                            <Path Data="{Binding Geometry}" Stretch="None"
-                                  Stroke="{Binding Stroke}"
-                                  StrokeThickness="{Binding StrokeThickness}"
-                                  StrokeDashArray="{Binding StrokeDashArray}" />
-                            <Path Data="{Binding SourceDecoration}" Stretch="None"
-                                  Stroke="{Binding Stroke}"
-                                  StrokeThickness="{Binding StrokeThickness}"
-                                  Fill="{Binding SourceDecorationFill}" />
-                            <Path Data="{Binding TargetDecoration}" Stretch="None"
-                                  Stroke="{Binding Stroke}"
-                                  StrokeThickness="{Binding StrokeThickness}"
-                                  Fill="{Binding TargetDecorationFill}" />
-                            <TextBlock Text="{Binding CenterLabelText}" FontSize="11"
-                                       Canvas.Left="{Binding CenterLabelX}" Canvas.Top="{Binding CenterLabelY}"
-                                       IsVisible="{Binding HasCenterLabel}" />
-                            <TextBlock Text="{Binding SourceLabelText}" FontSize="11"
-                                       Canvas.Left="{Binding SourceLabelX}" Canvas.Top="{Binding SourceLabelY}"
-                                       IsVisible="{Binding HasSourceLabel}" />
-                            <TextBlock Text="{Binding TargetLabelText}" FontSize="11"
-                                       Canvas.Left="{Binding TargetLabelX}" Canvas.Top="{Binding TargetLabelY}"
-                                       IsVisible="{Binding HasTargetLabel}" />
-                        </Canvas>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- ClipToBounds=false for the same reason as the Connectors layer above. -->
             <ItemsControl ItemsSource="{Binding Nodes}" ClipToBounds="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -68,6 +29,9 @@
                     <Style Selector="ContentPresenter">
                         <Setter Property="Canvas.Left" Value="{ReflectionBinding X}" />
                         <Setter Property="Canvas.Top" Value="{ReflectionBinding Y}" />
+                        <!-- Background container kinds (system boundaries) return a lower ZIndex so
+                             they sit behind the nodes they enclose. -->
+                        <Setter Property="Canvas.ZIndex" Value="{ReflectionBinding ZIndex}" />
                     </Style>
                 </ItemsControl.Styles>
                 <ItemsControl.DataTemplates>
@@ -124,7 +88,7 @@
                             </Panel.Styles>
                             <Border Background="{Binding Fill}"
                                     BorderBrush="{Binding Stroke}"
-                                    BorderThickness="{Binding StrokeThickness}">
+                                    BorderThickness="{Binding BorderThickness}">
                                 <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
                                     <StackPanel Grid.Row="0" Margin="6,4" HorizontalAlignment="Center">
                                         <TextBlock Text="{Binding Stereotype}" FontSize="10" FontStyle="Italic"
@@ -288,7 +252,7 @@
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
                             <Border Background="{Binding Fill}"
                                     BorderBrush="{Binding Stroke}"
-                                    BorderThickness="{Binding StrokeThickness}" />
+                                    BorderThickness="{Binding BorderThickness}" />
                             <TextBlock Text="{Binding Title}"
                                        Foreground="{Binding Foreground}"
                                        FontFamily="{Binding FontFamily}"
@@ -311,6 +275,48 @@
                         </Panel>
                     </DataTemplate>
                 </ItemsControl.DataTemplates>
+            </ItemsControl>
+
+            <!-- Connectors render on top of every node (highest Z among diagram content) so an edge
+                 is never hidden by a filled node such as a System Boundary. The layer is
+                 non-hit-testable, so node interaction is unaffected. ClipToBounds=false for the same
+                 reason as the node layer above. -->
+            <ItemsControl ItemsSource="{Binding Connectors}" IsHitTestVisible="False" ClipToBounds="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:ConnectorViewModel">
+                        <Canvas>
+                            <Path Data="{Binding Geometry}" Stretch="None"
+                                  Stroke="#663D7EFF" StrokeThickness="6"
+                                  IsVisible="{Binding IsSelected}" />
+                            <Path Data="{Binding Geometry}" Stretch="None"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}"
+                                  StrokeDashArray="{Binding StrokeDashArray}" />
+                            <Path Data="{Binding SourceDecoration}" Stretch="None"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}"
+                                  Fill="{Binding SourceDecorationFill}" />
+                            <Path Data="{Binding TargetDecoration}" Stretch="None"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}"
+                                  Fill="{Binding TargetDecorationFill}" />
+                            <TextBlock Text="{Binding CenterLabelText}" FontSize="11"
+                                       Canvas.Left="{Binding CenterLabelX}" Canvas.Top="{Binding CenterLabelY}"
+                                       IsVisible="{Binding HasCenterLabel}" />
+                            <TextBlock Text="{Binding SourceLabelText}" FontSize="11"
+                                       Canvas.Left="{Binding SourceLabelX}" Canvas.Top="{Binding SourceLabelY}"
+                                       IsVisible="{Binding HasSourceLabel}" />
+                            <TextBlock Text="{Binding TargetLabelText}" FontSize="11"
+                                       Canvas.Left="{Binding TargetLabelX}" Canvas.Top="{Binding TargetLabelY}"
+                                       IsVisible="{Binding HasTargetLabel}" />
+                        </Canvas>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
             </ItemsControl>
 
             <Canvas x:Name="Overlay" IsHitTestVisible="False" />

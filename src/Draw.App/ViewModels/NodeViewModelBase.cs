@@ -1,4 +1,5 @@
 using System;
+using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Media;
 using Draw.App.Rendering;
@@ -41,6 +42,10 @@ public abstract class NodeViewModelBase : ViewModelBase
     public virtual double MinWidth => 12d;
 
     public virtual double MinHeight => 12d;
+
+    /// <summary>Stacking order within the node layer; lower renders further back. Container kinds
+    /// (e.g. system boundaries) override this to sit behind the nodes they enclose.</summary>
+    public virtual int ZIndex => 0;
 
     public Rect2D Bounds => Model.Bounds;
 
@@ -122,6 +127,12 @@ public abstract class NodeViewModelBase : ViewModelBase
 
     public double StrokeThickness => Model.Style.Stroke.Thickness;
 
+    /// <summary>Stroke thickness as a uniform <see cref="Thickness"/>, for border-based templates
+    /// (class/interface/enum, system boundary). Avalonia has no implicit double→Thickness binding
+    /// conversion, so binding the double <see cref="StrokeThickness"/> to a <c>Border.BorderThickness</c>
+    /// fails silently and the border vanishes — bind this instead.</summary>
+    public Thickness BorderThickness => new(Model.Style.Stroke.Thickness);
+
     public AvaloniaList<double>? StrokeDashArray => Model.Style.Stroke.Dash.ToDashArray();
 
     public IBrush Foreground => UsesDefaultForeground && _theme.DefaultNodeText is { } text ? text : Model.Style.Font.Color.ToBrush();
@@ -142,6 +153,7 @@ public abstract class NodeViewModelBase : ViewModelBase
         OnPropertyChanged(nameof(Fill));
         OnPropertyChanged(nameof(Stroke));
         OnPropertyChanged(nameof(StrokeThickness));
+        OnPropertyChanged(nameof(BorderThickness));
         OnPropertyChanged(nameof(StrokeDashArray));
         OnPropertyChanged(nameof(Foreground));
         OnPropertyChanged(nameof(FontFamily));
