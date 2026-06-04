@@ -15,11 +15,6 @@
                        Width="6000" Height="6000"
                        IsHitTestVisible="False" />
 
-            <!-- Selection glow is drawn here, behind the node layer, so each halo hugs its node's
-                 perimeter without tinting the (opaque) interior. ClipToBounds=false like the layers
-                 below; populated from code-behind alongside the resize handles. -->
-            <Canvas x:Name="GlowLayer" IsHitTestVisible="False" ClipToBounds="False" />
-
             <!-- Nodes and Connectors are unbounded world-space layers. Their Canvas ItemsPanel has
                  zero desired size, so the ItemsControl measures to 0x0; since ItemsControl defaults
                  ClipToBounds=true, it would otherwise clip every item away. Keep it false — the
