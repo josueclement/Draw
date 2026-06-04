@@ -51,12 +51,26 @@ public partial class DiagramView : UserControl
 
     private const double HandleScreenSize = 10d;
 
+    // Selection accent shared by handles, marquee, connect-preview and the node selection adorner.
+    private static readonly Color SelectionAccentColor = Color.Parse("#3D7EFF");
+    private static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
+    private static readonly SolidColorBrush SelectionGlowBrush = new(Color.Parse("#663D7EFF"));
+
+    // Selection adorner geometry, in screen pixels (each is divided by Zoom when drawn so it stays
+    // a constant size on screen, exactly like the resize handles).
+    private const double SelectionOutlineOffset = 3d;     // gap between the node bounds and the outline
+    private const double SelectionOutlineThickness = 1.5d;
+    private const double SelectionCornerRadius = 4d;
+    private const double SelectionGlowBlur = 8d;
+    private const double SelectionGlowSpread = 1d;
+
     // A right-button press that travels less than this (screen px, squared) before release is treated as
     // a click that opens the arrange context menu rather than a pan drag.
     private const double ContextClickThresholdSquared = 16d;
 
     private readonly List<Rectangle> _handles = new();
     private readonly List<Control> _connectorHandles = new();
+    private readonly List<Border> _selectionAdorners = new();
     private DiagramDocumentViewModel? _vm;
     private DragMode _mode = DragMode.None;
     private bool _undoCaptured;
@@ -1156,15 +1170,28 @@ public partial class DiagramView : UserControl
 
         _connectorHandles.Clear();
 
+        foreach (Border adorner in _selectionAdorners)
+        {
+            Overlay.Children.Remove(adorner);
+        }
+
+        _selectionAdorners.Clear();
+
         if (_vm is null)
         {
             return;
         }
 
+        // The glow+outline adorner marks every selected node (single or multi); the draggable
+        // resize handles only appear when exactly one node is selected.
+        foreach (NodeViewModelBase node in _vm.SelectedNodes)
+        {
+            AddSelectionAdorner(node);
+        }
+
         if (_vm.SelectedNodes.Count() == 1)
         {
             double size = HandleScreenSize / Zoom;
-            IBrush stroke = new SolidColorBrush(Color.Parse("#3D7EFF"));
             foreach (Point position in HandlePositions(_vm.SelectedNodes.First()))
             {
                 Rectangle handle = new()
@@ -1172,7 +1199,7 @@ public partial class DiagramView : UserControl
                     Width = size,
                     Height = size,
                     Fill = Brushes.White,
-                    Stroke = stroke,
+                    Stroke = SelectionAccentBrush,
                     StrokeThickness = 1d / Zoom,
                 };
                 Canvas.SetLeft(handle, position.X - (size / 2));
@@ -1190,12 +1217,45 @@ public partial class DiagramView : UserControl
         }
     }
 
+    // A soft accent glow plus a thin solid outline, inflated a few screen pixels OUTSIDE the node
+    // bounds so it never coincides with the node's own border (which made the old in-template
+    // dashed rectangle nearly invisible on UML class/interface/enum nodes). Drawn on the unclipped
+    // Overlay, so it is uniform across every node kind and crisp at any zoom.
+    private void AddSelectionAdorner(NodeViewModelBase node)
+    {
+        Rect2D b = node.Model.Bounds;
+        double off = SelectionOutlineOffset / Zoom;
+        Border adorner = new()
+        {
+            Width = b.Width + (2 * off),
+            Height = b.Height + (2 * off),
+            Background = Brushes.Transparent,
+            BorderBrush = SelectionAccentBrush,
+            BorderThickness = new Thickness(SelectionOutlineThickness / Zoom),
+            CornerRadius = new CornerRadius(SelectionCornerRadius / Zoom),
+            IsHitTestVisible = false,
+            BoxShadow = new BoxShadows(new BoxShadow
+            {
+                OffsetX = 0,
+                OffsetY = 0,
+                Blur = SelectionGlowBlur / Zoom,
+                Spread = SelectionGlowSpread / Zoom,
+                Color = SelectionGlowBrush.Color,
+                IsInset = false,
+            }),
+        };
+        Canvas.SetLeft(adorner, b.Left - off);
+        Canvas.SetTop(adorner, b.Top - off);
+        Overlay.Children.Add(adorner);
+        _selectionAdorners.Add(adorner);
+    }
+
     // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);
     // bend-point handles are squares — drawn on the zoom-scaled overlay like node handles.
     private void DrawConnectorHandles(ConnectorViewModel connector)
     {
         double size = HandleScreenSize / Zoom;
-        IBrush stroke = new SolidColorBrush(Color.Parse("#3D7EFF"));
+        IBrush stroke = SelectionAccentBrush;
 
         AddEndpointHandle(connector.RouteStart, connector.SourceAnchored, size, stroke);
         AddEndpointHandle(connector.RouteEnd, connector.TargetAnchored, size, stroke);
@@ -1368,7 +1428,7 @@ public partial class DiagramView : UserControl
         _marquee = new Rectangle
         {
             Fill = new SolidColorBrush(Color.FromArgb(40, 61, 126, 255)),
-            Stroke = new SolidColorBrush(Color.Parse("#3D7EFF")),
+            Stroke = SelectionAccentBrush,
             StrokeThickness = 1d / Zoom,
         };
         Canvas.SetLeft(_marquee, world.X);
@@ -1407,7 +1467,7 @@ public partial class DiagramView : UserControl
         {
             StartPoint = new Point(center.X, center.Y),
             EndPoint = world,
-            Stroke = new SolidColorBrush(Color.Parse("#3D7EFF")),
+            Stroke = SelectionAccentBrush,
             StrokeThickness = 1.5d / Zoom,
             StrokeDashArray = new AvaloniaList<double> { 4, 2 },
             IsHitTestVisible = false,

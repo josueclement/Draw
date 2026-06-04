@@ -61,11 +61,6 @@
                                      TextWrapping="Wrap"
                                      Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
-                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
-                                       StrokeDashArray="3,2"
-                                       Fill="Transparent"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
 
@@ -186,11 +181,6 @@
                                     </Panel>
                                 </Grid>
                             </Border>
-                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
-                                       StrokeDashArray="3,2"
-                                       Fill="Transparent"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
 
@@ -212,10 +202,6 @@
                                      VerticalAlignment="Bottom"
                                      Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
-                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
-                                       StrokeDashArray="3,2" Fill="Transparent"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
 
@@ -241,10 +227,6 @@
                                      AcceptsReturn="True" TextWrapping="Wrap"
                                      VerticalAlignment="Center" Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
-                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
-                                       StrokeDashArray="3,2" Fill="Transparent"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
 
@@ -253,10 +235,6 @@
                             <!-- Aspect ratio is locked by the resize gesture, so the bounds already match
                                  the image; Stretch=Fill then never distorts it. -->
                             <Image Source="{Binding Image}" Stretch="Fill" />
-                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
-                                       StrokeDashArray="3,2" Fill="Transparent"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
 
@@ -280,10 +258,6 @@
                                      HorizontalAlignment="Left" VerticalAlignment="Top"
                                      Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
-                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
-                                       StrokeDashArray="3,2" Fill="Transparent"
-                                       IsHitTestVisible="False"
-                                       IsVisible="{Binding IsSelected}" />
                         </Panel>
                     </DataTemplate>
                 </ItemsControl.DataTemplates>
