@@ -248,6 +248,18 @@
                         </Panel>
                     </DataTemplate>
 
+                    <DataTemplate DataType="vm:ImageNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <!-- Aspect ratio is locked by the resize gesture, so the bounds already match
+                                 the image; Stretch=Fill then never distorts it. -->
+                            <Image Source="{Binding Image}" Stretch="Fill" />
+                            <Rectangle Stroke="#3D7EFF" StrokeThickness="1.5"
+                                       StrokeDashArray="3,2" Fill="Transparent"
+                                       IsHitTestVisible="False"
+                                       IsVisible="{Binding IsSelected}" />
+                        </Panel>
+                    </DataTemplate>
+
                     <DataTemplate DataType="vm:SystemBoundaryNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
                             <Border Background="{Binding Fill}"

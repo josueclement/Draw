@@ -81,3 +81,16 @@ A **Connections** group on the Arrange ribbon tab + a right-click menu item (the
 with ≥1 shape selected). Pure geometry in `Draw.Diagramming/Layout/ConnectionDistributor.cs`; one undo
 step per action; reuses the forced-anchor mechanism. See
 `documentation/plans/2026-06-04-connection-point-spacing.md`.
+
+## Copy/paste + image support ✅ (cross-cutting)
+
+Clipboard editing for diagram content plus embedded images. **Copy/Cut/Paste/Duplicate**
+(`Ctrl+C`/`X`/`V`/`D`) of the selected nodes, automatically carrying any connector whose **both**
+endpoints are selected; paste centres on the viewport and re-links cloned nodes with fresh ids (one undo
+step). A new `ImageNode` embeds its bytes as base64 in the `.draw` file and is inserted by pasting a
+bitmap, the **Insert image** picker, or drag-&-drop of an image file; copying a lone image also puts a
+bitmap on the OS clipboard for other apps, and pasting an external bitmap creates an image node. Images
+resize with a locked aspect ratio and behave as full nodes (connectors/align/distribute apply). Clipboard
+access goes through `IClipboardService` (Avalonia 12 typed `DataFormat`); keyboard shortcuts are handled
+in `DiagramView` so they don't hijack text editing. See
+`documentation/plans/2026-06-04-copy-paste-and-images.md`.

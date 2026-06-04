@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFileDialogService, FileDialogService>();
         services.AddSingleton<IRecentFilesService, RecentFilesService>();
         services.AddSingleton<IImageExportService, ImageExportService>();
+        services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IDiagramDocumentViewModelFactory, DiagramDocumentViewModelFactory>();
