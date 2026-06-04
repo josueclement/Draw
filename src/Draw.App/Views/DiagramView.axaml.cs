@@ -523,11 +523,12 @@ public partial class DiagramView : UserControl
         UpdateHandles();
     }
 
-    // Right-clicking the canvas (a click, not a pan drag) with a multi-selection opens the arrange menu.
-    // Right-dragging still pans; the middle button never opens the menu.
+    // Right-clicking the canvas (a click, not a pan drag) with at least one selected shape opens the
+    // arrange menu. Align/Distribute need >=2 / >=3 and grey themselves out below that; Space connections
+    // works on a single shape. Right-dragging still pans; the middle button never opens the menu.
     private void MaybeShowArrangeMenu(PointerReleasedEventArgs e)
     {
-        if (_vm is null || e.InitialPressMouseButton != MouseButton.Right || _vm.SelectedNodes.Count() < 2)
+        if (_vm is null || e.InitialPressMouseButton != MouseButton.Right || !_vm.SelectedNodes.Any())
         {
             return;
         }
@@ -563,6 +564,8 @@ public partial class DiagramView : UserControl
         menu.Items.Add(new Separator());
         menu.Items.Add(ArrangeItem("Distribute horizontally", vm.DistributeCommand, DistributionMode.Horizontal));
         menu.Items.Add(ArrangeItem("Distribute vertically", vm.DistributeCommand, DistributionMode.Vertical));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = "Space connections", Command = vm.SpaceConnectionsCommand });
         return menu;
     }
 

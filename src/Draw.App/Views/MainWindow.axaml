@@ -182,6 +182,11 @@
                                          CommandParameter="{x:Static layout:DistributionMode.Vertical}"
                                          IconData="{StaticResource ToolIcon.DistributeVertical}" />
                 </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Connections">
+                    <ribbon:RibbonButton Header="Space connections"
+                                         Command="{Binding ActiveDocument.SpaceConnectionsCommand}"
+                                         IconData="{StaticResource ToolIcon.SpaceConnections}" />
+                </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
             <ribbon:RibbonTab Header="View">
