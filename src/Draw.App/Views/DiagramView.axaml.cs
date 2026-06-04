@@ -51,18 +51,17 @@ public partial class DiagramView : UserControl
 
     private const double HandleScreenSize = 10d;
 
-    // Selection accent shared by handles, marquee, connect-preview and the node selection adorner.
+    // Selection accent shared by the resize handles, marquee and connect-preview.
     private static readonly Color SelectionAccentColor = Color.Parse("#3D7EFF");
     private static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
-    private static readonly SolidColorBrush SelectionGlowBrush = new(Color.Parse("#663D7EFF"));
 
-    // Selection adorner geometry, in screen pixels (each is divided by Zoom when drawn so it stays
-    // a constant size on screen, exactly like the resize handles).
-    private const double SelectionOutlineOffset = 3d;     // gap between the node bounds and the outline
-    private const double SelectionOutlineThickness = 1.5d;
-    private const double SelectionCornerRadius = 4d;
-    private const double SelectionGlowBlur = 8d;
-    private const double SelectionGlowSpread = 1d;
+    // A selected node thickens its own border (see NodeViewModelBase) and gets this soft accent glow
+    // behind it. Blur/spread are screen pixels, divided by Zoom when drawn so the halo is a constant
+    // size on screen regardless of zoom (same trick as the resize handles).
+    private static readonly Color SelectionGlowColor = Color.FromArgb(0xAA, 0x3D, 0x7E, 0xFF);
+    private const double SelectionGlowBlur = 16d;
+    private const double SelectionGlowSpread = 3d;
+    private const double SelectionGlowCornerRadius = 3d;
 
     // A right-button press that travels less than this (screen px, squared) before release is treated as
     // a click that opens the arrange context menu rather than a pan drag.
@@ -1172,7 +1171,7 @@ public partial class DiagramView : UserControl
 
         foreach (Border adorner in _selectionAdorners)
         {
-            Overlay.Children.Remove(adorner);
+            GlowLayer.Children.Remove(adorner);
         }
 
         _selectionAdorners.Clear();
@@ -1217,22 +1216,19 @@ public partial class DiagramView : UserControl
         }
     }
 
-    // A soft accent glow plus a thin solid outline, inflated a few screen pixels OUTSIDE the node
-    // bounds so it never coincides with the node's own border (which made the old in-template
-    // dashed rectangle nearly invisible on UML class/interface/enum nodes). Drawn on the unclipped
-    // Overlay, so it is uniform across every node kind and crisp at any zoom.
+    // A soft accent glow behind a selected node. It is drawn on the GlowLayer (under the node layer)
+    // and sized to the node bounds, so the blurred halo spills out around the node's perimeter while
+    // the node's own (opaque) fill hides the centre — uniform across every node kind, crisp at any
+    // zoom. The selected node's own border is thickened separately by the view model.
     private void AddSelectionAdorner(NodeViewModelBase node)
     {
         Rect2D b = node.Model.Bounds;
-        double off = SelectionOutlineOffset / Zoom;
-        Border adorner = new()
+        Border glow = new()
         {
-            Width = b.Width + (2 * off),
-            Height = b.Height + (2 * off),
+            Width = b.Width,
+            Height = b.Height,
             Background = Brushes.Transparent,
-            BorderBrush = SelectionAccentBrush,
-            BorderThickness = new Thickness(SelectionOutlineThickness / Zoom),
-            CornerRadius = new CornerRadius(SelectionCornerRadius / Zoom),
+            CornerRadius = new CornerRadius(SelectionGlowCornerRadius / Zoom),
             IsHitTestVisible = false,
             BoxShadow = new BoxShadows(new BoxShadow
             {
@@ -1240,14 +1236,14 @@ public partial class DiagramView : UserControl
                 OffsetY = 0,
                 Blur = SelectionGlowBlur / Zoom,
                 Spread = SelectionGlowSpread / Zoom,
-                Color = SelectionGlowBrush.Color,
+                Color = SelectionGlowColor,
                 IsInset = false,
             }),
         };
-        Canvas.SetLeft(adorner, b.Left - off);
-        Canvas.SetTop(adorner, b.Top - off);
-        Overlay.Children.Add(adorner);
-        _selectionAdorners.Add(adorner);
+        Canvas.SetLeft(glow, b.Left);
+        Canvas.SetTop(glow, b.Top);
+        GlowLayer.Children.Add(glow);
+        _selectionAdorners.Add(glow);
     }
 
     // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);

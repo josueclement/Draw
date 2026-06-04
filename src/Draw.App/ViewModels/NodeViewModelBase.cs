@@ -109,7 +109,15 @@ public abstract class NodeViewModelBase : ViewModelBase
     public bool IsSelected
     {
         get;
-        set => SetProperty(ref field, value);
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                // Selection thickens the node's own outline rather than drawing a separate border.
+                OnPropertyChanged(nameof(StrokeThickness));
+                OnPropertyChanged(nameof(BorderThickness));
+            }
+        }
     }
 
     public bool IsEditing
@@ -128,13 +136,17 @@ public abstract class NodeViewModelBase : ViewModelBase
 
     public IBrush Stroke => Model.Style.Stroke.Color.ToBrush();
 
-    public double StrokeThickness => Model.Style.Stroke.Thickness;
+    /// <summary>Extra outline width (world units) added while the node is selected. Selection is shown
+    /// by thickening the node's own border, so it reads as part of the shape rather than a detached box.</summary>
+    private const double SelectedBorderBump = 2d;
+
+    public double StrokeThickness => Model.Style.Stroke.Thickness + (IsSelected ? SelectedBorderBump : 0d);
 
     /// <summary>Stroke thickness as a uniform <see cref="Thickness"/>, for border-based templates
     /// (class/interface/enum, system boundary). Avalonia has no implicit double→Thickness binding
     /// conversion, so binding the double <see cref="StrokeThickness"/> to a <c>Border.BorderThickness</c>
     /// fails silently and the border vanishes — bind this instead.</summary>
-    public Thickness BorderThickness => new(Model.Style.Stroke.Thickness);
+    public Thickness BorderThickness => new(StrokeThickness);
 
     public AvaloniaList<double>? StrokeDashArray => Model.Style.Stroke.Dash.ToDashArray();
 
