@@ -16,6 +16,8 @@
     </GeometryGroup>
     <StreamGeometry x:Key="ToolIcon.RoundedRectangle">F0 M6,5 L18,5 A4,4 0 0 1 22,9 L22,15 A4,4 0 0 1 18,19 L6,19 A4,4 0 0 1 2,15 L2,9 A4,4 0 0 1 6,5 Z M7,7 L17,7 A3,3 0 0 1 20,10 L20,14 A3,3 0 0 1 17,17 L7,17 A3,3 0 0 1 4,14 L4,10 A3,3 0 0 1 7,7 Z</StreamGeometry>
     <StreamGeometry x:Key="ToolIcon.Trapezoid">F0 M7,6 L17,6 L21,18 L3,18 Z M9,8 L15,8 L18.5,16 L5.5,16 Z</StreamGeometry>
+    <!-- Note: a folded-corner sheet. Body silhouette with the dog-ear cut out (even-odd hole). -->
+    <StreamGeometry x:Key="ToolIcon.Note">F0 M4,3 L14,3 L20,9 L20,21 L4,21 Z M14,3 L14,9 L20,9 Z</StreamGeometry>
 
     <!-- Arrange: distribute glyphs (three evenly-spaced bars). Phosphor has align icons but no
          distribute equivalents, so author them here. Horizontal = bars spread along X (vertical bars);

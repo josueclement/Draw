@@ -189,19 +189,18 @@
                         <ribbon:RibbonMenuItem Header="Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}" IconData="{StaticResource ToolIcon.Dependency}" />
                     </ribbon:RibbonDropDownButton>
                 </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="Class diagram">
+                <ribbon:RibbonGroup Header="UML">
                     <ribbon:RibbonDropDownButton x:Name="ClassDropDown" Header="{Binding Toolbox.ClassHeader}" IconData="{pia:IconGeometry Icon=square_split_horizontal}">
                         <ribbon:RibbonMenuItem Header="Class" CommandParameter="{x:Static nodes:ClassNodeKind.Class}" IconData="{pia:IconGeometry Icon=square_split_horizontal}" />
                         <ribbon:RibbonMenuItem Header="Interface" CommandParameter="{x:Static nodes:ClassNodeKind.Interface}" IconData="{StaticResource ToolIcon.Interface}" />
                         <ribbon:RibbonMenuItem Header="Enum" CommandParameter="{x:Static nodes:ClassNodeKind.Enum}" IconData="{pia:IconGeometry Icon=list_numbers}" />
                     </ribbon:RibbonDropDownButton>
-                </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="Use case">
                     <ribbon:RibbonDropDownButton x:Name="UseCaseDropDown" Header="{Binding Toolbox.UseCaseHeader}" IconData="{pia:IconGeometry Icon=user}">
                         <ribbon:RibbonMenuItem Header="Actor" CommandParameter="{x:Static vm:UseCaseNodeKind.Actor}" IconData="{pia:IconGeometry Icon=user}" />
                         <ribbon:RibbonMenuItem Header="Use case" CommandParameter="{x:Static vm:UseCaseNodeKind.UseCase}" IconData="{StaticResource ToolIcon.Ellipse}" />
                         <ribbon:RibbonMenuItem Header="System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}" IconData="{pia:IconGeometry Icon=bounding_box}" />
                     </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonButton Header="Note" Command="{Binding Toolbox.SelectShapeToolCommand}" CommandParameter="{x:Static nodes:ShapeKind.Note}" IconData="{StaticResource ToolIcon.Note}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Image">
                     <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />

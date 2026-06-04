@@ -26,8 +26,36 @@ public static class ShapeGeometryBuilder
             ShapeKind.RoundedRectangle => RoundedRectangle(width, height, cornerRadius),
             ShapeKind.Ellipse => new EllipseGeometry(new Rect(0, 0, width, height)),
             ShapeKind.Circle => Circle(width, height),
+            ShapeKind.Note => NoteGeometry(width, height),
             _ => Polygon(ShapeOutline.GetPolygon(kind, new ModelRect(0, 0, width, height))),
         };
+    }
+
+    private static Geometry NoteGeometry(double width, double height)
+    {
+        // Rectangle with a folded top-right corner. The body figure renders the outline (incl. the
+        // diagonal fold edge); a second open figure strokes the fold's underside. Deliberately
+        // differs from ShapeOutline.Note (a plain rectangle) used for connector routing.
+        double fold = Math.Clamp(Math.Min(width, height) * 0.22, 6d, 18d);
+        fold = Math.Min(fold, Math.Min(width, height));
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(0, 0), isFilled: true);
+            ctx.LineTo(new Point(width - fold, 0));
+            ctx.LineTo(new Point(width, fold));
+            ctx.LineTo(new Point(width, height));
+            ctx.LineTo(new Point(0, height));
+            ctx.EndFigure(true);
+
+            ctx.BeginFigure(new Point(width - fold, 0), isFilled: false);
+            ctx.LineTo(new Point(width - fold, fold));
+            ctx.LineTo(new Point(width, fold));
+            ctx.EndFigure(false);
+        }
+
+        return geometry;
     }
 
     private static Geometry Circle(double width, double height)

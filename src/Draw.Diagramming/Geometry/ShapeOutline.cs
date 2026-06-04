@@ -45,6 +45,8 @@ public static class ShapeOutline
         {
             case ShapeKind.Rectangle:
             case ShapeKind.RoundedRectangle:
+            // Connectors attach to the full rectangle; the small dog-ear is ignored for routing.
+            case ShapeKind.Note:
                 return new[] { P(0, 0), P(w, 0), P(w, h), P(0, h) };
 
             case ShapeKind.Diamond:

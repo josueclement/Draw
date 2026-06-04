@@ -34,6 +34,8 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ShapeToolItem("Parallelogram", ShapeKind.Parallelogram),
         new ShapeToolItem("Trapezoid", ShapeKind.Trapezoid),
         new ShapeToolItem("Triangle", ShapeKind.Triangle),
+        // Armed by the standalone UML-group "Note" button; intentionally absent from the Shapes dropdown.
+        new ShapeToolItem("Note", ShapeKind.Note),
     };
 
     public ObservableCollection<ConnectorToolItem> Connectors { get; } = new()
