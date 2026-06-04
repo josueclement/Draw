@@ -34,9 +34,11 @@
                     <Style Selector="ContentPresenter">
                         <Setter Property="Canvas.Left" Value="{ReflectionBinding X}" />
                         <Setter Property="Canvas.Top" Value="{ReflectionBinding Y}" />
-                        <!-- Background container kinds (system boundaries) return a lower ZIndex so
-                             they sit behind the nodes they enclose. -->
-                        <Setter Property="Canvas.ZIndex" Value="{ReflectionBinding ZIndex}" />
+                        <!-- Stacking order: bind the element's own ZIndex (Visual.ZIndex). Avalonia has
+                             NO Canvas.ZIndex attached property (unlike WPF's Panel.ZIndex), so the name
+                             must be unqualified or it silently no-ops. System boundaries carry a lower
+                             ZIndex (reserved band) so they sit behind the nodes they enclose. -->
+                        <Setter Property="ZIndex" Value="{ReflectionBinding ZIndex}" />
                     </Style>
                 </ItemsControl.Styles>
                 <ItemsControl.DataTemplates>

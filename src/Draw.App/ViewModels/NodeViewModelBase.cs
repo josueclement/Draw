@@ -47,9 +47,15 @@ public abstract class NodeViewModelBase : ViewModelBase
     /// <summary>When true, resize gestures preserve the node's aspect ratio (e.g. images can't be distorted).</summary>
     public virtual bool LocksAspectRatio => false;
 
-    /// <summary>Stacking order within the node layer; lower renders further back. Container kinds
-    /// (e.g. system boundaries) override this to sit behind the nodes they enclose.</summary>
-    public virtual int ZIndex => 0;
+    /// <summary>Stacking order within the node layer; lower renders further back. Bound to the
+    /// node container's <c>ZIndex</c> (<c>Visual.ZIndex</c> — Avalonia has no <c>Canvas.ZIndex</c>).
+    /// System boundaries are kept in a reserved lower band by the editor's reorder logic (see
+    /// <c>DiagramDocumentViewModel.ReorderSelected</c>), so they always sit behind ordinary shapes.</summary>
+    public int ZIndex => Model.ZIndex;
+
+    /// <summary>Re-raises <see cref="ZIndex"/> after a stacking-order change so the bound
+    /// <c>Visual.ZIndex</c> updates without rebuilding the node collection.</summary>
+    public void RaiseZIndexChanged() => OnPropertyChanged(nameof(ZIndex));
 
     public Rect2D Bounds => Model.Bounds;
 

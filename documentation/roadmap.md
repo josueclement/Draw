@@ -118,6 +118,17 @@ access goes through `IClipboardService` (Avalonia 12 typed `DataFormat`); keyboa
 in `DiagramView` so they don't hijack text editing. See
 `documentation/plans/2026-06-04-copy-paste-and-images.md`.
 
+## Shape stacking order (Z-order) ✅ (cross-cutting)
+
+Control the front-to-back order of overlapping shapes: **Bring to Front / Bring Forward / Send
+Backward / Send to Back** on the selection, via a new **Order** group on the Arrange ribbon tab,
+`Ctrl+]`/`Ctrl+[` and `Ctrl+Shift+]`/`Ctrl+Shift+[` shortcuts, and the right-click canvas menu.
+System boundaries stay in a reserved lower band (always behind ordinary shapes, reorderable among
+themselves); connectors keep their dedicated top layer. Reuses the existing `NodeBase.ZIndex`
+(already serialized + cloned for undo) bound to `Canvas.ZIndex`; pure reordering in
+`Draw.Diagramming/Layout/ZOrderArranger.cs`; one undo step per action. See
+`documentation/plans/2026-06-04-shape-z-order.md`.
+
 ## Quick style palette ✅ (cross-cutting)
 
 A **Styles** group on the Home ribbon tab with an always-visible grid of 10 curated **pastel**

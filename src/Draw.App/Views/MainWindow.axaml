@@ -30,6 +30,10 @@
         <KeyBinding Gesture="Ctrl+Shift+B" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Bottom}" />
         <KeyBinding Gesture="Ctrl+Shift+H" Command="{Binding ActiveDocument.DistributeCommand}" CommandParameter="{x:Static layout:DistributionMode.Horizontal}" />
         <KeyBinding Gesture="Ctrl+Shift+V" Command="{Binding ActiveDocument.DistributeCommand}" CommandParameter="{x:Static layout:DistributionMode.Vertical}" />
+        <KeyBinding Gesture="Ctrl+OemCloseBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.BringForward}" />
+        <KeyBinding Gesture="Ctrl+OemOpenBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.SendBackward}" />
+        <KeyBinding Gesture="Ctrl+Shift+OemCloseBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.BringToFront}" />
+        <KeyBinding Gesture="Ctrl+Shift+OemOpenBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.SendToBack}" />
     </Window.KeyBindings>
 
     <DockPanel>
@@ -236,6 +240,24 @@
                                          Command="{Binding ActiveDocument.DistributeCommand}"
                                          CommandParameter="{x:Static layout:DistributionMode.Vertical}"
                                          IconData="{StaticResource ToolIcon.DistributeVertical}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Order">
+                    <ribbon:RibbonButton Header="Bring to front"
+                                         Command="{Binding ActiveDocument.OrderCommand}"
+                                         CommandParameter="{x:Static layout:ZOrderOperation.BringToFront}"
+                                         IconData="{StaticResource ToolIcon.BringToFront}" />
+                    <ribbon:RibbonButton Header="Bring forward"
+                                         Command="{Binding ActiveDocument.OrderCommand}"
+                                         CommandParameter="{x:Static layout:ZOrderOperation.BringForward}"
+                                         IconData="{StaticResource ToolIcon.BringForward}" />
+                    <ribbon:RibbonButton Header="Send backward"
+                                         Command="{Binding ActiveDocument.OrderCommand}"
+                                         CommandParameter="{x:Static layout:ZOrderOperation.SendBackward}"
+                                         IconData="{StaticResource ToolIcon.SendBackward}" />
+                    <ribbon:RibbonButton Header="Send to back"
+                                         Command="{Binding ActiveDocument.OrderCommand}"
+                                         CommandParameter="{x:Static layout:ZOrderOperation.SendToBack}"
+                                         IconData="{StaticResource ToolIcon.SendToBack}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Connections">
                     <ribbon:RibbonButton Header="Space connections"

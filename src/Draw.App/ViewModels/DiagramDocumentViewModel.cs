@@ -70,6 +70,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             _ => CanDistributeSelection);
         SpaceConnectionsCommand = new RelayCommand(SpaceSelectedConnections, () => CanSpaceConnections);
         MergeConnectionsCommand = new RelayCommand(MergeSelectedConnections, () => CanMergeConnections);
+        OrderCommand = new RelayCommand<ZOrderOperation>(
+            op => { if (op is { } o) ReorderSelected(o); },
+            _ => HasNodeSelection);
 
         RebuildNodes();
         RebuildConnectors();
@@ -149,6 +152,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public RelayCommand SpaceConnectionsCommand { get; }
 
     public RelayCommand MergeConnectionsCommand { get; }
+
+    public RelayCommand<ZOrderOperation> OrderCommand { get; }
 
     public double PanX
     {
@@ -767,6 +772,71 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         MarkModified();
     }
 
+    /// <summary>
+    /// Changes the front-to-back stacking of the selected shapes (one undo step). Nodes are kept in two
+    /// bands — system boundaries always below ordinary shapes — and each band is reordered independently,
+    /// so a boundary can be re-stacked relative to other boundaries but can never rise above a shape. The
+    /// new order is repacked into contiguous <c>ZIndex</c> values; connectors render in their own layer
+    /// above all nodes, so they stay on top regardless. A no-op (no undo) when nothing actually moves.
+    /// </summary>
+    public void ReorderSelected(ZOrderOperation operation)
+    {
+        List<NodeViewModelBase> selected = SelectedNodes.ToList();
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<NodeViewModelBase> selectedSet = selected.ToHashSet();
+
+        // Each band is ordered back-to-front by its current ZIndex; boundaries are repacked below the
+        // ordinary nodes so the "boundaries stay behind shapes" constraint holds structurally.
+        List<NodeViewModelBase> boundaries = Nodes
+            .Where(n => n.Model is SystemBoundaryNode)
+            .OrderBy(n => n.Model.ZIndex)
+            .ToList();
+        List<NodeViewModelBase> ordinary = Nodes
+            .Where(n => n.Model is not SystemBoundaryNode)
+            .OrderBy(n => n.Model.ZIndex)
+            .ToList();
+
+        List<NodeViewModelBase> reordered = new(boundaries.Count + ordinary.Count);
+        reordered.AddRange(ZOrderArranger.Reorder(boundaries, selectedSet.Contains, operation));
+        reordered.AddRange(ZOrderArranger.Reorder(ordinary, selectedSet.Contains, operation));
+
+        // Nothing moved (e.g. the selection is already at the front) — don't dirty the document.
+        if (reordered.SequenceEqual(boundaries.Concat(ordinary)))
+        {
+            return;
+        }
+
+        CaptureUndo();
+        for (int i = 0; i < reordered.Count; i++)
+        {
+            reordered[i].Model.ZIndex = i;
+        }
+
+        // Mirror the new order into the node collection so the ItemsControl restacks: render order
+        // follows collection order (and the bound ZIndex agrees with it). In-place Move keeps the
+        // existing view-model instances — and thus their selection and decoded image bitmaps — intact.
+        for (int target = 0; target < reordered.Count; target++)
+        {
+            int current = Nodes.IndexOf(reordered[target]);
+            if (current != target)
+            {
+                Nodes.Move(current, target);
+            }
+        }
+
+        // Refresh the bound ZIndex (Visual.ZIndex) too, so it stays consistent with the new order.
+        foreach (NodeViewModelBase node in Nodes)
+        {
+            node.RaiseZIndexChanged();
+        }
+
+        MarkModified();
+    }
+
     /// <summary>One connector endpoint that touches a shape being spaced.</summary>
     private readonly record struct ConnectorEnd(ConnectorViewModel Connector, bool IsSource, double Fraction);
 
@@ -1250,6 +1320,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         DistributeCommand.NotifyCanExecuteChanged();
         SpaceConnectionsCommand.NotifyCanExecuteChanged();
         MergeConnectionsCommand.NotifyCanExecuteChanged();
+        OrderCommand.NotifyCanExecuteChanged();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 }
