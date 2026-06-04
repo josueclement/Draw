@@ -61,6 +61,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         DistributeCommand = new RelayCommand<DistributionMode>(
             mode => { if (mode is { } m) DistributeSelected(m); },
             _ => CanDistributeSelection);
+        SpaceConnectionsCommand = new RelayCommand(SpaceSelectedConnections, () => CanSpaceConnections);
 
         RebuildNodes();
         RebuildConnectors();
@@ -137,6 +138,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public RelayCommand<DistributionMode> DistributeCommand { get; }
 
+    public RelayCommand SpaceConnectionsCommand { get; }
+
     public double PanX
     {
         get;
@@ -160,6 +163,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     /// <summary>Distribution needs at least three shapes (two anchors plus something to space between).</summary>
     public bool CanDistributeSelection => SelectedNodes.Count() >= 3;
+
+    /// <summary>Connector spacing operates on every connector attached to the selected shape(s).</summary>
+    public bool CanSpaceConnections => SelectedNodes.Any();
 
     public bool HasConnectorSelection => SelectedConnector is not null;
 
@@ -430,6 +436,88 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         MarkModified();
     }
 
+    /// <summary>One connector endpoint that touches a shape being spaced.</summary>
+    private readonly record struct ConnectorEnd(ConnectorViewModel Connector, bool IsSource, double Fraction);
+
+    /// <summary>
+    /// Evenly spreads the connectors attached to the selected shape(s) along each edge they touch
+    /// (one undo step). For every selected shape, the connector ends on a given bounding-box side are
+    /// kept in their current order and re-pinned at equal gaps; sides with a single connection are left
+    /// alone. Reads the current routes before mutating, so each end is classified by where it lands now.
+    /// </summary>
+    public void SpaceSelectedConnections()
+    {
+        HashSet<Guid> selectedIds = SelectedNodes.Select(n => n.Id).ToHashSet();
+        if (selectedIds.Count == 0)
+        {
+            return;
+        }
+
+        Dictionary<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> groups = new();
+
+        void Collect(ConnectorViewModel connector, bool isSource, NodeViewModelBase node, Point2D point)
+        {
+            BoxSide side = ConnectionDistributor.ClassifySide(node.Bounds, point);
+            double fraction = ConnectionDistributor.FractionAlong(side, node.Bounds, point);
+            if (!groups.TryGetValue((node, side), out List<ConnectorEnd>? ends))
+            {
+                ends = new List<ConnectorEnd>();
+                groups[(node, side)] = ends;
+            }
+
+            ends.Add(new ConnectorEnd(connector, isSource, fraction));
+        }
+
+        foreach (ConnectorViewModel connector in Connectors)
+        {
+            if (selectedIds.Contains(connector.Source.Id))
+            {
+                Collect(connector, isSource: true, connector.Source, connector.RouteStart);
+            }
+
+            if (selectedIds.Contains(connector.Target.Id))
+            {
+                Collect(connector, isSource: false, connector.Target, connector.RouteEnd);
+            }
+        }
+
+        bool anySpaced = false;
+        foreach (KeyValuePair<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> group in groups)
+        {
+            List<ConnectorEnd> ends = group.Value;
+            if (ends.Count < 2)
+            {
+                continue;
+            }
+
+            // Capture only once we know there is something to do, so a no-op adds no undo entry.
+            if (!anySpaced)
+            {
+                CaptureUndo();
+                anySpaced = true;
+            }
+
+            ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
+            for (int i = 0; i < ends.Count; i++)
+            {
+                Point2D anchor = ConnectionDistributor.EvenAnchor(group.Key.Side, i, ends.Count);
+                if (ends[i].IsSource)
+                {
+                    ends[i].Connector.SetSourceAnchor(anchor);
+                }
+                else
+                {
+                    ends[i].Connector.SetTargetAnchor(anchor);
+                }
+            }
+        }
+
+        if (anySpaced)
+        {
+            MarkModified();
+        }
+    }
+
     public void SetNodeBounds(NodeViewModelBase vm, Rect2D bounds)
     {
         vm.X = bounds.X;
@@ -681,8 +769,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(CanAlignSelection));
         OnPropertyChanged(nameof(CanDistributeSelection));
+        OnPropertyChanged(nameof(CanSpaceConnections));
         AlignCommand.NotifyCanExecuteChanged();
         DistributeCommand.NotifyCanExecuteChanged();
+        SpaceConnectionsCommand.NotifyCanExecuteChanged();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 }

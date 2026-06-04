@@ -71,3 +71,13 @@ ribbon tab (Align dropdown + two Distribute buttons), `Ctrl+Shift+L/C/R/T/M/B` a
 shortcuts, and a right-click canvas menu (right-drag still pans). Pure geometry in
 `Draw.Diagramming/Layout/ShapeArranger.cs`; one undo step per action; connectors re-route
 automatically. See `documentation/plans/2026-06-04-align-distribute-shapes.md`.
+
+## Connection point spacing ✅ (cross-cutting)
+
+Tidy the connectors landing on a shape: a one-shot **Space connections** action spreads the connectors
+attached to the selected shape(s) evenly along each edge they touch (sides with ≥2 connections),
+preserving their current order and pinning them as forced anchors so the layout sticks on move/resize.
+A **Connections** group on the Arrange ribbon tab + a right-click menu item (the arrange menu now opens
+with ≥1 shape selected). Pure geometry in `Draw.Diagramming/Layout/ConnectionDistributor.cs`; one undo
+step per action; reuses the forced-anchor mechanism. See
+`documentation/plans/2026-06-04-connection-point-spacing.md`.
