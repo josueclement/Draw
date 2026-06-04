@@ -210,6 +210,9 @@
                     <ribbon:RibbonButton Header="Space connections"
                                          Command="{Binding ActiveDocument.SpaceConnectionsCommand}"
                                          IconData="{StaticResource ToolIcon.SpaceConnections}" />
+                    <ribbon:RibbonButton Header="Merge connections"
+                                         Command="{Binding ActiveDocument.MergeConnectionsCommand}"
+                                         IconData="{StaticResource ToolIcon.MergeConnections}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 

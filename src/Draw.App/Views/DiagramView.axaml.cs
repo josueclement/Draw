@@ -589,6 +589,7 @@ public partial class DiagramView : UserControl
         menu.Items.Add(ArrangeItem("Distribute vertically", vm.DistributeCommand, DistributionMode.Vertical));
         menu.Items.Add(new Separator());
         menu.Items.Add(new MenuItem { Header = "Space connections", Command = vm.SpaceConnectionsCommand });
+        menu.Items.Add(new MenuItem { Header = "Merge connections", Command = vm.MergeConnectionsCommand });
         return menu;
     }
 

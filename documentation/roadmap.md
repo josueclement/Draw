@@ -91,6 +91,11 @@ The action now **force-pins every end** touching the selection, not just crowded
 side is centred on that edge so the whole arrangement is locked. See
 `documentation/plans/2026-06-04-force-pin-on-arrange.md`.
 
+A sibling **Merge connections** action (same Connections group + context menu) is the inverse: it
+collapses every connector end touching the selected shape(s) onto the centre of the side it lands on,
+so the two buttons fan out ↔ regroup a shape's connectors. See
+`documentation/plans/2026-06-04-merge-connections.md`.
+
 ## Copy/paste + image support ✅ (cross-cutting)
 
 Clipboard editing for diagram content plus embedded images. **Copy/Cut/Paste/Duplicate**
