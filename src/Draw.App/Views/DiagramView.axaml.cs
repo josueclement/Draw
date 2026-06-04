@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
@@ -9,6 +11,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
@@ -85,9 +88,28 @@ public partial class DiagramView : UserControl
         Viewport.PointerReleased += OnPointerReleased;
         Viewport.PointerWheelChanged += OnPointerWheel;
         Viewport.DoubleTapped += OnDoubleTapped;
-        Viewport.SizeChanged += (_, _) => UpdateGridBounds();
+        Viewport.SizeChanged += (_, _) =>
+        {
+            UpdateGridBounds();
+            PushViewportSize();
+        };
         KeyDown += OnKeyDown;
         DataContextChanged += OnDataContextChanged;
+
+        // Accept image files dropped from the OS onto the canvas.
+        DragDrop.SetAllowDrop(Viewport, true);
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
+    }
+
+    // The visible viewport size (screen px) the document VM needs to centre pastes.
+    private void PushViewportSize()
+    {
+        if (_vm is not null)
+        {
+            _vm.ViewportWidth = Viewport.Bounds.Width;
+            _vm.ViewportHeight = Viewport.Bounds.Height;
+        }
     }
 
     private double Zoom => _vm?.Zoom ?? 1d;
@@ -142,6 +164,7 @@ public partial class DiagramView : UserControl
         UpdateGrid();
         UpdateTransform();
         UpdateHandles();
+        PushViewportSize();
     }
 
     private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -633,6 +656,31 @@ public partial class DiagramView : UserControl
             return;
         }
 
+        // Clipboard shortcuts are handled here (not as window key bindings) so they only act on the
+        // diagram when no text editor has focus — the TextBox guard above lets them edit text normally.
+        if (_vm is not null && e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            switch (e.Key)
+            {
+                case Key.C:
+                    _ = _vm.CopySelectionAsync();
+                    e.Handled = true;
+                    return;
+                case Key.X:
+                    _ = _vm.CutSelectionAsync();
+                    e.Handled = true;
+                    return;
+                case Key.V:
+                    _ = _vm.PasteAsync();
+                    e.Handled = true;
+                    return;
+                case Key.D:
+                    _vm.DuplicateSelection();
+                    e.Handled = true;
+                    return;
+            }
+        }
+
         if (e.Key == Key.Delete)
         {
             _vm?.DeleteSelected();
@@ -642,6 +690,56 @@ public partial class DiagramView : UserControl
         {
             EndEditing();
         }
+    }
+
+    private void OnDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = e.DataTransfer.Contains(DataFormat.File) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void OnDrop(object? sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        if (_vm is null)
+        {
+            return;
+        }
+
+        IEnumerable<IStorageItem>? files = e.DataTransfer.TryGetFiles();
+        if (files is null)
+        {
+            return;
+        }
+
+        Point world = ScreenToWorld(e.GetPosition(Viewport));
+        foreach (IStorageItem storageItem in files)
+        {
+            if (storageItem is not IStorageFile file || file.TryGetLocalPath() is not { } path || !IsImagePath(path))
+            {
+                continue;
+            }
+
+            try
+            {
+                byte[] data = await File.ReadAllBytesAsync(path);
+                _vm.AddImageNode(new Point2D(world.X, world.Y), data, ImageFormatFromPath(path));
+                world = new Point(world.X + 16, world.Y + 16); // cascade when several are dropped at once
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Skip an unreadable file; the others still drop.
+            }
+        }
+    }
+
+    private static bool IsImagePath(string path)
+        => System.IO.Path.GetExtension(path).ToLowerInvariant() is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif";
+
+    private static string ImageFormatFromPath(string path)
+    {
+        string ext = System.IO.Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
+        return ext.Length == 0 ? "png" : ext;
     }
 
     private void OnMemberDoubleTapped(object? sender, TappedEventArgs e)
@@ -985,7 +1083,51 @@ public partial class DiagramView : UserControl
         double top = Math.Min(t, bottom);
         double width = Math.Max(node.MinWidth, Math.Abs(r - l));
         double height = Math.Max(node.MinHeight, Math.Abs(bottom - t));
-        return new Rect2D(left, top, width, height);
+        Rect2D result = new(left, top, width, height);
+
+        if (node.LocksAspectRatio && b.Width > 0 && b.Height > 0)
+        {
+            result = LockAspect(handle, b, result, node.MinWidth, node.MinHeight);
+        }
+
+        return result;
+    }
+
+    // Re-proportions an unconstrained resize so the node keeps its original aspect ratio, anchored at the
+    // fixed corner/edge of the dragged handle. Corner handles scale from the opposite corner; edge handles
+    // scale (driven by the moved axis) and re-centre on the fixed edge.
+    private static Rect2D LockAspect(int handle, Rect2D original, Rect2D raw, double minWidth, double minHeight)
+    {
+        double ratio = original.Width / original.Height;
+
+        double scale = handle switch
+        {
+            1 or 5 => raw.Height / original.Height,                                   // N / S: height-driven
+            3 or 7 => raw.Width / original.Width,                                     // E / W: width-driven
+            _ => Math.Max(raw.Width / original.Width, raw.Height / original.Height),  // corners: dominant axis
+        };
+
+        // Don't let either dimension fall below its minimum.
+        scale = Math.Max(scale, Math.Max(minWidth / original.Width, minHeight / original.Height));
+
+        double newWidth = original.Width * scale;
+        double newHeight = newWidth / ratio;
+
+        double cx = original.Center.X;
+        double cy = original.Center.Y;
+        (double newLeft, double newTop) = handle switch
+        {
+            0 => (original.Right - newWidth, original.Bottom - newHeight),  // NW: fix SE corner
+            2 => (original.Left, original.Bottom - newHeight),              // NE: fix SW corner
+            4 => (original.Left, original.Top),                             // SE: fix NW corner
+            6 => (original.Right - newWidth, original.Top),                 // SW: fix NE corner
+            1 => (cx - (newWidth / 2), original.Bottom - newHeight),        // N: fix bottom edge
+            5 => (cx - (newWidth / 2), original.Top),                       // S: fix top edge
+            3 => (original.Left, cy - (newHeight / 2)),                     // E: fix left edge
+            _ => (original.Right - newWidth, cy - (newHeight / 2)),         // W (7): fix right edge
+        };
+
+        return new Rect2D(newLeft, newTop, newWidth, newHeight);
     }
 
     private void EnsureUndoCaptured()

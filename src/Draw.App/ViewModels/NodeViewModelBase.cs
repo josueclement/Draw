@@ -43,6 +43,9 @@ public abstract class NodeViewModelBase : ViewModelBase
 
     public virtual double MinHeight => 12d;
 
+    /// <summary>When true, resize gestures preserve the node's aspect ratio (e.g. images can't be distorted).</summary>
+    public virtual bool LocksAspectRatio => false;
+
     /// <summary>Stacking order within the node layer; lower renders further back. Container kinds
     /// (e.g. system boundaries) override this to sit behind the nodes they enclose.</summary>
     public virtual int ZIndex => 0;

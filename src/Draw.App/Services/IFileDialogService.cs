@@ -14,6 +14,8 @@ public interface IFileDialogService
     Task<string?> PickSaveAsync(string? suggestedFileName);
 
     Task<string?> PickSavePngAsync(string? suggestedFileName);
+
+    Task<string?> PickOpenImageAsync();
 }
 
 public sealed class FileDialogService : IFileDialogService
@@ -26,6 +28,11 @@ public sealed class FileDialogService : IFileDialogService
     private static readonly FilePickerFileType PngFileType = new("PNG image")
     {
         Patterns = new[] { "*.png" },
+    };
+
+    private static readonly FilePickerFileType ImageFileType = new("Image")
+    {
+        Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif" },
     };
 
     public async Task<string?> PickOpenAsync()
@@ -82,6 +89,24 @@ public sealed class FileDialogService : IFileDialogService
         }).ConfigureAwait(true);
 
         return file?.TryGetLocalPath();
+    }
+
+    public async Task<string?> PickOpenImageAsync()
+    {
+        IStorageProvider? storage = GetStorageProvider();
+        if (storage is null)
+        {
+            return null;
+        }
+
+        IReadOnlyList<IStorageFile> files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Insert image",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { ImageFileType },
+        }).ConfigureAwait(true);
+
+        return files.Count > 0 ? files[0].TryGetLocalPath() : null;
     }
 
     private static IStorageProvider? GetStorageProvider()

@@ -87,6 +87,23 @@
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=arrow_clockwise}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <Separator />
+                <MenuItem Header="Cu_t" Command="{Binding CutCommand}" InputGesture="Ctrl+X">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=scissors}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Copy" Command="{Binding CopyCommand}" InputGesture="Ctrl+C">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Paste" Command="{Binding PasteCommand}" InputGesture="Ctrl+V">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=clipboard}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="D_uplicate" Command="{Binding DuplicateCommand}" InputGesture="Ctrl+D">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy_simple}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Insert _Image…" Command="{Binding InsertImageCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=image}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="_Delete" Command="{Binding DeleteCommand}" InputGesture="Delete">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=trash}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
@@ -113,6 +130,10 @@
                 <ribbon:RibbonGroup Header="Edit">
                     <ribbon:RibbonButton Header="Undo" Command="{Binding UndoCommand}" IconData="{pia:IconGeometry Icon=arrow_counter_clockwise}" />
                     <ribbon:RibbonButton Header="Redo" Command="{Binding RedoCommand}" IconData="{pia:IconGeometry Icon=arrow_clockwise}" />
+                    <ribbon:RibbonButton Header="Cut" Command="{Binding CutCommand}" IconData="{pia:IconGeometry Icon=scissors}" />
+                    <ribbon:RibbonButton Header="Copy" Command="{Binding CopyCommand}" IconData="{pia:IconGeometry Icon=copy}" />
+                    <ribbon:RibbonButton Header="Paste" Command="{Binding PasteCommand}" IconData="{pia:IconGeometry Icon=clipboard}" />
+                    <ribbon:RibbonButton Header="Duplicate" Command="{Binding DuplicateCommand}" IconData="{pia:IconGeometry Icon=copy_simple}" />
                     <ribbon:RibbonButton Header="Delete" Command="{Binding DeleteCommand}" IconData="{pia:IconGeometry Icon=trash}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
@@ -156,6 +177,9 @@
                         <ribbon:RibbonMenuItem Header="Use case" CommandParameter="{x:Static vm:UseCaseNodeKind.UseCase}" IconData="{StaticResource ToolIcon.Ellipse}" />
                         <ribbon:RibbonMenuItem Header="System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}" IconData="{pia:IconGeometry Icon=bounding_box}" />
                     </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Image">
+                    <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 

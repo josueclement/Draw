@@ -49,6 +49,11 @@ public sealed class ShellViewModel : ViewModelBase
         UndoCommand = new RelayCommand(OnUndo, () => ActiveDocument?.CanUndo ?? false);
         RedoCommand = new RelayCommand(OnRedo, () => ActiveDocument?.CanRedo ?? false);
         DeleteCommand = new RelayCommand(OnDelete, () => ActiveDocument?.HasSelection ?? false);
+        CopyCommand = new AsyncRelayCommand(OnCopyAsync, () => ActiveDocument?.HasNodeSelection ?? false);
+        CutCommand = new AsyncRelayCommand(OnCutAsync, () => ActiveDocument?.HasNodeSelection ?? false);
+        PasteCommand = new AsyncRelayCommand(OnPasteAsync, () => HasActiveDocument);
+        DuplicateCommand = new RelayCommand(OnDuplicate, () => ActiveDocument?.HasNodeSelection ?? false);
+        InsertImageCommand = new AsyncRelayCommand(OnInsertImageAsync, () => HasActiveDocument);
         ExportPngCommand = new RelayCommand(OnExportPng, () => HasActiveDocument);
         CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
@@ -76,6 +81,11 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand UndoCommand { get; }
     public RelayCommand RedoCommand { get; }
     public RelayCommand DeleteCommand { get; }
+    public AsyncRelayCommand CopyCommand { get; }
+    public AsyncRelayCommand CutCommand { get; }
+    public AsyncRelayCommand PasteCommand { get; }
+    public RelayCommand DuplicateCommand { get; }
+    public AsyncRelayCommand InsertImageCommand { get; }
     public RelayCommand ExportPngCommand { get; }
     public RelayCommand CopyImageCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
@@ -225,6 +235,44 @@ public sealed class ShellViewModel : ViewModelBase
 
     private void OnDelete() => ActiveDocument?.DeleteSelected();
 
+    private Task OnCopyAsync() => ActiveDocument?.CopySelectionAsync() ?? Task.CompletedTask;
+
+    private Task OnCutAsync() => ActiveDocument?.CutSelectionAsync() ?? Task.CompletedTask;
+
+    private Task OnPasteAsync() => ActiveDocument?.PasteAsync() ?? Task.CompletedTask;
+
+    private void OnDuplicate() => ActiveDocument?.DuplicateSelection();
+
+    private async Task OnInsertImageAsync()
+    {
+        if (ActiveDocument is null)
+        {
+            return;
+        }
+
+        string? path = await _fileDialogs.PickOpenImageAsync();
+        if (path is null)
+        {
+            return;
+        }
+
+        try
+        {
+            byte[] data = await File.ReadAllBytesAsync(path);
+            ActiveDocument.AddImageAtViewportCenter(data, ImageFormatFromPath(path));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await _dialogs.ShowErrorAsync("Could not insert image", ex.Message);
+        }
+    }
+
+    private static string ImageFormatFromPath(string path)
+    {
+        string ext = Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
+        return ext.Length == 0 ? "png" : ext;
+    }
+
     private void OnExportPng() => ExportPngRequested?.Invoke(this, EventArgs.Empty);
 
     private void OnCopyImage() => CopyImageRequested?.Invoke(this, EventArgs.Empty);
@@ -244,7 +292,12 @@ public sealed class ShellViewModel : ViewModelBase
     }
 
     private void OnActiveSelectionChanged(object? sender, EventArgs e)
-        => DeleteCommand.NotifyCanExecuteChanged();
+    {
+        DeleteCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
+        DuplicateCommand.NotifyCanExecuteChanged();
+    }
 
     private void OnActiveDocumentPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -261,6 +314,11 @@ public sealed class ShellViewModel : ViewModelBase
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
         DeleteCommand.NotifyCanExecuteChanged();
+        CopyCommand.NotifyCanExecuteChanged();
+        CutCommand.NotifyCanExecuteChanged();
+        PasteCommand.NotifyCanExecuteChanged();
+        DuplicateCommand.NotifyCanExecuteChanged();
+        InsertImageCommand.NotifyCanExecuteChanged();
         ExportPngCommand.NotifyCanExecuteChanged();
         CopyImageCommand.NotifyCanExecuteChanged();
     }
