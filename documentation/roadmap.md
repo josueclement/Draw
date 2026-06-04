@@ -47,6 +47,11 @@ Adds a fourth route style, **Rounded** — a smooth curve averaged from the bend
 midpoints between consecutive points; a gentle S-curve when there are none), rendered as true cubic
 beziers. See `documentation/plans/2026-06-03-connector-rounded-route.md`.
 
+A new connection is now **curved by default**: `AddConnector` creates it with the Rounded route and
+auto-pins each end to the centre of its facing side (reusing the Space-connections math), so the
+connector bows into a curve the instant two shapes are joined. See
+`documentation/plans/2026-06-04-curved-connection-defaults.md`.
+
 ## UI shell — Ribbon, icons & theming ✅ (cross-cutting)
 
 Replaces the top toolbar + left tool palette with a `Carbon.Avalonia.Desktop` **Ribbon**

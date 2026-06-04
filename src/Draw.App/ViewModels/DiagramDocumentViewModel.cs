@@ -358,11 +358,24 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             SourceNodeId = sourceId,
             TargetNodeId = targetId,
             Kind = kind,
-            Route = RouteStyle.Straight,
+            Route = RouteStyle.Rounded,
         };
         _document.Connectors.Add(connector);
         ConnectorViewModel vm = new(connector, source, target, _router);
         Connectors.Add(vm);
+
+        // Curve-on-connect: pin each end to the centre of the side it naturally attaches to. An
+        // unpinned rounded connector aims dead-on at the other shape and renders straight; a
+        // side-centre anchor gives the cardinal outward normal that makes the rounded route bow
+        // into a curve immediately. Classify both sides from the initial auto-route before pinning,
+        // since pinning the source recomputes the route (and would move the target attachment).
+        Point2D autoStart = vm.RouteStart;
+        Point2D autoEnd = vm.RouteEnd;
+        BoxSide sourceSide = ConnectionDistributor.ClassifySide(source.Bounds, autoStart);
+        BoxSide targetSide = ConnectionDistributor.ClassifySide(target.Bounds, autoEnd);
+        vm.SetSourceAnchor(ConnectionDistributor.EvenAnchor(sourceSide, 0, 1));
+        vm.SetTargetAnchor(ConnectionDistributor.EvenAnchor(targetSide, 0, 1));
+
         SelectConnector(vm);
         MarkModified();
         return vm;
