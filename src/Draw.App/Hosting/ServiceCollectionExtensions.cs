@@ -26,7 +26,6 @@ public static class ServiceCollectionExtensions
         // Connector routing strategies + dispatcher.
         services.AddSingleton<IConnectorRouteStrategy, StraightRouter>();
         services.AddSingleton<IConnectorRouteStrategy, OrthogonalRouter>();
-        services.AddSingleton<IConnectorRouteStrategy, BezierRouter>();
         services.AddSingleton<IConnectorRouteStrategy, RoundedRouter>();
         services.AddSingleton<IConnectorRouter, ConnectorRouter>();
         services.AddSingleton<IDocumentFileService, DocumentFileService>();

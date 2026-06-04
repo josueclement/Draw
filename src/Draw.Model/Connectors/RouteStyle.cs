@@ -5,12 +5,11 @@ public enum RouteStyle
 {
     Straight = 0,
     Orthogonal = 1,
-    Bezier = 2,
 
     /// <summary>
     /// A smooth curve averaged from the bend points: it passes through the two attachment
     /// endpoints and the midpoints between consecutive bend points, with the bend points acting
-    /// as pull-handles. With no bend points it is a gentle S-curve (like <see cref="Bezier"/>).
+    /// as pull-handles. With no bend points it is a gentle S-curve.
     /// </summary>
     Rounded = 3,
 }

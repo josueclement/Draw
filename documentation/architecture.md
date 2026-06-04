@@ -24,8 +24,8 @@ the outline for each of the 7 shape kinds (sharing `ShapeOutline` with the route
 `Draw.Diagramming.Routing` computes connector geometry independently of the UI:
 `ShapeBoundary` finds where a ray from a shape's centre crosses its outline (the floating
 attachment point), and `IConnectorRouter` dispatches to a `StraightRouter` /
-`OrthogonalRouter` / `BezierRouter` strategy (registered in DI) returning a `ConnectorRoute`
-(polyline or cubic) plus non-zero endpoint direction vectors. `ConnectorViewModel` turns
+`OrthogonalRouter` / `RoundedRouter` strategy (registered in DI) returning a `ConnectorRoute`
+(polyline or cubic curve) plus non-zero endpoint direction vectors. `ConnectorViewModel` turns
 that into Avalonia geometry, builds the per-relationship UML decorations
 (`ConnectorDecorationBuilder`) and label positions, and recomputes whenever an endpoint
 node moves. Connectors render as `Path` controls in a layer behind the nodes; selection and

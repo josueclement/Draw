@@ -11,7 +11,7 @@ text; per-shape styling + inspector; memento undo/redo; PNG + clipboard export.
 
 ## Phase 2 — Connectors ✅
 
-`IConnectorRouter` with straight / orthogonal / bezier strategies and shape-boundary
+`IConnectorRouter` with straight / orthogonal strategies and shape-boundary
 attachment; the full UML relationship decoration set (open arrow, hollow/filled diamond,
 hollow triangle, dashed lines for realization/dependency); editable source/center/target
 labels; drag-from-node-to-node creation with preview; connector selection + inspector

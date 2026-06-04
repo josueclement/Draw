@@ -11,7 +11,7 @@ consecutive points; gentle S-curve when there are none). True vector (cubic) ren
 1. **Model** — `RouteStyle.cs`: add `Rounded = 3`.
 2. **Geometry** — `ConnectorRoute.cs`: add `CubicSegment` record, `Cubics` property, `PolyCubic`
    factory (knot `Points` + `Start`/`End`Direction from first/last controls).
-3. **Helper** — `RouteHelpers.cs`: add shared `SafeOutward`; `BezierRouter` now calls it.
+3. **Helper** — `RouteHelpers.cs`: add shared `SafeOutward` (used by the rounded router).
 4. **Strategy** — new `RoundedRouter.cs`: anchor-aware endpoints; 0 points → outward-normal S-curve;
    ≥1 points → midpoint-quadratic smoothing converted to cubic segments.
 5. **VM** — `ConnectorViewModel.cs`: `BuildLineGeometry` + `GetFlattenedPoints` handle `Cubics`;
