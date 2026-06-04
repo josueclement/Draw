@@ -53,6 +53,15 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         _theme.ThemeChanged += OnThemeChanged;
+        // Construct the selection-gated commands before RebuildNodes(): it raises a selection-changed
+        // notification that calls NotifyCanExecuteChanged() on both, so they must already exist.
+        AlignCommand = new RelayCommand<AlignmentMode>(
+            mode => { if (mode is { } m) AlignSelected(m); },
+            _ => CanAlignSelection);
+        DistributeCommand = new RelayCommand<DistributionMode>(
+            mode => { if (mode is { } m) DistributeSelected(m); },
+            _ => CanDistributeSelection);
+
         RebuildNodes();
         RebuildConnectors();
         _cleanSnapshot = _serializer.Serialize(_document);
@@ -65,13 +74,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             PanX = 0d;
             PanY = 0d;
         });
-
-        AlignCommand = new RelayCommand<AlignmentMode>(
-            mode => { if (mode is { } m) AlignSelected(m); },
-            _ => CanAlignSelection);
-        DistributeCommand = new RelayCommand<DistributionMode>(
-            mode => { if (mode is { } m) DistributeSelected(m); },
-            _ => CanDistributeSelection);
     }
 
     public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
