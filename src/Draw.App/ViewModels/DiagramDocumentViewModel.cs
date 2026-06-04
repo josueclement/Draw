@@ -720,10 +720,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     /// <summary>
     /// Force-pins every connector end touching the selected shape(s) (one undo step). On a bounding-box
-    /// side with several ends, they keep their current order and are re-pinned at equal gaps; a side with
-    /// a single end is pinned in place (frozen where it currently lands), while an already-pinned lone end
-    /// is left untouched. Reads the current routes before mutating, so each end is classified and frozen by
-    /// where it lands now; a no-op (nothing actually changes) adds no undo entry.
+    /// side with several ends, they keep their current order and are re-pinned at equal gaps; a side with a
+    /// single end is centred on that edge. Reads the current routes before mutating, so each end is
+    /// classified by where it lands now; a no-op (nothing actually changes) adds no undo entry.
     /// </summary>
     public void SpaceSelectedConnections()
     {
@@ -762,29 +761,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         // Compute every target anchor before mutating anything. A connector's route depends only on its
-        // own endpoints, so reading all current routes up front is order-independent.
+        // own endpoints, so reading all current routes up front is order-independent. EvenAnchor centres a
+        // lone end (count 1 → fraction 0.5) and spreads several at equal gaps, keeping their current order.
         List<(ConnectorEnd End, Point2D Anchor)> ops = new();
         foreach (KeyValuePair<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> group in groups)
         {
             List<ConnectorEnd> ends = group.Value;
-            if (ends.Count >= 2)
+            ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
+            for (int i = 0; i < ends.Count; i++)
             {
-                ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
-                for (int i = 0; i < ends.Count; i++)
-                {
-                    ops.Add((ends[i], ConnectionDistributor.EvenAnchor(group.Key.Side, i, ends.Count)));
-                }
-            }
-            else
-            {
-                // Lone end on its side: pin it where it currently lands. Already-pinned ends stay as-is.
-                ConnectorEnd end = ends[0];
-                Point2D? current = end.IsSource ? end.Connector.SourceAnchor : end.Connector.TargetAnchor;
-                if (current is null)
-                {
-                    Point2D point = end.IsSource ? end.Connector.RouteStart : end.Connector.RouteEnd;
-                    ops.Add((end, ConnectionDistributor.RelativeAnchor(group.Key.Node.Bounds, point)));
-                }
+                ops.Add((ends[i], ConnectionDistributor.EvenAnchor(group.Key.Side, i, ends.Count)));
             }
         }
 

@@ -83,7 +83,7 @@ step per action; reuses the forced-anchor mechanism. See
 `documentation/plans/2026-06-04-connection-point-spacing.md`.
 
 The action now **force-pins every end** touching the selection, not just crowded sides: a lone end on a
-side is pinned in place (frozen where it lands) so the whole arrangement is locked. See
+side is centred on that edge so the whole arrangement is locked. See
 `documentation/plans/2026-06-04-force-pin-on-arrange.md`.
 
 ## Copy/paste + image support ✅ (cross-cutting)
