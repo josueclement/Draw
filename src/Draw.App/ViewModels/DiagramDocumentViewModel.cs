@@ -18,6 +18,7 @@ using Draw.Model.Documents;
 using Draw.Model.Nodes;
 using Draw.Model.Primitives;
 using Draw.Model.Serialization;
+using Draw.Model.Styling;
 
 namespace Draw.App.ViewModels;
 
@@ -222,19 +223,28 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             bounds = bounds.PositionSnappedToGrid(GridSize);
         }
 
+        ShapeNodeViewModel vm = CreateShapeNode(kind, bounds, _document.DefaultShapeStyle.Clone());
+        SelectOnly(vm);
+        MarkModified();
+        return vm;
+    }
+
+    // Builds a shape node, adds it to the model + collection and returns its VM — WITHOUT capturing
+    // undo, selecting or marking modified. Callers own those, so a compound gesture (e.g. quick-add's
+    // node + connector) collapses into a single undo step.
+    private ShapeNodeViewModel CreateShapeNode(ShapeKind kind, Rect2D bounds, ShapeStyle style)
+    {
         ShapeNode node = new()
         {
             Kind = kind,
             Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
+            Style = style,
             ZIndex = NextZIndex(),
         };
 
         _document.Nodes.Add(node);
         ShapeNodeViewModel vm = new(node, _theme);
         Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
         return vm;
     }
 
@@ -253,20 +263,27 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             bounds = bounds.PositionSnappedToGrid(GridSize);
         }
 
+        ClassNodeViewModel vm = CreateClassNode(kind, bounds, _document.DefaultShapeStyle.Clone());
+        SelectOnly(vm);
+        MarkModified();
+        return vm;
+    }
+
+    // Undo-free, no-select core (see CreateShapeNode).
+    private ClassNodeViewModel CreateClassNode(ClassNodeKind kind, Rect2D bounds, ShapeStyle style)
+    {
         ClassNode node = new()
         {
             Kind = kind,
             Name = DefaultClassName(kind),
             Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
+            Style = style,
             ZIndex = NextZIndex(),
         };
 
         _document.Nodes.Add(node);
         ClassNodeViewModel vm = new(node, this, _theme);
         Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
         return vm;
     }
 
@@ -301,19 +318,29 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             bounds = bounds.PositionSnappedToGrid(GridSize);
         }
 
+        NodeViewModelBase vm = CreateUseCaseNode(kind, bounds, _document.DefaultShapeStyle.Clone());
+        SelectOnly(vm);
+        MarkModified();
+        return vm;
+    }
+
+    // Undo-free, no-select core (see CreateShapeNode). Preserves the boundary's behind-everything
+    // z-index and front-of-collection insertion.
+    private NodeViewModelBase CreateUseCaseNode(UseCaseNodeKind kind, Rect2D bounds, ShapeStyle style)
+    {
         NodeBase node = kind switch
         {
             UseCaseNodeKind.Actor => new ActorNode
             {
-                Name = "Actor", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = NextZIndex(),
+                Name = "Actor", Bounds = bounds, Style = style, ZIndex = NextZIndex(),
             },
             UseCaseNodeKind.SystemBoundary => new SystemBoundaryNode
             {
-                Title = "System", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = LowestZIndex() - 1,
+                Title = "System", Bounds = bounds, Style = style, ZIndex = LowestZIndex() - 1,
             },
             _ => new UseCaseNode
             {
-                Text = "Use case", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = NextZIndex(),
+                Text = "Use case", Bounds = bounds, Style = style, ZIndex = NextZIndex(),
             },
         };
 
@@ -331,14 +358,33 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             Nodes.Add(vm);
         }
 
-        SelectOnly(vm);
-        MarkModified();
         return vm;
     }
 
     private int LowestZIndex() => _document.Nodes.Count == 0 ? 0 : _document.Nodes.Min(n => n.ZIndex);
 
     public ConnectorViewModel? AddConnector(Guid sourceId, Guid targetId, RelationshipKind kind)
+    {
+        // Validate before capturing undo, so an invalid request pushes no redundant undo state.
+        if (sourceId == targetId || FindNode(sourceId) is null || FindNode(targetId) is null)
+        {
+            return null;
+        }
+
+        CaptureUndo();
+        ConnectorViewModel? vm = CreateConnector(sourceId, targetId, kind, RouteStyle.Straight);
+        if (vm is not null)
+        {
+            SelectConnector(vm);
+            MarkModified();
+        }
+
+        return vm;
+    }
+
+    // Undo-free, no-select core (see CreateShapeNode). Returns null if the endpoints coincide or
+    // either node is missing. Route is a parameter so quick-add can request a rounded link.
+    private ConnectorViewModel? CreateConnector(Guid sourceId, Guid targetId, RelationshipKind kind, RouteStyle route)
     {
         if (sourceId == targetId)
         {
@@ -352,20 +398,127 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             return null;
         }
 
-        CaptureUndo();
         Connector connector = new()
         {
             SourceNodeId = sourceId,
             TargetNodeId = targetId,
             Kind = kind,
-            Route = RouteStyle.Straight,
+            Route = route,
         };
         _document.Connectors.Add(connector);
         ConnectorViewModel vm = new(connector, source, target, _router);
         Connectors.Add(vm);
-        SelectConnector(vm);
-        MarkModified();
         return vm;
+    }
+
+    // Quick-add gap between a source node's edge and the new node's edge, in world units.
+    private const double QuickAddGap = 48d;
+
+    /// <summary>Creates a node a fixed gap beyond <paramref name="source"/>'s edge in
+    /// <paramref name="direction"/> — cloning the source's kind, style and size — and links the two with
+    /// a rounded association, all as a single undo step. The child is selected and, for label-bearing
+    /// kinds, put into inline edit. Returns null for image and boundary sources (out of scope).</summary>
+    public NodeViewModelBase? QuickAddConnectedNode(NodeViewModelBase source, QuickAddDirection direction)
+    {
+        if (source is ImageNodeViewModel or SystemBoundaryNodeViewModel)
+        {
+            return null;
+        }
+
+        CaptureUndo();
+        Rect2D bounds = ComputeQuickAddBounds(source, direction);
+        ShapeStyle style = source.Model.Style.Clone();
+        NodeViewModelBase child = CreateChildLike(source, bounds, style);
+        CreateConnector(source.Id, child.Id, RelationshipKind.Association, RouteStyle.Rounded);
+        SelectOnly(child);
+        if (child.HasInlineLabel)
+        {
+            child.IsEditing = true;
+        }
+
+        MarkModified();
+        return child;
+    }
+
+    // Maps a source VM to a fresh same-kind child (cloned style, supplied bounds). Image and boundary
+    // sources are rejected upstream in QuickAddConnectedNode.
+    private NodeViewModelBase CreateChildLike(NodeViewModelBase source, Rect2D bounds, ShapeStyle style) => source switch
+    {
+        ShapeNodeViewModel shape => CreateShapeNode(shape.Kind, bounds, style),
+        ClassNodeViewModel @class => CreateClassNode(@class.Kind, bounds, style),
+        ActorNodeViewModel => CreateUseCaseNode(UseCaseNodeKind.Actor, bounds, style),
+        UseCaseNodeViewModel => CreateUseCaseNode(UseCaseNodeKind.UseCase, bounds, style),
+        _ => throw new NotSupportedException($"Quick-add is not supported for {source.GetType().Name}."),
+    };
+
+    // Child inherits the source's size; placed a gap beyond the chosen edge, centred on the
+    // perpendicular axis, grid-snapped, then nudged sideways to avoid overlapping existing nodes.
+    private Rect2D ComputeQuickAddBounds(NodeViewModelBase source, QuickAddDirection direction)
+    {
+        Rect2D s = source.Model.Bounds;
+        double w = s.Width;
+        double h = s.Height;
+
+        (double x, double y) = direction switch
+        {
+            QuickAddDirection.Right => (s.Right + QuickAddGap, s.Center.Y - (h / 2)),
+            QuickAddDirection.Left => (s.Left - QuickAddGap - w, s.Center.Y - (h / 2)),
+            QuickAddDirection.Down => (s.Center.X - (w / 2), s.Bottom + QuickAddGap),
+            _ => (s.Center.X - (w / 2), s.Top - QuickAddGap - h), // Up
+        };
+
+        Rect2D bounds = new(x, y, w, h);
+        if (SnapEnabled)
+        {
+            bounds = bounds.PositionSnappedToGrid(GridSize);
+        }
+
+        return NudgeToFreeSlot(bounds, direction, source);
+    }
+
+    // Shifts the candidate along the axis perpendicular to the growth direction, alternating sides in
+    // increasing steps, until it clears other nodes (boundaries excepted). Falls back to the base
+    // position after a few tries so it never runs away.
+    private Rect2D NudgeToFreeSlot(Rect2D bounds, QuickAddDirection direction, NodeViewModelBase source)
+    {
+        bool horizontal = direction is QuickAddDirection.Left or QuickAddDirection.Right;
+        double step = (horizontal ? bounds.Height : bounds.Width) + QuickAddGap;
+        if (SnapEnabled && GridSize > 0)
+        {
+            step = Math.Ceiling(step / GridSize) * GridSize;
+        }
+
+        const int MaxTries = 6;
+        for (int i = 0; i <= MaxTries; i++)
+        {
+            // Offsets walk outward as 0, +s, -s, +2s, -2s, +3s, -3s.
+            double offset = i == 0 ? 0d : (i + 1) / 2 * step * (i % 2 == 0 ? -1 : 1);
+            Rect2D candidate = horizontal ? bounds.Translate(0d, offset) : bounds.Translate(offset, 0d);
+            if (!OverlapsExistingNode(candidate, source))
+            {
+                return candidate;
+            }
+        }
+
+        return bounds;
+    }
+
+    private bool OverlapsExistingNode(Rect2D candidate, NodeViewModelBase source)
+    {
+        foreach (NodeViewModelBase node in Nodes)
+        {
+            if (ReferenceEquals(node, source) || node is SystemBoundaryNodeViewModel)
+            {
+                continue;
+            }
+
+            if (candidate.IntersectsWith(node.Model.Bounds))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Copies the selected nodes (and any connector whose endpoints are both selected) to the

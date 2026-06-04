@@ -98,3 +98,14 @@ resize with a locked aspect ratio and behave as full nodes (connectors/align/dis
 access goes through `IClipboardService` (Avalonia 12 typed `DataFormat`); keyboard shortcuts are handled
 in `DiagramView` so they don't hijack text editing. See
 `documentation/plans/2026-06-04-copy-paste-and-images.md`.
+
+## Mind-map quick-add — + helper buttons ✅ (cross-cutting)
+
+Fast graph/mind-map building: **+** buttons on a node's four sides that, in one click, create a new node
+in that direction and connect it. The child clones the source's kind, style and size; the link is a plain
+association with the **Rounded** route; the whole gesture is one undo step, after which the new node is
+selected and focused for inline typing. Buttons show on hover and on single-selection (shapes + UML
+nodes; not images/boundaries), are placed a fixed gap beyond the edge and nudged to avoid overlap.
+Reuses the node/connector creation APIs (refactored into undo-free cores so node + connector collapse
+into one undo step), the world-space overlay + resize-handle interaction model, and the automatic
+boundary-attachment router. See `documentation/plans/2026-06-04-mindmap-quick-add.md`.

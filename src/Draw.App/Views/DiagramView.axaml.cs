@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -51,12 +52,18 @@ public partial class DiagramView : UserControl
 
     private const double HandleScreenSize = 10d;
 
+    // Quick-add helper buttons: on-screen diameter and the gap between a node's edge and the button.
+    private const double QuickAddButtonScreenSize = 22d;
+    private const double QuickAddButtonGap = 10d;
+
     // A right-button press that travels less than this (screen px, squared) before release is treated as
     // a click that opens the arrange context menu rather than a pan drag.
     private const double ContextClickThresholdSquared = 16d;
 
     private readonly List<Rectangle> _handles = new();
     private readonly List<Control> _connectorHandles = new();
+    private readonly List<Control> _quickAddButtons = new();
+    private NodeViewModelBase? _hoverNode;
     private DiagramDocumentViewModel? _vm;
     private DragMode _mode = DragMode.None;
     private bool _undoCaptured;
@@ -87,6 +94,7 @@ public partial class DiagramView : UserControl
         Viewport.PointerMoved += OnPointerMoved;
         Viewport.PointerReleased += OnPointerReleased;
         Viewport.PointerWheelChanged += OnPointerWheel;
+        Viewport.PointerExited += OnPointerExited;
         Viewport.DoubleTapped += OnDoubleTapped;
         Viewport.SizeChanged += (_, _) =>
         {
@@ -138,7 +146,11 @@ public partial class DiagramView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
-    private void OnToolboxPropertyChanged(object? sender, PropertyChangedEventArgs e) => UpdateCursor();
+    private void OnToolboxPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        UpdateCursor();
+        UpdateQuickAddButtons();
+    }
 
     private void UpdateCursor()
         => Viewport.Cursor = _toolbox is { IsSelectTool: false }
@@ -296,6 +308,21 @@ public partial class DiagramView : UserControl
             return;
         }
 
+        // Quick-add: clicking a + helper button spawns a connected node. Checked before tool and
+        // marquee handling because the buttons sit outside the node bounds, so HitTestNode misses them.
+        if (QuickAddTarget() is { } quickAddSource && HitTestQuickAdd(quickAddSource, world) is { } quickAddDirection)
+        {
+            NodeViewModelBase? child = _vm.QuickAddConnectedNode(quickAddSource, quickAddDirection);
+            UpdateHandles();
+            if (child is { IsEditing: true })
+            {
+                TryFocusNodeEditor(child);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         ToolboxViewModel? toolbox = GetToolbox();
 
         // Connector mode: drag from a source node to a target node.
@@ -410,8 +437,14 @@ public partial class DiagramView : UserControl
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_vm is null || _mode == DragMode.None)
+        if (_vm is null)
         {
+            return;
+        }
+
+        if (_mode == DragMode.None)
+        {
+            UpdateHover(ScreenToWorld(e.GetPosition(Viewport)));
             return;
         }
 
@@ -1141,6 +1174,8 @@ public partial class DiagramView : UserControl
 
     private void UpdateHandles()
     {
+        UpdateQuickAddButtons();
+
         foreach (Rectangle handle in _handles)
         {
             Overlay.Children.Remove(handle);
@@ -1230,6 +1265,171 @@ public partial class DiagramView : UserControl
         Canvas.SetTop(handle, position.Y - (size / 2));
         Overlay.Children.Add(handle);
         _connectorHandles.Add(handle);
+    }
+
+    // --- Quick-add helper buttons (the + affordances on a node's four sides) ---
+
+    // The node the quick-add buttons currently decorate: the hovered candidate when idle, else the
+    // single selected candidate. Null while dragging or when a placement/connector tool is armed.
+    private NodeViewModelBase? QuickAddTarget()
+    {
+        if (_vm is null || _mode != DragMode.None || _toolbox is { IsSelectTool: false })
+        {
+            return null;
+        }
+
+        if (IsQuickAddCandidate(_hoverNode))
+        {
+            return _hoverNode;
+        }
+
+        NodeViewModelBase? selected = _vm.SelectedNodes.Count() == 1 ? _vm.SelectedNodes.First() : null;
+        return IsQuickAddCandidate(selected) ? selected : null;
+    }
+
+    private static bool IsQuickAddCandidate(NodeViewModelBase? node)
+        => node is ShapeNodeViewModel or ClassNodeViewModel or ActorNodeViewModel or UseCaseNodeViewModel;
+
+    // Rebuilds the four + buttons on the overlay for the current target (a cheap no-op when there is
+    // none). Kept on its own list so it can refresh on hover without rebuilding the resize handles.
+    private void UpdateQuickAddButtons()
+    {
+        foreach (Control button in _quickAddButtons)
+        {
+            Overlay.Children.Remove(button);
+        }
+
+        _quickAddButtons.Clear();
+
+        if (QuickAddTarget() is not { } target)
+        {
+            return;
+        }
+
+        double size = QuickAddButtonScreenSize / Zoom;
+        foreach ((Point position, QuickAddDirection _) in QuickAddPositions(target))
+        {
+            Control button = CreateQuickAddButton(size);
+            Canvas.SetLeft(button, position.X - (size / 2));
+            Canvas.SetTop(button, position.Y - (size / 2));
+            Overlay.Children.Add(button);
+            _quickAddButtons.Add(button);
+        }
+    }
+
+    // Button centres: each edge midpoint pushed outward so the button clears the edge (and the
+    // edge-midpoint resize handle) by QuickAddButtonGap screen pixels.
+    private IEnumerable<(Point Position, QuickAddDirection Direction)> QuickAddPositions(NodeViewModelBase node)
+    {
+        Rect2D b = node.Model.Bounds;
+        double cx = b.X + (b.Width / 2);
+        double cy = b.Y + (b.Height / 2);
+        double offset = (QuickAddButtonGap + (QuickAddButtonScreenSize / 2d)) / Zoom;
+        yield return (new Point(cx, b.Top - offset), QuickAddDirection.Up);
+        yield return (new Point(b.Right + offset, cy), QuickAddDirection.Right);
+        yield return (new Point(cx, b.Bottom + offset), QuickAddDirection.Down);
+        yield return (new Point(b.Left - offset, cy), QuickAddDirection.Left);
+    }
+
+    // A white disc with an accent + glyph, sized in world units so it tracks zoom like the handles.
+    private Control CreateQuickAddButton(double size)
+    {
+        IBrush accent = new SolidColorBrush(Color.Parse("#3D7EFF"));
+        double bar = size * 0.5d;
+        double thickness = Math.Max(size * 0.14d, 1d / Zoom);
+
+        Grid grid = new() { Width = size, Height = size };
+        grid.Children.Add(new Ellipse
+        {
+            Width = size,
+            Height = size,
+            Fill = Brushes.White,
+            Stroke = accent,
+            StrokeThickness = 1d / Zoom,
+        });
+        grid.Children.Add(new Rectangle
+        {
+            Width = bar,
+            Height = thickness,
+            Fill = accent,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        grid.Children.Add(new Rectangle
+        {
+            Width = thickness,
+            Height = bar,
+            Fill = accent,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        return grid;
+    }
+
+    private QuickAddDirection? HitTestQuickAdd(NodeViewModelBase target, Point world)
+    {
+        double tolerance = (QuickAddButtonScreenSize / 2d) / Zoom;
+        foreach ((Point position, QuickAddDirection direction) in QuickAddPositions(target))
+        {
+            if (Math.Abs(world.X - position.X) <= tolerance && Math.Abs(world.Y - position.Y) <= tolerance)
+            {
+                return direction;
+            }
+        }
+
+        return null;
+    }
+
+    // Tracks the hovered node so the + buttons follow the pointer. Stays on the current node while the
+    // pointer is within reach of its buttons (which sit outside the node bounds) so they don't flicker.
+    private void UpdateHover(Point world)
+    {
+        NodeViewModelBase? node = HitTestNode(world);
+        if (node is null && _hoverNode is { } hover && IsQuickAddCandidate(hover))
+        {
+            double margin = (QuickAddButtonGap + QuickAddButtonScreenSize) / Zoom;
+            if (hover.Model.Bounds.Inflate(margin).Contains(new Point2D(world.X, world.Y)))
+            {
+                return;
+            }
+        }
+
+        if (!ReferenceEquals(node, _hoverNode))
+        {
+            _hoverNode = node;
+            UpdateQuickAddButtons();
+        }
+    }
+
+    private void OnPointerExited(object? sender, PointerEventArgs e)
+    {
+        if (_hoverNode is not null)
+        {
+            _hoverNode = null;
+            UpdateQuickAddButtons();
+        }
+    }
+
+    // Focuses a quick-added node's inline editor (shape/use-case/actor). Posted at Loaded priority so
+    // the freshly-added node's container is realized before we look for its TextBox — same approach as
+    // TryFocusMemberEditor. (Double-tap editing only flips IsEditing; quick-add focuses for fast typing.)
+    private void TryFocusNodeEditor(NodeViewModelBase node)
+    {
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                TextBox? box = this.GetVisualDescendants()
+                    .OfType<TextBox>()
+                    .FirstOrDefault(t => ReferenceEquals(t.DataContext, node));
+                if (box is null)
+                {
+                    return;
+                }
+
+                box.Focus();
+                box.SelectAll();
+            },
+            DispatcherPriority.Loaded);
     }
 
     // Code-based hit-testing (the connector layer is IsHitTestVisible=false). Endpoints and bend
