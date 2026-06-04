@@ -39,6 +39,9 @@
                 <MenuItem Header="_New" Command="{Binding NewCommand}" InputGesture="Ctrl+N">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=file_plus}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="New _ER diagram" Command="{Binding NewErCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=table}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
                 <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGesture="Ctrl+O">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=folder_open}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
@@ -176,6 +179,10 @@
                         <ribbon:RibbonMenuItem Header="System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}" IconData="{pia:IconGeometry Icon=bounding_box}" />
                     </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonButton Header="Note" Command="{Binding Toolbox.SelectShapeToolCommand}" CommandParameter="{x:Static nodes:ShapeKind.Note}" IconData="{StaticResource ToolIcon.Note}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="ER">
+                    <ribbon:RibbonButton Header="Table" Command="{Binding Toolbox.SelectEntityToolCommand}" IconData="{pia:IconGeometry Icon=table}" />
+                    <ribbon:RibbonButton Header="Relationship" Command="{Binding Toolbox.SelectConnectorToolCommand}" CommandParameter="{x:Static rel:RelationshipKind.Relationship}" IconData="{pia:IconGeometry Icon=line_segment}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Image">
                     <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
@@ -430,6 +437,52 @@
                         </StackPanel>
                         </StackPanel>
 
+                        <!-- Entity (ER table) properties -->
+                        <StackPanel IsVisible="{Binding Inspector.IsEntityNodeSelected}">
+                        <StackPanel Spacing="10" DataContext="{Binding Inspector.SelectedEntityNode}">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Table name" Opacity="0.7" />
+                                <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddColumnCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
+                                        <TextBlock Text="Column" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding Columns}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EntityColumnViewModel">
+                                        <StackPanel Spacing="2" Margin="0,0,0,6">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <TextBox Width="110" PlaceholderText="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveColumnCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                </Button>
+                                            </StackPanel>
+                                            <AutoCompleteBox Width="150" PlaceholderText="type"
+                                                             ItemsSource="{Binding TypeSuggestions}"
+                                                             Text="{Binding Type, Mode=TwoWay}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <CheckBox Content="PK" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
+                                                <CheckBox Content="FK" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
+                                                <CheckBox Content="Null" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
+                                                <CheckBox Content="Uniq" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        </StackPanel>
+
                         <!-- Connector properties -->
                         <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsConnectorSelected}">
                             <StackPanel Spacing="3">
@@ -444,6 +497,20 @@
                                 <ComboBox HorizontalAlignment="Stretch"
                                           ItemsSource="{x:Static vm:InspectorViewModel.RouteStyleOptions}"
                                           SelectedItem="{Binding Inspector.ConnectorRouteStyle, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Source cardinality" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.CardinalityOptions}"
+                                          SelectedItem="{Binding Inspector.SourceCardinality, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Target cardinality" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.CardinalityOptions}"
+                                          SelectedItem="{Binding Inspector.TargetCardinality, Mode=TwoWay}" />
                             </StackPanel>
 
                             <StackPanel Spacing="3">

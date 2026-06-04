@@ -17,6 +17,7 @@ namespace Draw.Model.Nodes;
 [JsonDerivedType(typeof(UseCaseNode), "useCase")]
 [JsonDerivedType(typeof(SystemBoundaryNode), "systemBoundary")]
 [JsonDerivedType(typeof(ImageNode), "image")]
+[JsonDerivedType(typeof(EntityNode), "entity")]
 public abstract class NodeBase
 {
     public Guid Id { get; set; } = Guid.NewGuid();

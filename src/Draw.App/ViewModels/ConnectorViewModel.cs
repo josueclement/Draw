@@ -75,27 +75,22 @@ public sealed class ConnectorViewModel : ViewModelBase
             ? new AvaloniaList<double> { 6, 3 }
             : _model.Style.Stroke.Dash.ToDashArray();
 
-    public Geometry? SourceDecoration
-    {
-        get
-        {
-            ConnectorEndDecoration deco = ConnectorDecorationBuilder.Describe(_model.Kind).Source;
-            return ConnectorDecorationBuilder.Build(deco, _route.Start, _route.StartDirection * -1d);
-        }
-    }
+    // Per-end decoration: a set crow's-foot cardinality (ER) wins; otherwise the relationship kind's cap.
+    private ConnectorEndDecoration SourceEnd => _model.SourceCardinality != Cardinality.Unspecified
+        ? ConnectorDecorationBuilder.FromCardinality(_model.SourceCardinality)
+        : ConnectorDecorationBuilder.Describe(_model.Kind).Source;
 
-    public IBrush? SourceDecorationFill => DecorationFill(ConnectorDecorationBuilder.Describe(_model.Kind).Source);
+    private ConnectorEndDecoration TargetEnd => _model.TargetCardinality != Cardinality.Unspecified
+        ? ConnectorDecorationBuilder.FromCardinality(_model.TargetCardinality)
+        : ConnectorDecorationBuilder.Describe(_model.Kind).Target;
 
-    public Geometry? TargetDecoration
-    {
-        get
-        {
-            ConnectorEndDecoration deco = ConnectorDecorationBuilder.Describe(_model.Kind).Target;
-            return ConnectorDecorationBuilder.Build(deco, _route.End, _route.EndDirection);
-        }
-    }
+    public Geometry? SourceDecoration => ConnectorDecorationBuilder.Build(SourceEnd, _route.Start, _route.StartDirection * -1d);
 
-    public IBrush? TargetDecorationFill => DecorationFill(ConnectorDecorationBuilder.Describe(_model.Kind).Target);
+    public IBrush? SourceDecorationFill => DecorationFill(SourceEnd);
+
+    public Geometry? TargetDecoration => ConnectorDecorationBuilder.Build(TargetEnd, _route.End, _route.EndDirection);
+
+    public IBrush? TargetDecorationFill => DecorationFill(TargetEnd);
 
     public string CenterLabelText => _model.CenterLabel ?? DefaultStereotype();
 
@@ -358,7 +353,7 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     private IBrush? DecorationFill(ConnectorEndDecoration decoration)
     {
-        if (decoration is ConnectorEndDecoration.None or ConnectorEndDecoration.OpenArrow)
+        if (ConnectorDecorationBuilder.IsStrokeOnly(decoration))
         {
             return null;
         }

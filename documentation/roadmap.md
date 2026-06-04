@@ -28,12 +28,21 @@ inspector) with free-text types + autocomplete; class relationships reuse Phase 
 
 Actor, use-case, system boundary; association, include/extend, generalization.
 
-## Phase 5 — ER diagrams + DB schema + vector export
+## Phase 5 — ER diagrams + DB schema + vector export 🚧
 
 `EntityNode` with columns (PK/FK/nullable/unique) and crow's-foot cardinality;
 `Draw.Sql` with `ISqlDialect` for PostgreSQL / SQL Server / SQLite / MySQL,
 ER→DDL (primary) and optional class→table mapping; `Draw.Export` adds SVG/PDF
 (SkiaSharp).
+
+**ER shapes ✅ (visual slice):** `EntityNode` + `EntityColumn` (name/type/PK/FK/nullable/unique),
+mirroring the UML class node — a titled box over a flat column list with inline editing (`name: type PK`
+grammar via `Draw.Diagramming/Er/ColumnSignature.cs`), context-menu flag toggles, and the shared
+theme-aware styling. A new **Relationship** connector with **per-end crow's-foot cardinality**
+(One/Many/ZeroOrOne/OneOrMany/ZeroOrMany — `Connector.Source/TargetCardinality`, rendered by
+`ConnectorDecorationBuilder`). A dedicated **ER** ribbon group (Table + Relationship) and a *New ER
+diagram* entry wiring `DiagramType.Er`. See `documentation/plans/2026-06-04-er-database-shapes.md`.
+**Still pending:** `Draw.Sql` ER→DDL generation and `Draw.Export` SVG/PDF.
 
 ## Connector editing — forced anchors, waypoints, movable labels ✅ (cross-cutting)
 

@@ -26,6 +26,9 @@ public sealed class InspectorViewModel : ViewModelBase
     public static IReadOnlyList<MemberVisibility> VisibilityOptions { get; } =
         Enum.GetValues<MemberVisibility>();
 
+    public static IReadOnlyList<Cardinality> CardinalityOptions { get; } =
+        Enum.GetValues<Cardinality>();
+
     public bool IsShapeSelected
     {
         get;
@@ -71,9 +74,28 @@ public sealed class InspectorViewModel : ViewModelBase
         }
     }
 
-    public bool IsNodeSelected => IsLabelNodeSelected || IsClassNodeSelected;
+    public bool IsEntityNodeSelected
+    {
+        get;
+        private set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(HasNoSelection));
+                OnPropertyChanged(nameof(IsNodeSelected));
+            }
+        }
+    }
+
+    public bool IsNodeSelected => IsLabelNodeSelected || IsClassNodeSelected || IsEntityNodeSelected;
 
     public ClassNodeViewModel? SelectedClassNode
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    }
+
+    public EntityNodeViewModel? SelectedEntityNode
     {
         get;
         private set => SetProperty(ref field, value);
@@ -85,7 +107,7 @@ public sealed class InspectorViewModel : ViewModelBase
         private set => SetProperty(ref field, value);
     } = System.Array.Empty<string>();
 
-    public bool HasNoSelection => !IsLabelNodeSelected && !IsConnectorSelected && !IsClassNodeSelected;
+    public bool HasNoSelection => !IsLabelNodeSelected && !IsConnectorSelected && !IsClassNodeSelected && !IsEntityNodeSelected;
 
     // --- Shape properties ---
 
@@ -151,6 +173,18 @@ public sealed class InspectorViewModel : ViewModelBase
         set { if (SetProperty(ref field, value)) ApplyConnector(c => c.Route = ConnectorRouteStyle); }
     }
 
+    public Cardinality SourceCardinality
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.SourceCardinality = SourceCardinality); }
+    }
+
+    public Cardinality TargetCardinality
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.TargetCardinality = TargetCardinality); }
+    }
+
     public string ConnectorStrokeHex
     {
         get;
@@ -193,6 +227,16 @@ public sealed class InspectorViewModel : ViewModelBase
 
     public IRelayCommand<ClassMemberViewModel> MoveMemberDownCommand { get; }
 
+    // --- Entity column-editor commands ---
+
+    public IRelayCommand AddColumnCommand { get; }
+
+    public IRelayCommand<EntityColumnViewModel> RemoveColumnCommand { get; }
+
+    public IRelayCommand<EntityColumnViewModel> MoveColumnUpCommand { get; }
+
+    public IRelayCommand<EntityColumnViewModel> MoveColumnDownCommand { get; }
+
     public InspectorViewModel()
     {
         AddPrimaryMemberCommand = new RelayCommand(() => SelectedClassNode?.AddPrimaryMember());
@@ -200,6 +244,11 @@ public sealed class InspectorViewModel : ViewModelBase
         RemoveMemberCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.RemoveMember(m); });
         MoveMemberUpCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.MoveMember(m, -1); });
         MoveMemberDownCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.MoveMember(m, +1); });
+
+        AddColumnCommand = new RelayCommand(() => SelectedEntityNode?.AddColumn());
+        RemoveColumnCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.RemoveColumn(c); });
+        MoveColumnUpCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.MoveColumn(c, -1); });
+        MoveColumnDownCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.MoveColumn(c, +1); });
     }
 
     public void SetTarget(DiagramDocumentViewModel? target)
@@ -230,18 +279,23 @@ public sealed class InspectorViewModel : ViewModelBase
             NodeViewModelBase? node = connector is null ? _target?.SelectedNodes.FirstOrDefault() : null;
             ShapeNodeViewModel? shape = node as ShapeNodeViewModel;
             ClassNodeViewModel? klass = node as ClassNodeViewModel;
+            EntityNodeViewModel? entity = node as EntityNodeViewModel;
 
             IsConnectorSelected = connector is not null;
             IsShapeSelected = shape is not null;
             IsClassNodeSelected = klass is not null;
+            IsEntityNodeSelected = entity is not null;
             IsLabelNodeSelected = node is { HasInlineLabel: true };
             SelectedClassNode = klass;
+            SelectedEntityNode = entity;
 
             if (connector is not null)
             {
                 Connector model = connector.Model;
                 ConnectorKind = model.Kind;
                 ConnectorRouteStyle = model.Route;
+                SourceCardinality = model.SourceCardinality;
+                TargetCardinality = model.TargetCardinality;
                 ConnectorStrokeHex = model.Style.Stroke.Color.ToHex();
                 ConnectorThickness = model.Style.Stroke.Thickness;
                 SourceLabel = model.SourceLabel ?? string.Empty;
@@ -264,7 +318,7 @@ public sealed class InspectorViewModel : ViewModelBase
                     Text = node.Label;
                 }
 
-                if (klass is not null)
+                if (klass is not null || entity is not null)
                 {
                     TypeSuggestions = _target!.GetTypeSuggestions();
                 }

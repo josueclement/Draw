@@ -15,4 +15,8 @@ public enum RelationshipKind
     Dependency = 6,
     Include = 7,
     Extend = 8,
+
+    /// <summary>A plain ER relationship line. Its crow's-foot end symbols come from the connector's
+    /// per-end <see cref="Cardinality"/>, not from this kind.</summary>
+    Relationship = 9,
 }

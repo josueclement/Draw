@@ -285,6 +285,37 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _ => "Class",
     };
 
+    private const double EntityNodeDefaultWidth = 180d;
+    private const double EntityNodeDefaultHeight = 120d;
+
+    public EntityNodeViewModel AddEntityNode(Point2D center)
+    {
+        CaptureUndo();
+
+        double w = EntityNodeDefaultWidth;
+        double h = EntityNodeDefaultHeight;
+        Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
+        if (SnapEnabled)
+        {
+            bounds = bounds.PositionSnappedToGrid(GridSize);
+        }
+
+        EntityNode node = new()
+        {
+            Name = "Table",
+            Bounds = bounds,
+            Style = _document.DefaultShapeStyle.Clone(),
+            ZIndex = NextZIndex(),
+        };
+
+        _document.Nodes.Add(node);
+        EntityNodeViewModel vm = new(node, this, _theme);
+        Nodes.Add(vm);
+        SelectOnly(vm);
+        MarkModified();
+        return vm;
+    }
+
     private const double ActorDefaultWidth = 48d;
     private const double ActorDefaultHeight = 84d;
     private const double UseCaseDefaultWidth = 130d;
@@ -1064,13 +1095,17 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public IReadOnlyList<string> GetTypeSuggestions()
     {
-        IEnumerable<string> names = _document.Nodes
+        IEnumerable<string> classNames = _document.Nodes
             .OfType<ClassNode>()
-            .Select(c => c.Name)
-            .Where(n => !string.IsNullOrWhiteSpace(n));
+            .Select(c => c.Name);
+        IEnumerable<string> entityNames = _document.Nodes
+            .OfType<EntityNode>()
+            .Select(e => e.Name);
 
         return PrimitiveTypes.All
-            .Concat(names)
+            .Concat(classNames)
+            .Concat(entityNames)
+            .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.Ordinal)
             .ToList();
     }
@@ -1109,6 +1144,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private NodeViewModelBase CreateNodeViewModel(NodeBase node) => node switch
     {
         ClassNode @class => new ClassNodeViewModel(@class, this, _theme),
+        EntityNode entity => new EntityNodeViewModel(entity, this, _theme),
         ActorNode actor => new ActorNodeViewModel(actor, _theme),
         UseCaseNode useCase => new UseCaseNodeViewModel(useCase, _theme),
         SystemBoundaryNode boundary => new SystemBoundaryNodeViewModel(boundary, _theme),

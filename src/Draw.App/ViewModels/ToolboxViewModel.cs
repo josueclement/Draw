@@ -18,6 +18,9 @@ public sealed record ClassNodeToolItem(string Name, ClassNodeKind Kind);
 /// <summary>A selectable use-case-diagram node entry in the toolbox palette.</summary>
 public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind);
 
+/// <summary>The ER table tool. There is a single entity kind, so it carries only a display name.</summary>
+public sealed record EntityToolItem(string Name);
+
 /// <summary>
 /// Tracks the active drawing tool: the select tool (both null), a shape to place
 /// (<see cref="SelectedShape"/>), or a connector to draw (<see cref="SelectedConnector"/>).
@@ -49,6 +52,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ConnectorToolItem("Dependency", RelationshipKind.Dependency),
         new ConnectorToolItem("Include", RelationshipKind.Include),
         new ConnectorToolItem("Extend", RelationshipKind.Extend),
+        new ConnectorToolItem("Relationship", RelationshipKind.Relationship),
     };
 
     public ObservableCollection<ClassNodeToolItem> ClassNodes { get; } = new()
@@ -65,6 +69,9 @@ public sealed class ToolboxViewModel : ViewModelBase
         new UseCaseToolItem("System boundary", UseCaseNodeKind.SystemBoundary),
     };
 
+    /// <summary>The single ER table tool, armed by the ER ribbon button.</summary>
+    public EntityToolItem Entity { get; } = new("Table");
+
     public ToolboxViewModel()
     {
         // Each ribbon dropdown item arms a tool by its kind; reuse the mutually-exclusive Selected* setters.
@@ -72,6 +79,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         SelectConnectorToolCommand = new RelayCommand<RelationshipKind>(kind => SelectedConnector = Connectors.First(c => c.Kind == kind));
         SelectClassNodeToolCommand = new RelayCommand<ClassNodeKind>(kind => SelectedClassNode = ClassNodes.First(c => c.Kind == kind));
         SelectUseCaseToolCommand = new RelayCommand<UseCaseNodeKind>(kind => SelectedUseCaseNode = UseCaseNodes.First(u => u.Kind == kind));
+        SelectEntityToolCommand = new RelayCommand(() => SelectedEntity = Entity);
     }
 
     public RelayCommand<ShapeKind> SelectShapeToolCommand { get; }
@@ -81,6 +89,8 @@ public sealed class ToolboxViewModel : ViewModelBase
     public RelayCommand<ClassNodeKind> SelectClassNodeToolCommand { get; }
 
     public RelayCommand<UseCaseNodeKind> SelectUseCaseToolCommand { get; }
+
+    public RelayCommand SelectEntityToolCommand { get; }
 
     public ShapeToolItem? SelectedShape
     {
@@ -94,6 +104,7 @@ public sealed class ToolboxViewModel : ViewModelBase
                     SelectedConnector = null;
                     SelectedClassNode = null;
                     SelectedUseCaseNode = null;
+                    SelectedEntity = null;
                 }
 
                 RaiseModes();
@@ -113,6 +124,7 @@ public sealed class ToolboxViewModel : ViewModelBase
                     SelectedShape = null;
                     SelectedClassNode = null;
                     SelectedUseCaseNode = null;
+                    SelectedEntity = null;
                 }
 
                 RaiseModes();
@@ -132,6 +144,7 @@ public sealed class ToolboxViewModel : ViewModelBase
                     SelectedShape = null;
                     SelectedConnector = null;
                     SelectedUseCaseNode = null;
+                    SelectedEntity = null;
                 }
 
                 RaiseModes();
@@ -151,6 +164,27 @@ public sealed class ToolboxViewModel : ViewModelBase
                     SelectedShape = null;
                     SelectedConnector = null;
                     SelectedClassNode = null;
+                    SelectedEntity = null;
+                }
+
+                RaiseModes();
+            }
+        }
+    }
+
+    public EntityToolItem? SelectedEntity
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                if (value is not null)
+                {
+                    SelectedShape = null;
+                    SelectedConnector = null;
+                    SelectedClassNode = null;
+                    SelectedUseCaseNode = null;
                 }
 
                 RaiseModes();
@@ -159,13 +193,15 @@ public sealed class ToolboxViewModel : ViewModelBase
     }
 
     public bool IsSelectTool => SelectedShape is null && SelectedConnector is null
-        && SelectedClassNode is null && SelectedUseCaseNode is null;
+        && SelectedClassNode is null && SelectedUseCaseNode is null && SelectedEntity is null;
 
     public bool IsConnectorMode => SelectedConnector is not null;
 
     public bool IsClassNodeMode => SelectedClassNode is not null;
 
     public bool IsUseCaseNodeMode => SelectedUseCaseNode is not null;
+
+    public bool IsEntityNodeMode => SelectedEntity is not null;
 
     public bool IsShapeMode => SelectedShape is not null;
 
@@ -200,6 +236,11 @@ public sealed class ToolboxViewModel : ViewModelBase
                 return $"Click on the canvas to place {useCaseNode.Name}.";
             }
 
+            if (SelectedEntity is { } entity)
+            {
+                return $"Click on the canvas to place {entity.Name}.";
+            }
+
             if (SelectedConnector is { } connector)
             {
                 return $"Drag from one node to another to draw {connector.Name}.";
@@ -215,6 +256,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         SelectedConnector = null;
         SelectedClassNode = null;
         SelectedUseCaseNode = null;
+        SelectedEntity = null;
     }
 
     private void RaiseModes()
@@ -224,6 +266,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsConnectorMode));
         OnPropertyChanged(nameof(IsClassNodeMode));
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
+        OnPropertyChanged(nameof(IsEntityNodeMode));
         OnPropertyChanged(nameof(ShapesHeader));
         OnPropertyChanged(nameof(ConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));
