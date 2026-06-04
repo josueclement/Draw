@@ -8,6 +8,7 @@ using Carbon.Avalonia.Desktop.Controls.Ribbon;
 using CommunityToolkit.Mvvm.Input;
 using Draw.App.Services;
 using Draw.App.ViewModels;
+using Draw.Diagramming.Layout;
 
 namespace Draw.App.Views;
 
@@ -39,6 +40,7 @@ public partial class MainWindow : Window
         shell.ExportPngRequested += OnExportPngRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
+        WireAlignDropdown();
 
         // Open on the Insert (tools) tab. This must be set here, not as a literal SelectedIndex in XAML:
         // the XAML attribute is applied while Ribbon.Tabs is still empty, so Ribbon never syncs SelectedTab
@@ -75,6 +77,28 @@ public partial class MainWindow : Window
         foreach (RibbonMenuItem item in dropdown.Items)
         {
             item.Command = wrapper;
+        }
+    }
+
+    // The Align dropdown is one-shot (not an armed tool), so its shared command resolves the active
+    // document at click time — that way it follows tab switches without re-wiring. Each item's
+    // AlignmentMode arrives via the XAML CommandParameter; enable/disable is handled by the button's
+    // IsEnabled binding to ActiveDocument.CanAlignSelection.
+    private void WireAlignDropdown()
+    {
+        RelayCommand<AlignmentMode> align = new(mode =>
+        {
+            if (mode is { } m)
+            {
+                _shell?.ActiveDocument?.AlignSelected(m);
+            }
+
+            AlignDropDown.IsDropDownOpen = false;
+        });
+
+        foreach (RibbonMenuItem item in AlignDropDown.Items)
+        {
+            item.Command = align;
         }
     }
 
