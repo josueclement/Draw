@@ -16,6 +16,8 @@
     </GeometryGroup>
     <StreamGeometry x:Key="ToolIcon.RoundedRectangle">F0 M6,5 L18,5 A4,4 0 0 1 22,9 L22,15 A4,4 0 0 1 18,19 L6,19 A4,4 0 0 1 2,15 L2,9 A4,4 0 0 1 6,5 Z M7,7 L17,7 A3,3 0 0 1 20,10 L20,14 A3,3 0 0 1 17,17 L7,17 A3,3 0 0 1 4,14 L4,10 A3,3 0 0 1 7,7 Z</StreamGeometry>
     <StreamGeometry x:Key="ToolIcon.Trapezoid">F0 M7,6 L17,6 L21,18 L3,18 Z M9,8 L15,8 L18.5,16 L5.5,16 Z</StreamGeometry>
+    <!-- Note: a folded-corner sheet. Body silhouette with the dog-ear cut out (even-odd hole). -->
+    <StreamGeometry x:Key="ToolIcon.Note">F0 M4,3 L14,3 L20,9 L20,21 L4,21 Z M14,3 L14,9 L20,9 Z</StreamGeometry>
 
     <!-- Arrange: distribute glyphs (three evenly-spaced bars). Phosphor has align icons but no
          distribute equivalents, so author them here. Horizontal = bars spread along X (vertical bars);
@@ -46,6 +48,16 @@
         <StreamGeometry>M20,5 L20,7 L6,13 L6,11 Z</StreamGeometry>
         <RectangleGeometry Rect="6,11,14,2" />
         <StreamGeometry>M20,17 L20,19 L6,13 L6,11 Z</StreamGeometry>
+    </GeometryGroup>
+
+    <!-- Styles: "no fill" — a square frame crossed by a diagonal slash (NonZero so the slash unions
+         over the frame rather than punching holes). -->
+    <GeometryGroup x:Key="ToolIcon.NoFill" FillRule="NonZero">
+        <RectangleGeometry Rect="3,3,18,2" />
+        <RectangleGeometry Rect="3,19,18,2" />
+        <RectangleGeometry Rect="3,3,2,18" />
+        <RectangleGeometry Rect="19,3,2,18" />
+        <StreamGeometry>M3,18.5 L5.5,21 L21,5.5 L18.5,3 Z</StreamGeometry>
     </GeometryGroup>
 
     <!-- Class diagram: interface lollipop (provided-interface circle on a stem) -->

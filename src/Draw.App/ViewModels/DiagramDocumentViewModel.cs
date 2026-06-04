@@ -11,6 +11,7 @@ using Draw.App.Services;
 using Draw.Diagramming.Geometry;
 using Draw.Diagramming.Layout;
 using Draw.Diagramming.Routing;
+using Draw.Diagramming.Styling;
 using Draw.Diagramming.Uml;
 using Draw.Diagramming.Undo;
 using Draw.Model.Connectors;
@@ -18,6 +19,7 @@ using Draw.Model.Documents;
 using Draw.Model.Nodes;
 using Draw.Model.Primitives;
 using Draw.Model.Serialization;
+using Draw.Model.Styling;
 
 namespace Draw.App.ViewModels;
 
@@ -367,7 +369,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             Route = RouteStyle.Rounded,
         };
         _document.Connectors.Add(connector);
-        ConnectorViewModel vm = new(connector, source, target, _router);
+        ConnectorViewModel vm = new(connector, source, target, _router, _theme);
         Connectors.Add(vm);
 
         // Curve-on-connect: pin each end to the centre of the side it naturally attaches to. An
@@ -977,6 +979,85 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public void NotifyStyleEditStarting() => CaptureUndo();
 
+    /// <summary>Applies a quick-palette swatch to the whole selection: a coordinated fill + stroke +
+    /// text on every selected node, and stroke + label colour on a selected connector. Stores the
+    /// swatch id so the colours follow the active theme, and bakes the current theme's variant into the
+    /// raw colour fields as a fallback. One undo step; a no-op (and no undo) when nothing is selected.</summary>
+    public void ApplyStyleSwatch(StyleSwatch swatch)
+    {
+        SwatchVariant v = swatch.Variant(_theme.IsDark);
+        ApplyStyleToSelection(
+            style =>
+            {
+                style.PaletteId = swatch.Id;
+                style.Fill = v.Fill;
+                style.Stroke.Color = v.Stroke;
+                style.Font.Color = v.Text;
+            },
+            style =>
+            {
+                style.PaletteId = swatch.Id;
+                style.Stroke.Color = v.Stroke;
+                style.Font.Color = v.Text;
+            });
+    }
+
+    /// <summary>Restores the theme-adaptive default look (default fill/stroke/text) and unlinks the
+    /// selection from any palette swatch. Thickness, dash and font are left untouched.</summary>
+    public void ResetStyleToDefault()
+        => ApplyStyleToSelection(
+            style =>
+            {
+                style.PaletteId = null;
+                style.Fill = ShapeStyle.DefaultFill;
+                style.Stroke.Color = StrokeStyle.DefaultColor;
+                style.Font.Color = FontSpec.DefaultColor;
+            },
+            style =>
+            {
+                style.PaletteId = null;
+                style.Stroke.Color = StrokeStyle.DefaultColor;
+                style.Font.Color = FontSpec.DefaultColor;
+            });
+
+    /// <summary>Makes the selected nodes outline-only (transparent fill) and unlinks them from any
+    /// palette swatch. Connectors have no fill, so they're unaffected.</summary>
+    public void ApplyNoFill()
+        => ApplyStyleToSelection(
+            style =>
+            {
+                style.PaletteId = null;
+                style.Fill = ArgbColor.Transparent;
+            },
+            mutateConnector: null);
+
+    // Shared body for the palette actions: one undo snapshot, mutate every selected node + a selected
+    // connector, refresh bindings, mark dirty. No-op (no undo) when the selection is empty.
+    private void ApplyStyleToSelection(Action<ShapeStyle> mutateNode, Action<ConnectorStyle>? mutateConnector)
+    {
+        List<NodeViewModelBase> nodes = SelectedNodes.ToList();
+        ConnectorViewModel? connector = SelectedConnector;
+        if (nodes.Count == 0 && connector is null)
+        {
+            return;
+        }
+
+        NotifyStyleEditStarting();
+        foreach (NodeViewModelBase node in nodes)
+        {
+            mutateNode(node.Model.Style);
+            node.RaiseStyleChanged();
+        }
+
+        if (connector is not null && mutateConnector is not null)
+        {
+            mutateConnector(connector.Model.Style);
+            connector.RaiseStyleChanged();
+        }
+
+        MarkModified();
+    }
+
     void INodeEditContext.BeginMemberEdit() => CaptureUndo();
 
     void INodeEditContext.EndMemberEdit() => MarkModified();
@@ -1044,6 +1125,12 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         {
             node.RaiseStyleChanged();
         }
+
+        // Palette-linked connectors resolve their stroke/label colour from the active theme too.
+        foreach (ConnectorViewModel connector in Connectors)
+        {
+            connector.RaiseStyleChanged();
+        }
     }
 
     /// <summary>Detaches from the shared theme service when the tab closes, so this VM can be collected,
@@ -1076,7 +1163,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             if (byId.TryGetValue(connector.SourceNodeId, out NodeViewModelBase? source)
                 && byId.TryGetValue(connector.TargetNodeId, out NodeViewModelBase? target))
             {
-                Connectors.Add(new ConnectorViewModel(connector, source, target, _router));
+                Connectors.Add(new ConnectorViewModel(connector, source, target, _router, _theme));
             }
         }
     }

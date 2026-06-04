@@ -300,9 +300,11 @@ public sealed class InspectorViewModel : ViewModelBase
 
     private void ApplyFill()
     {
+        // A hand-edited colour detaches the shape from its quick-palette swatch (it stops following the
+        // theme and becomes a custom colour).
         if (ModelStyle.ArgbColor.TryParse(FillHex, out ModelStyle.ArgbColor color))
         {
-            ApplyShapeStyle(s => s.Fill = color);
+            ApplyShapeStyle(s => { s.Fill = color; s.PaletteId = null; });
         }
     }
 
@@ -310,7 +312,7 @@ public sealed class InspectorViewModel : ViewModelBase
     {
         if (ModelStyle.ArgbColor.TryParse(StrokeHex, out ModelStyle.ArgbColor color))
         {
-            ApplyShapeStyle(s => s.Stroke.Color = color);
+            ApplyShapeStyle(s => { s.Stroke.Color = color; s.PaletteId = null; });
         }
     }
 
@@ -341,7 +343,7 @@ public sealed class InspectorViewModel : ViewModelBase
     {
         if (ModelStyle.ArgbColor.TryParse(ConnectorStrokeHex, out ModelStyle.ArgbColor color))
         {
-            ApplyConnector(c => c.Style.Stroke.Color = color);
+            ApplyConnector(c => { c.Style.Stroke.Color = color; c.Style.PaletteId = null; });
         }
     }
 

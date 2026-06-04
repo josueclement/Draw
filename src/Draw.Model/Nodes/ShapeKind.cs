@@ -11,4 +11,7 @@ public enum ShapeKind
     Parallelogram = 5,
     Trapezoid = 6,
     Triangle = 7,
+
+    /// <summary>A UML note: a rectangle with a folded top-right corner.</summary>
+    Note = 8,
 }

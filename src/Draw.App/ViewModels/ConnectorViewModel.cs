@@ -6,10 +6,13 @@ using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Media;
 using Draw.App.Rendering;
+using Draw.App.Services;
 using Draw.Diagramming.Geometry;
 using Draw.Diagramming.Routing;
+using Draw.Diagramming.Styling;
 using Draw.Model.Connectors;
 using ModelPoint = Draw.Model.Primitives.Point2D;
+using ModelStyle = Draw.Model.Styling;
 
 namespace Draw.App.ViewModels;
 
@@ -20,14 +23,16 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     private readonly Connector _model;
     private readonly IConnectorRouter _router;
+    private readonly IThemeService _theme;
     private ConnectorRoute _route;
 
-    public ConnectorViewModel(Connector model, NodeViewModelBase source, NodeViewModelBase target, IConnectorRouter router)
+    public ConnectorViewModel(Connector model, NodeViewModelBase source, NodeViewModelBase target, IConnectorRouter router, IThemeService theme)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         Source = source ?? throw new ArgumentNullException(nameof(source));
         Target = target ?? throw new ArgumentNullException(nameof(target));
         _router = router ?? throw new ArgumentNullException(nameof(router));
+        _theme = theme ?? throw new ArgumentNullException(nameof(theme));
 
         Source.PropertyChanged += OnEndpointChanged;
         Target.PropertyChanged += OnEndpointChanged;
@@ -50,7 +55,18 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     public Geometry Geometry => BuildLineGeometry();
 
-    public IBrush Stroke => _model.Style.Stroke.Color.ToBrush();
+    /// <summary>The active-theme variant of the quick-palette swatch this connector is linked to, or
+    /// null when it carries no <c>PaletteId</c>.</summary>
+    private SwatchVariant? Swatch
+        => StylePalette.TryGet(_model.Style.PaletteId, out StyleSwatch swatch) ? swatch.Variant(_theme.IsDark) : null;
+
+    public IBrush Stroke => Swatch is { } s ? s.Stroke.ToBrush() : _model.Style.Stroke.Color.ToBrush();
+
+    /// <summary>Brush for the connector's labels: the swatch's text colour, else the theme-aware
+    /// default (matching node text), else the customised font colour.</summary>
+    public IBrush LabelForeground => Swatch is { } s ? s.Text.ToBrush()
+        : _model.Style.Font.Color == ModelStyle.FontSpec.DefaultColor && _theme.DefaultNodeText is { } text ? text
+        : _model.Style.Font.Color.ToBrush();
 
     public double StrokeThickness => _model.Style.Stroke.Thickness;
 
@@ -473,6 +489,7 @@ public sealed class ConnectorViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(Stroke));
         OnPropertyChanged(nameof(StrokeThickness));
+        OnPropertyChanged(nameof(LabelForeground));
         Recompute();
     }
 
