@@ -55,21 +55,12 @@ public partial class DiagramView : UserControl
     private static readonly Color SelectionAccentColor = Color.Parse("#3D7EFF");
     private static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
 
-    // A selected node thickens its own border (see NodeViewModelBase) and gets this soft accent glow
-    // behind it. Blur/spread are screen pixels, divided by Zoom when drawn so the halo is a constant
-    // size on screen regardless of zoom (same trick as the resize handles).
-    private static readonly Color SelectionGlowColor = Color.FromArgb(0xAA, 0x3D, 0x7E, 0xFF);
-    private const double SelectionGlowBlur = 16d;
-    private const double SelectionGlowSpread = 3d;
-    private const double SelectionGlowCornerRadius = 3d;
-
     // A right-button press that travels less than this (screen px, squared) before release is treated as
     // a click that opens the arrange context menu rather than a pan drag.
     private const double ContextClickThresholdSquared = 16d;
 
     private readonly List<Rectangle> _handles = new();
     private readonly List<Control> _connectorHandles = new();
-    private readonly List<Border> _selectionAdorners = new();
     private DiagramDocumentViewModel? _vm;
     private DragMode _mode = DragMode.None;
     private bool _undoCaptured;
@@ -1380,29 +1371,20 @@ public partial class DiagramView : UserControl
 
         _connectorHandles.Clear();
 
-        foreach (Border adorner in _selectionAdorners)
-        {
-            GlowLayer.Children.Remove(adorner);
-        }
-
-        _selectionAdorners.Clear();
-
         if (_vm is null)
         {
             return;
         }
 
-        // The glow+outline adorner marks every selected node (single or multi); the draggable
-        // resize handles only appear when exactly one node is selected.
+        // Resize handles trace the bounding box of every selected node — this is what marks the
+        // selection (single or multi), so each selected shape is outlined regardless of its kind.
+        // Dragging a handle to resize is still gated to a single selection (see HitTestHandle); with
+        // 2+ selected the handles are purely a visual cue. The node's own border is thickened
+        // separately by the view model as a reinforcing cue.
+        double size = HandleScreenSize / Zoom;
         foreach (NodeViewModelBase node in _vm.SelectedNodes)
         {
-            AddSelectionAdorner(node);
-        }
-
-        if (_vm.SelectedNodes.Count() == 1)
-        {
-            double size = HandleScreenSize / Zoom;
-            foreach (Point position in HandlePositions(_vm.SelectedNodes.First()))
+            foreach (Point position in HandlePositions(node))
             {
                 Rectangle handle = new()
                 {
@@ -1417,44 +1399,12 @@ public partial class DiagramView : UserControl
                 Overlay.Children.Add(handle);
                 _handles.Add(handle);
             }
-
-            return;
         }
 
         if (_vm.SelectedConnector is { } connector)
         {
             DrawConnectorHandles(connector);
         }
-    }
-
-    // A soft accent glow behind a selected node. It is drawn on the GlowLayer (under the node layer)
-    // and sized to the node bounds, so the blurred halo spills out around the node's perimeter while
-    // the node's own (opaque) fill hides the centre — uniform across every node kind, crisp at any
-    // zoom. The selected node's own border is thickened separately by the view model.
-    private void AddSelectionAdorner(NodeViewModelBase node)
-    {
-        Rect2D b = node.Model.Bounds;
-        Border glow = new()
-        {
-            Width = b.Width,
-            Height = b.Height,
-            Background = Brushes.Transparent,
-            CornerRadius = new CornerRadius(SelectionGlowCornerRadius / Zoom),
-            IsHitTestVisible = false,
-            BoxShadow = new BoxShadows(new BoxShadow
-            {
-                OffsetX = 0,
-                OffsetY = 0,
-                Blur = SelectionGlowBlur / Zoom,
-                Spread = SelectionGlowSpread / Zoom,
-                Color = SelectionGlowColor,
-                IsInset = false,
-            }),
-        };
-        Canvas.SetLeft(glow, b.Left);
-        Canvas.SetTop(glow, b.Top);
-        GlowLayer.Children.Add(glow);
-        _selectionAdorners.Add(glow);
     }
 
     // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);
