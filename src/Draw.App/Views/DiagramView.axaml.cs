@@ -278,8 +278,8 @@ public partial class DiagramView : UserControl
         Point screen = point.Position;
         Point world = ScreenToWorld(screen);
 
-        // Right-clicking a class member opens its context menu instead of starting a pan.
-        if (point.Properties.IsRightButtonPressed && (e.Source as Control)?.DataContext is ClassMemberViewModel)
+        // Right-clicking a class member or entity column opens its context menu instead of starting a pan.
+        if (point.Properties.IsRightButtonPressed && (e.Source as Control)?.DataContext is ClassMemberViewModel or EntityColumnViewModel)
         {
             return;
         }
@@ -346,6 +346,14 @@ public partial class DiagramView : UserControl
         if (toolbox?.SelectedUseCaseNode is { } useCaseTool)
         {
             _vm.AddUseCaseNode(useCaseTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return;
+        }
+
+        // ER table placement.
+        if (toolbox is { SelectedEntity: not null })
+        {
+            _vm.AddEntityNode(new Point2D(world.X, world.Y));
             toolbox.ActivateSelectTool();
             return;
         }
@@ -964,7 +972,12 @@ public partial class DiagramView : UserControl
         TryFocusMemberEditor(vm, selectAll: false);
     }
 
-    private void TryFocusMemberEditor(ClassMemberViewModel member, bool selectAll)
+    private void TryFocusMemberEditor(ClassMemberViewModel member, bool selectAll) => FocusEditorFor(member, selectAll);
+
+    private void TryFocusColumnEditor(EntityColumnViewModel column, bool selectAll) => FocusEditorFor(column, selectAll);
+
+    // Focuses the inline editor whose DataContext is the given row view model (class member or entity column).
+    private void FocusEditorFor(object rowDataContext, bool selectAll)
     {
         // Post at Loaded priority so a just-inserted row's container is realized before we focus.
         Dispatcher.UIThread.Post(
@@ -972,7 +985,7 @@ public partial class DiagramView : UserControl
             {
                 TextBox? box = this.GetVisualDescendants()
                     .OfType<TextBox>()
-                    .FirstOrDefault(t => ReferenceEquals(t.DataContext, member));
+                    .FirstOrDefault(t => ReferenceEquals(t.DataContext, rowDataContext));
                 if (box is null)
                 {
                     return;
@@ -1002,6 +1015,189 @@ public partial class DiagramView : UserControl
     private static bool IsEditingMemberOf(ClassNodeViewModel node) =>
         node.PrimaryMembers.Concat(node.Operations).Any(m => m.IsEditing);
 
+    // --- Entity (ER table) column inline editing — mirrors the class-member handlers above. ---
+
+    private void OnColumnDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (_vm is null || (sender as Control)?.DataContext is not EntityColumnViewModel column)
+        {
+            return;
+        }
+
+        column.BeginEdit();
+        e.Handled = true;
+        TryFocusColumnEditor(column, selectAll: true);
+    }
+
+    private void OnColumnEditCommitted(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is null || (sender as Control)?.DataContext is not EntityColumnViewModel column)
+        {
+            return;
+        }
+
+        if (column.IsEditing)
+        {
+            column.CommitEdit();
+        }
+
+        if (OwningEntity(column) is { } node)
+        {
+            Dispatcher.UIThread.Post(
+                () =>
+                {
+                    if (!IsEditingColumnOf(node))
+                    {
+                        node.DiscardEmptyNewColumns();
+                    }
+                },
+                DispatcherPriority.Background);
+        }
+    }
+
+    private void OnColumnEditKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_vm is null
+            || sender is not TextBox { DataContext: EntityColumnViewModel column }
+            || OwningEntity(column) is not { } node)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Enter:
+                CommitAndAddNextColumn(node, column);
+                e.Handled = true;
+                break;
+            case Key.Tab:
+                NavigateColumn(node, column, e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : +1);
+                e.Handled = true;
+                break;
+            case Key.Up when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
+                node.MoveColumn(column, -1);
+                TryFocusColumnEditor(column, selectAll: false);
+                e.Handled = true;
+                break;
+            case Key.Down when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
+                node.MoveColumn(column, +1);
+                TryFocusColumnEditor(column, selectAll: false);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void OnColumnCompartmentDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (_vm is null || (sender as Control)?.DataContext is not EntityNodeViewModel node)
+        {
+            return;
+        }
+
+        AddColumnAndEdit(node, index: -1);
+        e.Handled = true;
+    }
+
+    private void OnAddColumnClick(object? sender, RoutedEventArgs e)
+    {
+        if (EntityNodeOf(sender) is { } node)
+        {
+            AddColumnAndEdit(node, index: -1);
+        }
+    }
+
+    private void OnInsertColumnBelowClick(object? sender, RoutedEventArgs e)
+    {
+        if (ColumnOf(sender) is not { } column || OwningEntity(column) is not { } node)
+        {
+            return;
+        }
+
+        (_, int index) = node.Locate(column);
+        if (index >= 0)
+        {
+            AddColumnAndEdit(node, index + 1);
+        }
+    }
+
+    private void OnMoveColumnUpClick(object? sender, RoutedEventArgs e) => MoveColumn(sender, -1);
+
+    private void OnMoveColumnDownClick(object? sender, RoutedEventArgs e) => MoveColumn(sender, +1);
+
+    private void OnRemoveColumnClick(object? sender, RoutedEventArgs e)
+    {
+        if (ColumnOf(sender) is { } column && OwningEntity(column) is { } node)
+        {
+            node.RemoveColumn(column);
+        }
+    }
+
+    private void MoveColumn(object? sender, int delta)
+    {
+        if (ColumnOf(sender) is { } column && OwningEntity(column) is { } node)
+        {
+            node.MoveColumn(column, delta);
+        }
+    }
+
+    private void CommitAndAddNextColumn(EntityNodeViewModel node, EntityColumnViewModel column)
+    {
+        column.CommitEdit();
+        if (string.IsNullOrWhiteSpace(column.Name))
+        {
+            node.DiscardEmptyNewColumns();
+            Focus();
+            return;
+        }
+
+        (_, int index) = node.Locate(column);
+        AddColumnAndEdit(node, index + 1);
+    }
+
+    private void NavigateColumn(EntityNodeViewModel node, EntityColumnViewModel column, int delta)
+    {
+        column.CommitEdit();
+        if (string.IsNullOrWhiteSpace(column.Name))
+        {
+            node.DiscardEmptyNewColumns();
+            Focus();
+            return;
+        }
+
+        (System.Collections.ObjectModel.ObservableCollection<EntityColumnViewModel> list, int index) = node.Locate(column);
+        int next = index + delta;
+        if (index < 0 || next < 0)
+        {
+            Focus();
+            return;
+        }
+
+        if (next >= list.Count)
+        {
+            AddColumnAndEdit(node, index: -1);
+            return;
+        }
+
+        EntityColumnViewModel target = list[next];
+        target.BeginEdit();
+        TryFocusColumnEditor(target, selectAll: true);
+    }
+
+    private void AddColumnAndEdit(EntityNodeViewModel node, int index)
+    {
+        EntityColumnViewModel vm = node.InsertNewColumn(index);
+        TryFocusColumnEditor(vm, selectAll: false);
+    }
+
+    private EntityNodeViewModel? OwningEntity(EntityColumnViewModel column) =>
+        _vm?.Nodes.OfType<EntityNodeViewModel>().FirstOrDefault(n => n.Columns.Contains(column));
+
+    private static EntityNodeViewModel? EntityNodeOf(object? sender) => (sender as Control)?.DataContext as EntityNodeViewModel;
+
+    private static EntityColumnViewModel? ColumnOf(object? sender) => (sender as Control)?.DataContext as EntityColumnViewModel;
+
+    private static bool IsEditingColumnOf(EntityNodeViewModel node) => node.Columns.Any(c => c.IsEditing);
+
     private void EndEditing()
     {
         if (_vm is null)
@@ -1021,6 +1217,12 @@ public partial class DiagramView : UserControl
         {
             committed |= klass.CommitPendingEdits();
             klass.DiscardEmptyNewMembers();
+        }
+
+        foreach (EntityNodeViewModel entity in _vm.Nodes.OfType<EntityNodeViewModel>())
+        {
+            committed |= entity.CommitPendingEdits();
+            entity.DiscardEmptyNewColumns();
         }
 
         if (labelEdited || committed)

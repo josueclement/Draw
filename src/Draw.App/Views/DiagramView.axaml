@@ -189,6 +189,75 @@
                         </Panel>
                     </DataTemplate>
 
+                    <DataTemplate DataType="vm:EntityNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Panel.Styles>
+                                <Style Selector="Button.memberAdd">
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="Padding" Value="4,0" />
+                                    <Setter Property="Margin" Value="0,1,2,0" />
+                                    <Setter Property="FontSize" Value="11" />
+                                </Style>
+                                <Style Selector="Panel:pointerover Button.memberAdd">
+                                    <Setter Property="Opacity" Value="1" />
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                </Style>
+                            </Panel.Styles>
+                            <Border Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}">
+                                <Grid RowDefinitions="Auto,Auto,*">
+                                    <TextBlock Grid.Row="0" Text="{Binding Name}" FontWeight="Bold"
+                                               Foreground="{Binding Foreground}"
+                                               Margin="6,4" HorizontalAlignment="Center" />
+                                    <Rectangle Grid.Row="1" Height="1" Fill="{Binding Stroke}" />
+                                    <Panel Grid.Row="2" Background="Transparent"
+                                           DoubleTapped="OnColumnCompartmentDoubleTapped">
+                                        <ItemsControl ItemsSource="{Binding Columns}" Margin="6,2">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:EntityColumnViewModel">
+                                                    <Panel>
+                                                        <Panel.ContextMenu>
+                                                            <ContextMenu>
+                                                                <MenuItem Header="Primary key" ToggleType="CheckBox" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
+                                                                <MenuItem Header="Foreign key" ToggleType="CheckBox" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
+                                                                <MenuItem Header="Nullable" ToggleType="CheckBox" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
+                                                                <MenuItem Header="Unique" ToggleType="CheckBox" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
+                                                                <Separator />
+                                                                <MenuItem Header="Insert below" Click="OnInsertColumnBelowClick" />
+                                                                <MenuItem Header="Move up" Click="OnMoveColumnUpClick" />
+                                                                <MenuItem Header="Move down" Click="OnMoveColumnDownClick" />
+                                                                <Separator />
+                                                                <MenuItem Header="Delete" Click="OnRemoveColumnClick" />
+                                                            </ContextMenu>
+                                                        </Panel.ContextMenu>
+                                                        <TextBlock Text="{Binding DisplayText}" FontSize="11"
+                                                                   Foreground="{Binding $parent[ItemsControl].((vm:EntityNodeViewModel)DataContext).Foreground}"
+                                                                   FontWeight="{Binding RowFontWeight}"
+                                                                   TextDecorations="{Binding RowDecorations}"
+                                                                   IsVisible="{Binding !IsEditing}"
+                                                                   DoubleTapped="OnColumnDoubleTapped" />
+                                                        <TextBox Text="{Binding RawText, Mode=TwoWay}" FontSize="11"
+                                                                 Background="Transparent" Padding="0"
+                                                                 IsVisible="{Binding IsEditing}"
+                                                                 KeyDown="OnColumnEditKeyDown"
+                                                                 LostFocus="OnColumnEditCommitted" />
+                                                    </Panel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Classes="memberAdd" Content="+" Click="OnAddColumnClick"
+                                                HorizontalAlignment="Right" VerticalAlignment="Top"
+                                                ToolTip.Tip="Add column" />
+                                    </Panel>
+                                </Grid>
+                            </Border>
+                        </Panel>
+                    </DataTemplate>
+
                     <DataTemplate DataType="vm:ActorNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
                             <Path Data="{Binding Geometry}"

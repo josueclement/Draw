@@ -20,6 +20,12 @@ public sealed class Connector
 
     public RelationshipKind Kind { get; set; } = RelationshipKind.Association;
 
+    /// <summary>Crow's-foot cardinality drawn at the source end (ER relationships). Unspecified = none.</summary>
+    public Cardinality SourceCardinality { get; set; } = Cardinality.Unspecified;
+
+    /// <summary>Crow's-foot cardinality drawn at the target end (ER relationships). Unspecified = none.</summary>
+    public Cardinality TargetCardinality { get; set; } = Cardinality.Unspecified;
+
     public RouteStyle Route { get; set; } = RouteStyle.Straight;
 
     public List<Point2D> BendPoints { get; set; } = new();
@@ -56,6 +62,8 @@ public sealed class Connector
         SourceNodeId = SourceNodeId,
         TargetNodeId = TargetNodeId,
         Kind = Kind,
+        SourceCardinality = SourceCardinality,
+        TargetCardinality = TargetCardinality,
         Route = Route,
         BendPoints = BendPoints.ToList(),
         Style = Style.Clone(),

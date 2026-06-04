@@ -43,6 +43,7 @@ public sealed class ShellViewModel : ViewModelBase
         StylePalette = stylePalette;
 
         NewCommand = new RelayCommand(OnNew);
+        NewErCommand = new RelayCommand(OnNewEr);
         OpenCommand = new AsyncRelayCommand(OnOpenAsync);
         OpenRecentCommand = new AsyncRelayCommand<string>(OnOpenRecentAsync);
         SaveCommand = new AsyncRelayCommand(OnSaveAsync, () => HasActiveDocument);
@@ -77,6 +78,7 @@ public sealed class ShellViewModel : ViewModelBase
     public StylePaletteViewModel StylePalette { get; }
 
     public RelayCommand NewCommand { get; }
+    public RelayCommand NewErCommand { get; }
     public AsyncRelayCommand OpenCommand { get; }
     public AsyncRelayCommand<string> OpenRecentCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
@@ -134,6 +136,8 @@ public sealed class ShellViewModel : ViewModelBase
     }
 
     private void OnNew() => AddAndActivate(_factory.CreateNew(DiagramType.Freeform));
+
+    private void OnNewEr() => AddAndActivate(_factory.CreateNew(DiagramType.Er));
 
     private async Task OnOpenAsync()
     {
