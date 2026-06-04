@@ -6,6 +6,7 @@
         xmlns:pia="using:PhosphorIconsAvalonia.Markup"
         xmlns:nodes="using:Draw.Model.Nodes"
         xmlns:rel="using:Draw.Model.Connectors"
+        xmlns:layout="using:Draw.Diagramming.Layout"
         x:Class="Draw.App.Views.MainWindow"
         x:DataType="vm:ShellViewModel"
         Title="{Binding Title}"
@@ -21,6 +22,14 @@
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
         <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+L" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Left}" />
+        <KeyBinding Gesture="Ctrl+Shift+C" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.CenterHorizontal}" />
+        <KeyBinding Gesture="Ctrl+Shift+R" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Right}" />
+        <KeyBinding Gesture="Ctrl+Shift+T" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Top}" />
+        <KeyBinding Gesture="Ctrl+Shift+M" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.CenterVertical}" />
+        <KeyBinding Gesture="Ctrl+Shift+B" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Bottom}" />
+        <KeyBinding Gesture="Ctrl+Shift+H" Command="{Binding ActiveDocument.DistributeCommand}" CommandParameter="{x:Static layout:DistributionMode.Horizontal}" />
+        <KeyBinding Gesture="Ctrl+Shift+V" Command="{Binding ActiveDocument.DistributeCommand}" CommandParameter="{x:Static layout:DistributionMode.Vertical}" />
     </Window.KeyBindings>
 
     <DockPanel>
@@ -147,6 +156,31 @@
                         <ribbon:RibbonMenuItem Header="Use case" CommandParameter="{x:Static vm:UseCaseNodeKind.UseCase}" IconData="{StaticResource ToolIcon.Ellipse}" />
                         <ribbon:RibbonMenuItem Header="System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}" IconData="{pia:IconGeometry Icon=bounding_box}" />
                     </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="Arrange">
+                <ribbon:RibbonGroup Header="Align">
+                    <ribbon:RibbonDropDownButton x:Name="AlignDropDown" Header="Align"
+                                                 IsEnabled="{Binding ActiveDocument.CanAlignSelection}"
+                                                 IconData="{pia:IconGeometry Icon=align_left}">
+                        <ribbon:RibbonMenuItem Header="Align left" CommandParameter="{x:Static layout:AlignmentMode.Left}" IconData="{pia:IconGeometry Icon=align_left}" />
+                        <ribbon:RibbonMenuItem Header="Align center" CommandParameter="{x:Static layout:AlignmentMode.CenterHorizontal}" IconData="{pia:IconGeometry Icon=align_center_vertical}" />
+                        <ribbon:RibbonMenuItem Header="Align right" CommandParameter="{x:Static layout:AlignmentMode.Right}" IconData="{pia:IconGeometry Icon=align_right}" />
+                        <ribbon:RibbonMenuItem Header="Align top" CommandParameter="{x:Static layout:AlignmentMode.Top}" IconData="{pia:IconGeometry Icon=align_top}" />
+                        <ribbon:RibbonMenuItem Header="Align middle" CommandParameter="{x:Static layout:AlignmentMode.CenterVertical}" IconData="{pia:IconGeometry Icon=align_center_horizontal}" />
+                        <ribbon:RibbonMenuItem Header="Align bottom" CommandParameter="{x:Static layout:AlignmentMode.Bottom}" IconData="{pia:IconGeometry Icon=align_bottom}" />
+                    </ribbon:RibbonDropDownButton>
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Distribute">
+                    <ribbon:RibbonButton Header="Distribute H"
+                                         Command="{Binding ActiveDocument.DistributeCommand}"
+                                         CommandParameter="{x:Static layout:DistributionMode.Horizontal}"
+                                         IconData="{StaticResource ToolIcon.DistributeHorizontal}" />
+                    <ribbon:RibbonButton Header="Distribute V"
+                                         Command="{Binding ActiveDocument.DistributeCommand}"
+                                         CommandParameter="{x:Static layout:DistributionMode.Vertical}"
+                                         IconData="{StaticResource ToolIcon.DistributeVertical}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 

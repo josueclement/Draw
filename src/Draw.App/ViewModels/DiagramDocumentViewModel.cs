@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Draw.App.Configuration;
 using Draw.App.Services;
 using Draw.Diagramming.Geometry;
+using Draw.Diagramming.Layout;
 using Draw.Diagramming.Routing;
 using Draw.Diagramming.Uml;
 using Draw.Diagramming.Undo;
@@ -64,6 +65,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             PanX = 0d;
             PanY = 0d;
         });
+
+        AlignCommand = new RelayCommand<AlignmentMode>(
+            mode => { if (mode is { } m) AlignSelected(m); },
+            _ => CanAlignSelection);
+        DistributeCommand = new RelayCommand<DistributionMode>(
+            mode => { if (mode is { } m) DistributeSelected(m); },
+            _ => CanDistributeSelection);
     }
 
     public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
@@ -123,6 +131,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public RelayCommand ZoomResetCommand { get; }
 
+    public RelayCommand<AlignmentMode> AlignCommand { get; }
+
+    public RelayCommand<DistributionMode> DistributeCommand { get; }
+
     public double PanX
     {
         get;
@@ -140,6 +152,12 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public bool CanRedo => _undo.CanRedo;
 
     public bool HasSelection => Nodes.Any(n => n.IsSelected) || SelectedConnector is not null;
+
+    /// <summary>Alignment needs at least two shapes to have a common edge/center to line up on.</summary>
+    public bool CanAlignSelection => SelectedNodes.Count() >= 2;
+
+    /// <summary>Distribution needs at least three shapes (two anchors plus something to space between).</summary>
+    public bool CanDistributeSelection => SelectedNodes.Count() >= 3;
 
     public bool HasConnectorSelection => SelectedConnector is not null;
 
@@ -380,6 +398,34 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             vm.X = snapped.X;
             vm.Y = snapped.Y;
         }
+    }
+
+    /// <summary>
+    /// Lines the selected shapes up against the selection's bounding box (one undo step). Positions
+    /// are applied exactly — deliberately not re-snapped to the grid, so centers stay pixel-perfect.
+    /// </summary>
+    public void AlignSelected(AlignmentMode mode) => ArrangeSelected(rects => ShapeArranger.Align(rects, mode), minimum: 2);
+
+    /// <summary>Evens out the gaps between the selected shapes along an axis (one undo step).</summary>
+    public void DistributeSelected(DistributionMode mode) => ArrangeSelected(rects => ShapeArranger.Distribute(rects, mode), minimum: 3);
+
+    private void ArrangeSelected(Func<IReadOnlyList<Rect2D>, IReadOnlyList<Rect2D>> arrange, int minimum)
+    {
+        List<NodeViewModelBase> selected = SelectedNodes.ToList();
+        if (selected.Count < minimum)
+        {
+            return;
+        }
+
+        CaptureUndo();
+        IReadOnlyList<Rect2D> result = arrange(selected.Select(n => n.Model.Bounds).ToList());
+        for (int i = 0; i < selected.Count; i++)
+        {
+            selected[i].X = result[i].X;
+            selected[i].Y = result[i].Y;
+        }
+
+        MarkModified();
     }
 
     public void SetNodeBounds(NodeViewModelBase vm, Rect2D bounds)
@@ -631,6 +677,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private void RaiseSelectionChanged()
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(CanAlignSelection));
+        OnPropertyChanged(nameof(CanDistributeSelection));
+        AlignCommand.NotifyCanExecuteChanged();
+        DistributeCommand.NotifyCanExecuteChanged();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 }

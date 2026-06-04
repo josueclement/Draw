@@ -11,8 +11,10 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using Draw.App.ViewModels;
 using Draw.Diagramming.Geometry;
+using Draw.Diagramming.Layout;
 using Draw.Model.Connectors;
 using Draw.Model.Nodes;
 using Draw.Model.Primitives;
@@ -46,12 +48,17 @@ public partial class DiagramView : UserControl
 
     private const double HandleScreenSize = 10d;
 
+    // A right-button press that travels less than this (screen px, squared) before release is treated as
+    // a click that opens the arrange context menu rather than a pan drag.
+    private const double ContextClickThresholdSquared = 16d;
+
     private readonly List<Rectangle> _handles = new();
     private readonly List<Control> _connectorHandles = new();
     private DiagramDocumentViewModel? _vm;
     private DragMode _mode = DragMode.None;
     private bool _undoCaptured;
     private Point _lastScreen;
+    private Point _panStartScreen;
     private Point _moveLastWorld;
     private Point _marqueeStartWorld;
     private bool _marqueeAdditive;
@@ -245,6 +252,7 @@ public partial class DiagramView : UserControl
         {
             _mode = DragMode.Pan;
             _lastScreen = screen;
+            _panStartScreen = screen;
             e.Pointer.Capture(Viewport);
             return;
         }
@@ -497,6 +505,10 @@ public partial class DiagramView : UserControl
 
                     _vm.MarkModified();
                     break;
+
+                case DragMode.Pan:
+                    MaybeShowArrangeMenu(e);
+                    break;
             }
         }
 
@@ -510,6 +522,52 @@ public partial class DiagramView : UserControl
         e.Pointer.Capture(null);
         UpdateHandles();
     }
+
+    // Right-clicking the canvas (a click, not a pan drag) with a multi-selection opens the arrange menu.
+    // Right-dragging still pans; the middle button never opens the menu.
+    private void MaybeShowArrangeMenu(PointerReleasedEventArgs e)
+    {
+        if (_vm is null || e.InitialPressMouseButton != MouseButton.Right || _vm.SelectedNodes.Count() < 2)
+        {
+            return;
+        }
+
+        Point release = e.GetPosition(Viewport);
+        double dx = release.X - _panStartScreen.X;
+        double dy = release.Y - _panStartScreen.Y;
+        if (((dx * dx) + (dy * dy)) > ContextClickThresholdSquared)
+        {
+            return;
+        }
+
+        ContextMenu menu = BuildArrangeMenu(_vm);
+        // Defer so the pan gesture's pointer capture is fully released before the popup opens.
+        Dispatcher.UIThread.Post(() => menu.Open(Viewport));
+    }
+
+    // Built in code (rather than XAML) so the items bind directly to the document VM's commands — that
+    // gives correct enable/disable (Distribute needs >=3 selected) with no DataContext plumbing.
+    private static ContextMenu BuildArrangeMenu(DiagramDocumentViewModel vm)
+    {
+        MenuItem align = new() { Header = "Align" };
+        align.Items.Add(ArrangeItem("Align left", vm.AlignCommand, AlignmentMode.Left));
+        align.Items.Add(ArrangeItem("Align center", vm.AlignCommand, AlignmentMode.CenterHorizontal));
+        align.Items.Add(ArrangeItem("Align right", vm.AlignCommand, AlignmentMode.Right));
+        align.Items.Add(new Separator());
+        align.Items.Add(ArrangeItem("Align top", vm.AlignCommand, AlignmentMode.Top));
+        align.Items.Add(ArrangeItem("Align middle", vm.AlignCommand, AlignmentMode.CenterVertical));
+        align.Items.Add(ArrangeItem("Align bottom", vm.AlignCommand, AlignmentMode.Bottom));
+
+        ContextMenu menu = new();
+        menu.Items.Add(align);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(ArrangeItem("Distribute horizontally", vm.DistributeCommand, DistributionMode.Horizontal));
+        menu.Items.Add(ArrangeItem("Distribute vertically", vm.DistributeCommand, DistributionMode.Vertical));
+        return menu;
+    }
+
+    private static MenuItem ArrangeItem<T>(string header, RelayCommand<T> command, T parameter)
+        => new() { Header = header, Command = command, CommandParameter = parameter };
 
     private void OnPointerWheel(object? sender, PointerWheelEventArgs e)
     {

@@ -62,3 +62,12 @@ compartment (or the hover `+` button) to add, `Enter` adds the next member of th
 `Tab` / `Alt`+arrows navigate and reorder, and a right-click context menu covers
 insert/move/visibility/delete. One undo step per member; the Inspector stays as the precise
 editor. See `documentation/plans/2026-06-03-uml-member-editing-ux.md`.
+
+## Align & distribute shapes ✅ (cross-cutting)
+
+Tidy a group of shapes: align the selection (left/center/right/top/middle/bottom) to its bounding
+box, and evenly distribute it (equal edge-to-edge gaps) horizontally/vertically. New **Arrange**
+ribbon tab (Align dropdown + two Distribute buttons), `Ctrl+Shift+L/C/R/T/M/B` and `Ctrl+Shift+H/V`
+shortcuts, and a right-click canvas menu (right-drag still pans). Pure geometry in
+`Draw.Diagramming/Layout/ShapeArranger.cs`; one undo step per action; connectors re-route
+automatically. See `documentation/plans/2026-06-04-align-distribute-shapes.md`.
