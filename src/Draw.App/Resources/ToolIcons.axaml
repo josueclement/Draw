@@ -60,6 +60,27 @@
         <StreamGeometry>M3,18.5 L5.5,21 L21,5.5 L18.5,3 Z</StreamGeometry>
     </GeometryGroup>
 
+    <!-- Order (stacking): a filled object square plus a direction arrow; the "to front/back" glyphs
+         add a full-width bar that the arrow points to (the very top / very bottom of the stack). -->
+    <GeometryGroup x:Key="ToolIcon.BringForward" FillRule="NonZero">
+        <RectangleGeometry Rect="7,12,10,9" />
+        <StreamGeometry>M12,2 L18,8 L14,8 L14,11 L10,11 L10,8 L6,8 Z</StreamGeometry>
+    </GeometryGroup>
+    <GeometryGroup x:Key="ToolIcon.SendBackward" FillRule="NonZero">
+        <RectangleGeometry Rect="7,3,10,9" />
+        <StreamGeometry>M12,22 L18,16 L14,16 L14,13 L10,13 L10,16 L6,16 Z</StreamGeometry>
+    </GeometryGroup>
+    <GeometryGroup x:Key="ToolIcon.BringToFront" FillRule="NonZero">
+        <RectangleGeometry Rect="4,2,16,2" />
+        <RectangleGeometry Rect="7,14,10,7" />
+        <StreamGeometry>M12,5 L18,11 L14,11 L14,13 L10,13 L10,11 L6,11 Z</StreamGeometry>
+    </GeometryGroup>
+    <GeometryGroup x:Key="ToolIcon.SendToBack" FillRule="NonZero">
+        <RectangleGeometry Rect="4,20,16,2" />
+        <RectangleGeometry Rect="7,3,10,7" />
+        <StreamGeometry>M12,19 L18,13 L14,13 L14,11 L10,11 L10,13 L6,13 Z</StreamGeometry>
+    </GeometryGroup>
+
     <!-- Class diagram: interface lollipop (provided-interface circle on a stem) -->
     <GeometryGroup x:Key="ToolIcon.Interface" FillRule="EvenOdd">
         <EllipseGeometry Rect="8,3,8,8" />

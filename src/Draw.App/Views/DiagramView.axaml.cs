@@ -603,8 +603,15 @@ public partial class DiagramView : UserControl
         align.Items.Add(ArrangeItem("Align middle", vm.AlignCommand, AlignmentMode.CenterVertical));
         align.Items.Add(ArrangeItem("Align bottom", vm.AlignCommand, AlignmentMode.Bottom));
 
+        MenuItem order = new() { Header = "Order" };
+        order.Items.Add(ArrangeItem("Bring to front", vm.OrderCommand, ZOrderOperation.BringToFront));
+        order.Items.Add(ArrangeItem("Bring forward", vm.OrderCommand, ZOrderOperation.BringForward));
+        order.Items.Add(ArrangeItem("Send backward", vm.OrderCommand, ZOrderOperation.SendBackward));
+        order.Items.Add(ArrangeItem("Send to back", vm.OrderCommand, ZOrderOperation.SendToBack));
+
         ContextMenu menu = new();
         menu.Items.Add(align);
+        menu.Items.Add(order);
         menu.Items.Add(new Separator());
         menu.Items.Add(ArrangeItem("Distribute horizontally", vm.DistributeCommand, DistributionMode.Horizontal));
         menu.Items.Add(ArrangeItem("Distribute vertically", vm.DistributeCommand, DistributionMode.Vertical));
@@ -1234,7 +1241,9 @@ public partial class DiagramView : UserControl
     private NodeViewModelBase? HitTestNode(Point world)
     {
         Point2D p = new(world.X, world.Y);
-        return _vm?.Nodes.LastOrDefault(n => n.Model.Bounds.Contains(p));
+        // Pick the front-most node under the cursor by stacking order (highest ZIndex), so the result
+        // follows user reordering rather than collection order and a shape on a boundary wins over it.
+        return _vm?.Nodes.Where(n => n.Model.Bounds.Contains(p)).MaxBy(n => n.Model.ZIndex);
     }
 
     private int HitTestHandle(Point world)
