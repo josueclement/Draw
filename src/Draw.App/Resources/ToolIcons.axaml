@@ -48,6 +48,16 @@
         <StreamGeometry>M20,17 L20,19 L6,13 L6,11 Z</StreamGeometry>
     </GeometryGroup>
 
+    <!-- Styles: "no fill" — a square frame crossed by a diagonal slash (NonZero so the slash unions
+         over the frame rather than punching holes). -->
+    <GeometryGroup x:Key="ToolIcon.NoFill" FillRule="NonZero">
+        <RectangleGeometry Rect="3,3,18,2" />
+        <RectangleGeometry Rect="3,19,18,2" />
+        <RectangleGeometry Rect="3,3,2,18" />
+        <RectangleGeometry Rect="19,3,2,18" />
+        <StreamGeometry>M3,18.5 L5.5,21 L21,5.5 L18.5,3 Z</StreamGeometry>
+    </GeometryGroup>
+
     <!-- Class diagram: interface lollipop (provided-interface circle on a stem) -->
     <GeometryGroup x:Key="ToolIcon.Interface" FillRule="EvenOdd">
         <EllipseGeometry Rect="8,3,8,8" />

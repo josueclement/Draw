@@ -136,6 +136,31 @@
                     <ribbon:RibbonButton Header="Duplicate" Command="{Binding DuplicateCommand}" IconData="{pia:IconGeometry Icon=copy_simple}" />
                     <ribbon:RibbonButton Header="Delete" Command="{Binding DeleteCommand}" IconData="{pia:IconGeometry Icon=trash}" />
                 </ribbon:RibbonGroup>
+                <!-- Quick style palette: theme-aware pastel swatches (one click recolours fill+stroke+text on
+                     the selection) plus Reset and No-fill. Enabled only with a selection. -->
+                <ribbon:RibbonGroup Header="Styles" IsEnabled="{Binding ActiveDocument.HasSelection}">
+                    <ItemsControl ItemsSource="{Binding StylePalette.Swatches}" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="5" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StyleSwatchViewModel">
+                                <Button Width="26" Height="26" Margin="1" Padding="2"
+                                        Command="{Binding ApplyCommand}" ToolTip.Tip="{Binding Name}">
+                                    <Border Background="{Binding PreviewBackground}"
+                                            BorderBrush="{Binding PreviewBorder}" BorderThickness="1.5"
+                                            CornerRadius="3" />
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ribbon:RibbonButton Header="Reset" Command="{Binding StylePalette.ResetCommand}"
+                                         IconData="{pia:IconGeometry Icon=arrow_counter_clockwise}" />
+                    <ribbon:RibbonButton Header="No fill" Command="{Binding StylePalette.NoFillCommand}"
+                                         IconData="{StaticResource ToolIcon.NoFill}" />
+                </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
             <ribbon:RibbonTab Header="Insert">

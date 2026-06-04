@@ -108,3 +108,14 @@ resize with a locked aspect ratio and behave as full nodes (connectors/align/dis
 access goes through `IClipboardService` (Avalonia 12 typed `DataFormat`); keyboard shortcuts are handled
 in `DiagramView` so they don't hijack text editing. See
 `documentation/plans/2026-06-04-copy-paste-and-images.md`.
+
+## Quick style palette ✅ (cross-cutting)
+
+A **Styles** group on the Home ribbon tab with an always-visible grid of 10 curated **pastel**
+swatches plus **Reset to default** and **No fill** buttons. One click recolours the selection (all
+nodes + a selected connector) with a coordinated fill + stroke + text combination. Swatches are
+**theme-aware**: each carries a Light and a Dark variant, and styled elements recolour automatically
+on theme toggle — generalising the single default-fill sentinel into ~10 named palette tokens
+(`Style.PaletteId`, resolved at render time; additive, backward-compatible serialisation). Palette
+data is UI-agnostic in `Draw.Diagramming/Styling/StylePalette.cs`; apply reuses the style-edit memento
+undo. See `documentation/plans/2026-06-04-quick-style-palette.md`.

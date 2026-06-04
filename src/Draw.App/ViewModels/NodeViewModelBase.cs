@@ -4,6 +4,7 @@ using Avalonia.Collections;
 using Avalonia.Media;
 using Draw.App.Rendering;
 using Draw.App.Services;
+using Draw.Diagramming.Styling;
 using Draw.Model.Nodes;
 using Draw.Model.Primitives;
 using ModelStyle = Draw.Model.Styling;
@@ -132,9 +133,15 @@ public abstract class NodeViewModelBase : ViewModelBase
     /// <summary>True when the text colour is the un-customised default, so it follows the active theme.</summary>
     public bool UsesDefaultForeground => Model.Style.Font.Color == ModelStyle.FontSpec.DefaultColor;
 
-    public IBrush Fill => UsesDefaultFill && _theme.DefaultNodeFill is { } fill ? fill : Model.Style.Fill.ToBrush();
+    /// <summary>The active-theme variant of the quick-palette swatch this node is linked to, or null
+    /// when it carries no <c>PaletteId</c> (custom or default colours).</summary>
+    private SwatchVariant? Swatch
+        => StylePalette.TryGet(Model.Style.PaletteId, out StyleSwatch swatch) ? swatch.Variant(_theme.IsDark) : null;
 
-    public IBrush Stroke => Model.Style.Stroke.Color.ToBrush();
+    public IBrush Fill => Swatch is { } s ? s.Fill.ToBrush()
+        : UsesDefaultFill && _theme.DefaultNodeFill is { } fill ? fill : Model.Style.Fill.ToBrush();
+
+    public IBrush Stroke => Swatch is { } s ? s.Stroke.ToBrush() : Model.Style.Stroke.Color.ToBrush();
 
     /// <summary>Extra outline width (world units) added while the node is selected. Selection is shown
     /// by thickening the node's own border, so it reads as part of the shape rather than a detached box.</summary>
@@ -150,7 +157,8 @@ public abstract class NodeViewModelBase : ViewModelBase
 
     public AvaloniaList<double>? StrokeDashArray => Model.Style.Stroke.Dash.ToDashArray();
 
-    public IBrush Foreground => UsesDefaultForeground && _theme.DefaultNodeText is { } text ? text : Model.Style.Font.Color.ToBrush();
+    public IBrush Foreground => Swatch is { } s ? s.Text.ToBrush()
+        : UsesDefaultForeground && _theme.DefaultNodeText is { } text ? text : Model.Style.Font.Color.ToBrush();
 
     public FontFamily FontFamily => new(Model.Style.Font.Family);
 
