@@ -120,6 +120,12 @@ public sealed class ConnectorViewModel : ViewModelBase
     /// <summary>True when the target end is pinned to a forced anchor (vs. automatic attachment).</summary>
     public bool TargetAnchored => _model.TargetAnchor is not null;
 
+    /// <summary>The forced source anchor as a relative (u,v) in [0,1]², or null when the source end is automatic.</summary>
+    public ModelPoint? SourceAnchor => _model.SourceAnchor;
+
+    /// <summary>The forced target anchor as a relative (u,v) in [0,1]², or null when the target end is automatic.</summary>
+    public ModelPoint? TargetAnchor => _model.TargetAnchor;
+
     /// <summary>True for route styles whose bend points are honoured (straight, orthogonal, rounded).</summary>
     public bool SupportsWaypoints => _model.Route is RouteStyle.Straight or RouteStyle.Orthogonal or RouteStyle.Rounded;
 

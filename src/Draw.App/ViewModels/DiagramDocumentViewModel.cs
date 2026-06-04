@@ -719,10 +719,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private readonly record struct ConnectorEnd(ConnectorViewModel Connector, bool IsSource, double Fraction);
 
     /// <summary>
-    /// Evenly spreads the connectors attached to the selected shape(s) along each edge they touch
-    /// (one undo step). For every selected shape, the connector ends on a given bounding-box side are
-    /// kept in their current order and re-pinned at equal gaps; sides with a single connection are left
-    /// alone. Reads the current routes before mutating, so each end is classified by where it lands now.
+    /// Force-pins every connector end touching the selected shape(s) (one undo step). On a bounding-box
+    /// side with several ends, they keep their current order and are re-pinned at equal gaps; a side with
+    /// a single end is pinned in place (frozen where it currently lands), while an already-pinned lone end
+    /// is left untouched. Reads the current routes before mutating, so each end is classified and frozen by
+    /// where it lands now; a no-op (nothing actually changes) adds no undo entry.
     /// </summary>
     public void SpaceSelectedConnections()
     {
@@ -760,38 +761,60 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             }
         }
 
-        bool anySpaced = false;
+        // Compute every target anchor before mutating anything. A connector's route depends only on its
+        // own endpoints, so reading all current routes up front is order-independent.
+        List<(ConnectorEnd End, Point2D Anchor)> ops = new();
         foreach (KeyValuePair<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> group in groups)
         {
             List<ConnectorEnd> ends = group.Value;
-            if (ends.Count < 2)
+            if (ends.Count >= 2)
             {
-                continue;
-            }
-
-            // Capture only once we know there is something to do, so a no-op adds no undo entry.
-            if (!anySpaced)
-            {
-                CaptureUndo();
-                anySpaced = true;
-            }
-
-            ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
-            for (int i = 0; i < ends.Count; i++)
-            {
-                Point2D anchor = ConnectionDistributor.EvenAnchor(group.Key.Side, i, ends.Count);
-                if (ends[i].IsSource)
+                ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
+                for (int i = 0; i < ends.Count; i++)
                 {
-                    ends[i].Connector.SetSourceAnchor(anchor);
+                    ops.Add((ends[i], ConnectionDistributor.EvenAnchor(group.Key.Side, i, ends.Count)));
                 }
-                else
+            }
+            else
+            {
+                // Lone end on its side: pin it where it currently lands. Already-pinned ends stay as-is.
+                ConnectorEnd end = ends[0];
+                Point2D? current = end.IsSource ? end.Connector.SourceAnchor : end.Connector.TargetAnchor;
+                if (current is null)
                 {
-                    ends[i].Connector.SetTargetAnchor(anchor);
+                    Point2D point = end.IsSource ? end.Connector.RouteStart : end.Connector.RouteEnd;
+                    ops.Add((end, ConnectionDistributor.RelativeAnchor(group.Key.Node.Bounds, point)));
                 }
             }
         }
 
-        if (anySpaced)
+        // Apply, capturing undo once on the first real change so a no-op adds no undo entry.
+        bool captured = false;
+        foreach ((ConnectorEnd end, Point2D anchor) in ops)
+        {
+            Point2D? current = end.IsSource ? end.Connector.SourceAnchor : end.Connector.TargetAnchor;
+            if (current is { } c && c == anchor)
+            {
+                continue;
+            }
+
+            if (!captured)
+            {
+                CaptureUndo();
+                captured = true;
+            }
+
+            if (end.IsSource)
+            {
+                end.Connector.SetSourceAnchor(anchor);
+            }
+            else
+            {
+                end.Connector.SetTargetAnchor(anchor);
+            }
+        }
+
+        if (captured)
         {
             MarkModified();
         }

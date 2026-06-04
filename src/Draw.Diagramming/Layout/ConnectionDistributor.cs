@@ -42,6 +42,19 @@ public static class ConnectionDistributor
     }
 
     /// <summary>
+    /// The relative (u,v) anchor in [0,1]² of <paramref name="bounds"/> for a (resolved) world
+    /// <paramref name="point"/> — the inverse of resolving an anchor. Pinning the returned value
+    /// reproduces the same outline point (the shape kinds in use are convex), so it freezes a point
+    /// in place. Degenerate bounds fall back to the centre (0.5).
+    /// </summary>
+    public static Point2D RelativeAnchor(Rect2D bounds, Point2D point)
+    {
+        double u = bounds.Width <= 0 ? 0.5 : Math.Clamp((point.X - bounds.X) / bounds.Width, 0d, 1d);
+        double v = bounds.Height <= 0 ? 0.5 : Math.Clamp((point.Y - bounds.Y) / bounds.Height, 0d, 1d);
+        return new Point2D(u, v);
+    }
+
+    /// <summary>
     /// The position of <paramref name="point"/> along <paramref name="side"/> as a fraction in [0,1]
     /// (the coordinate that varies along that side). Used to keep the current order when spacing.
     /// </summary>
