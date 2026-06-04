@@ -16,6 +16,20 @@ public sealed record StyleSwatch(string Id, string Name, SwatchVariant Light, Sw
 {
     /// <summary>The variant for the active theme.</summary>
     public SwatchVariant Variant(bool isDark) => isDark ? Dark : Light;
+
+    /// <summary>Builds a shape style carrying this swatch: theme-aware via <see cref="ShapeStyle.PaletteId"/>,
+    /// with the active theme's colours baked in as the fallback. Mirrors the per-node mutation in
+    /// <c>DiagramDocumentViewModel.ApplyStyleSwatch</c>.</summary>
+    public ShapeStyle ToShapeStyle(bool isDark)
+    {
+        SwatchVariant variant = Variant(isDark);
+        ShapeStyle style = ShapeStyle.CreateDefault();
+        style.PaletteId = Id;
+        style.Fill = variant.Fill;
+        style.Stroke.Color = variant.Stroke;
+        style.Font.Color = variant.Text;
+        return style;
+    }
 }
 
 /// <summary>
@@ -43,6 +57,9 @@ public static class StylePalette
         Swatch("gray", "Gray", 0xE8E8EA, 0x9A9AA0, 0x3A3A3E, 0x9CA0A8),
         Swatch("slate", "Slate", 0xDEE4EA, 0x7E8C9C, 0x38414C, 0x93A2B3),
     };
+
+    /// <summary>The swatch new shapes adopt by default: the first (top-left) palette entry.</summary>
+    public static StyleSwatch Default => Swatches[0];
 
     private static readonly Dictionary<string, StyleSwatch> ById = BuildIndex(Swatches);
 

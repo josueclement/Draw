@@ -1,6 +1,7 @@
 using Draw.App.Configuration;
 using Draw.App.Services;
 using Draw.Diagramming.Routing;
+using Draw.Diagramming.Styling;
 using Draw.Diagramming.Undo;
 using Draw.Model.Documents;
 using Draw.Model.Serialization;
@@ -53,5 +54,9 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
             filePath);
 
     public DiagramDocumentViewModel CreateNew(DiagramType type)
-        => Create(DiagramDocument.CreateEmpty(type), filePath: null);
+    {
+        DiagramDocument document = DiagramDocument.CreateEmpty(type);
+        document.DefaultShapeStyle = StylePalette.Default.ToShapeStyle(_theme.IsDark);
+        return Create(document, filePath: null);
+    }
 }
