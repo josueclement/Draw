@@ -67,6 +67,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             mode => { if (mode is { } m) DistributeSelected(m); },
             _ => CanDistributeSelection);
         SpaceConnectionsCommand = new RelayCommand(SpaceSelectedConnections, () => CanSpaceConnections);
+        MergeConnectionsCommand = new RelayCommand(MergeSelectedConnections, () => CanMergeConnections);
 
         RebuildNodes();
         RebuildConnectors();
@@ -145,6 +146,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public RelayCommand SpaceConnectionsCommand { get; }
 
+    public RelayCommand MergeConnectionsCommand { get; }
+
     public double PanX
     {
         get;
@@ -187,6 +190,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     /// <summary>Connector spacing operates on every connector attached to the selected shape(s).</summary>
     public bool CanSpaceConnections => SelectedNodes.Any();
+
+    /// <summary>Connector merging operates on every connector attached to the selected shape(s).</summary>
+    public bool CanMergeConnections => SelectedNodes.Any();
 
     public bool HasConnectorSelection => SelectedConnector is not null;
 
@@ -732,12 +738,28 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private readonly record struct ConnectorEnd(ConnectorViewModel Connector, bool IsSource, double Fraction);
 
     /// <summary>
-    /// Force-pins every connector end touching the selected shape(s) (one undo step). On a bounding-box
-    /// side with several ends, they keep their current order and are re-pinned at equal gaps; a side with a
-    /// single end is centred on that edge. Reads the current routes before mutating, so each end is
-    /// classified by where it lands now; a no-op (nothing actually changes) adds no undo entry.
+    /// Force-pins every connector end touching the selected shape(s) into evenly spaced positions (one
+    /// undo step): on each bounding-box side the ends keep their current order and are re-pinned at equal
+    /// gaps, and a side with a single end is centred on that edge.
     /// </summary>
-    public void SpaceSelectedConnections()
+    public void SpaceSelectedConnections() => PinSelectedConnectionEnds(ConnectionDistributor.EvenAnchor);
+
+    /// <summary>
+    /// Force-pins every connector end touching the selected shape(s) onto the centre of the side it lands
+    /// on (one undo step) — the inverse of <see cref="SpaceSelectedConnections"/>. Every end on a given
+    /// side collapses to that edge's midpoint (they stack, by design), so the two actions let the user fan
+    /// out and regroup a shape's connectors.
+    /// </summary>
+    public void MergeSelectedConnections()
+        => PinSelectedConnectionEnds((side, _, _) => ConnectionDistributor.EvenAnchor(side, 0, 1));
+
+    /// <summary>
+    /// Re-pins every connector end touching the selected shape(s), using <paramref name="anchorFor"/> to
+    /// choose the relative (u,v) anchor for the <c>i</c>-th of <c>count</c> ends on a bounding-box side.
+    /// Reads the current routes before mutating, so each end is classified by where it lands now; captures
+    /// one undo entry on the first real change, and a no-op (nothing actually changes) adds no undo entry.
+    /// </summary>
+    private void PinSelectedConnectionEnds(Func<BoxSide, int, int, Point2D> anchorFor)
     {
         HashSet<Guid> selectedIds = SelectedNodes.Select(n => n.Id).ToHashSet();
         if (selectedIds.Count == 0)
@@ -774,8 +796,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         // Compute every target anchor before mutating anything. A connector's route depends only on its
-        // own endpoints, so reading all current routes up front is order-independent. EvenAnchor centres a
-        // lone end (count 1 → fraction 0.5) and spreads several at equal gaps, keeping their current order.
+        // own endpoints, so reading all current routes up front is order-independent. The ends keep their
+        // current order along each side; anchorFor decides where each lands (spread, or collapsed to centre).
         List<(ConnectorEnd End, Point2D Anchor)> ops = new();
         foreach (KeyValuePair<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> group in groups)
         {
@@ -783,7 +805,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
             for (int i = 0; i < ends.Count; i++)
             {
-                ops.Add((ends[i], ConnectionDistributor.EvenAnchor(group.Key.Side, i, ends.Count)));
+                ops.Add((ends[i], anchorFor(group.Key.Side, i, ends.Count)));
             }
         }
 
@@ -1100,9 +1122,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         OnPropertyChanged(nameof(CanAlignSelection));
         OnPropertyChanged(nameof(CanDistributeSelection));
         OnPropertyChanged(nameof(CanSpaceConnections));
+        OnPropertyChanged(nameof(CanMergeConnections));
         AlignCommand.NotifyCanExecuteChanged();
         DistributeCommand.NotifyCanExecuteChanged();
         SpaceConnectionsCommand.NotifyCanExecuteChanged();
+        MergeConnectionsCommand.NotifyCanExecuteChanged();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 }
