@@ -13,8 +13,8 @@ over all three, reusing the existing selection-handle + `Ctrl`/`Alt`+click inter
 In scope:
 
 - **Forced connection points** — pin either endpoint anywhere on its shape's outline. Stored
-  relative to the shape's bounds so the attachment tracks both move and resize. Applies to all
-  three route styles (straight, orthogonal, bezier).
+  relative to the shape's bounds so the attachment tracks both move and resize. Applies to every
+  route style.
 - **Editable waypoints** on straight + orthogonal connectors — `Ctrl`+click the line inserts a
   bend point (and starts dragging it), drag moves a bend point, `Alt`+click removes one.
 - **Movable labels** (source / center / target) — drag to reposition; stored as a relative offset
@@ -25,8 +25,6 @@ Out of scope:
 
 - **Reconnecting** an endpoint to a *different* shape by dragging it off — an endpoint drag stays
   on its current shape (clamped to its bounds). Changing the connected node stays a delete+recreate.
-- **Waypoints on bezier** — the bezier router ignores bend points; `Ctrl`+click does nothing on a
-  curve. (Forced anchors *do* apply to bezier.)
 - An inspector UI for any of this — it is purely direct-manipulation.
 
 ## 2. Interaction model (`Alt` = remove/reset everywhere)
@@ -64,10 +62,10 @@ unchanged and `Clone()` (used by the memento undo + serializer) copies them:
 - `ShapeBoundary.ResolveAnchor(kind, bounds, relative)` — builds the toward-point from `(u,v)` and
   returns `IntersectFromCenter(...)`. All boundary math stays in `Draw.Diagramming`.
 - `ConnectorRouteRequest` gains optional `Point2D? SourceAnchor, TargetAnchor` (the relative values).
-- `StraightRouter`, `OrthogonalRouter`, `BezierRouter`: where each computes an endpoint via
+- `StraightRouter`, `OrthogonalRouter`, `RoundedRouter`: where each computes an endpoint via
   `IntersectFromCenter`, instead use `ResolveAnchor(...)` when the corresponding anchor is set. No
   other change — `ConnectorRoute.Polyline` already derives the endpoint direction (for arrow/diamond
-  orientation) from the adjacent segment, and the bezier outward control derives from
+  orientation) from the adjacent segment, and the curved-route outward control derives from
   `endpoint − centre`, which the forced point feeds correctly.
 
 ## 5. View-model (`Draw.App/ViewModels/ConnectorViewModel.cs`)

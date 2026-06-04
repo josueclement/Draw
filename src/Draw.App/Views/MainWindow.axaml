@@ -332,11 +332,11 @@
                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                 <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
                                                           SelectedItem="{Binding Visibility, Mode=TwoWay}" />
-                                                <TextBox Width="90" Watermark="name"
+                                                <TextBox Width="90" PlaceholderText="name"
                                                          Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <AutoCompleteBox Width="120" Watermark="type"
+                                                <AutoCompleteBox Width="120" PlaceholderText="type"
                                                                  ItemsSource="{Binding TypeSuggestions}"
                                                                  Text="{Binding Type, Mode=TwoWay}" />
                                                 <CheckBox Content="stat" IsChecked="{Binding IsStatic, Mode=TwoWay}" />
@@ -358,13 +358,13 @@
                                             <StackPanel Orientation="Horizontal" Spacing="4">
                                                 <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
                                                           SelectedItem="{Binding Visibility, Mode=TwoWay}" />
-                                                <TextBox Width="90" Watermark="name"
+                                                <TextBox Width="90" PlaceholderText="name"
                                                          Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBox Width="86" Watermark="params"
+                                                <TextBox Width="86" PlaceholderText="params"
                                                          Text="{Binding Parameters, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                                <AutoCompleteBox Width="80" Watermark="ret"
+                                                <AutoCompleteBox Width="80" PlaceholderText="ret"
                                                                  ItemsSource="{Binding TypeSuggestions}"
                                                                  Text="{Binding Type, Mode=TwoWay}" />
                                                 <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"

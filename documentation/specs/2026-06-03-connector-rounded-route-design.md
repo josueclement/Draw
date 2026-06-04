@@ -3,7 +3,7 @@
 Status: approved 2026-06-03. Branch: `feature/connector-rounded-route` (builds on
 `feature/connector-editing`).
 
-A fourth `RouteStyle` alongside Straight / Orthogonal / Bezier: a smooth curve whose shape is
+A `RouteStyle` alongside Straight / Orthogonal: a smooth curve whose shape is
 **averaged from the bend points** added on the connector. It complements the connector-editing
 waypoint feature — you add points with Ctrl+click and the rounded route smooths through them.
 
@@ -12,8 +12,7 @@ waypoint feature — you add points with Ctrl+click and the rounded route smooth
 - **Averaged "mean" curve.** The curve passes through the two boundary attachment endpoints and the
   **midpoints between consecutive bend points**, using each bend point as a pull-handle — the curve
   is pulled toward the points but does not pass through them (classic midpoint-quadratic smoothing).
-- **No bend points → gentle S-curve**, bowing outward from each shape along its boundary normal,
-  identical to the existing `BezierRouter`.
+- **No bend points → gentle S-curve**, bowing outward from each shape along its boundary normal.
 - **True vector rendering** — real cubic bezier segments via `StreamGeometry` (crisp at any zoom,
   clean future SVG/PDF export), not a sampled polyline.
 - Honours **forced anchors** and **waypoint editing** (add/move/remove) from the connector-editing
@@ -34,10 +33,8 @@ type — exact conversion, no quality loss):
 - `IReadOnlyList<CubicSegment>? Cubics` — non-null only for the rounded curve.
 - `PolyCubic(Point2D start, IReadOnlyList<CubicSegment> segments)` — sets `Points` to the knot points
   `[start, seg0.End, …]` (so `Start`/`End` and label/decoration anchors keep working) and derives
-  `StartDirection`/`EndDirection` from `segments[0].Control1 - start` and `end - last.Control2`, the
-  same convention as the `Bezier(...)` factory, so arrow/diamond decorations orient correctly.
-
-`BezierRouter` is unchanged (keeps the single-cubic `Bezier(...)` factory).
+  `StartDirection`/`EndDirection` from `segments[0].Control1 - start` and `end - last.Control2` (the
+  first/last control directions), so arrow/diamond decorations orient correctly.
 
 ## 4. Strategy (`Draw.Diagramming/Routing/RoundedRouter.cs`, new)
 
@@ -45,14 +42,14 @@ type — exact conversion, no quality loss):
 `ShapeBoundary.ResolveAnchor` / `IntersectFromCenter`, toward the first/last bend or opposite centre).
 
 - **0 bend points:** one cubic with outward-normal controls (reusing the shared
-  `RouteHelpers.SafeOutward` + handle-length logic also used by `BezierRouter`) → the S-curve.
+  `RouteHelpers.SafeOutward` + handle-length logic) → the S-curve.
 - **≥1 bend points:** `pts = Dedupe([source, …bends, target])`; midpoint-quadratic smoothing — for
   `i = 1..n-3` a quad `(control = pts[i], end = midpoint(pts[i], pts[i+1]))`, then a final quad
   `(control = pts[n-2], end = pts[n-1])` — each converted to a cubic
   (`C1 = S + ⅔(Q−S)`, `C2 = E + ⅔(Q−E)`). Degenerate (`< 3` points after dedupe) → a single
   near-straight cubic.
 
-`SafeOutward` was factored out of `BezierRouter` into `RouteHelpers` so both share one implementation.
+`SafeOutward` lives in `RouteHelpers` as the shared outward-normal helper.
 
 ## 5. View-model (`Draw.App/ViewModels/ConnectorViewModel.cs`)
 
@@ -65,7 +62,7 @@ type — exact conversion, no quality loss):
 
 `services.AddSingleton<IConnectorRouteStrategy, RoundedRouter>();` — the dispatcher auto-discovers it.
 
-No changes needed to the inspector UI, serialization, toolbox, or `BezierRouter`'s behaviour.
+No changes needed to the inspector UI, serialization, or toolbox.
 
 ## 7. Verification
 

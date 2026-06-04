@@ -10,7 +10,7 @@ namespace Draw.Diagramming.Routing;
 /// A smooth curve averaged from the bend points. The curve passes through the two boundary
 /// attachment points and the midpoints between consecutive bend points, using each bend point as a
 /// pull-handle (classic midpoint-quadratic smoothing, emitted as cubic segments). With no bend
-/// points it bows outward from each shape along its boundary normal, like <see cref="BezierRouter"/>.
+/// points it bows outward from each shape along its boundary normal as a gentle S-curve.
 /// </summary>
 public sealed class RoundedRouter : IConnectorRouteStrategy
 {
@@ -21,7 +21,7 @@ public sealed class RoundedRouter : IConnectorRouteStrategy
         Point2D sourceCenter = request.SourceBounds.Center;
         Point2D targetCenter = request.TargetBounds.Center;
 
-        // No bend points: a gentle S-curve between the two boundary points (same as the bezier style).
+        // No bend points: a gentle S-curve between the two boundary points.
         if (request.BendPoints.Count == 0)
         {
             Point2D src = ResolveSource(request, targetCenter);

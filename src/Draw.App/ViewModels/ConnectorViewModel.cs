@@ -331,19 +331,6 @@ public sealed class ConnectorViewModel : ViewModelBase
             return geometry;
         }
 
-        if (_route.IsBezier)
-        {
-            StreamGeometry geometry = new();
-            using (StreamGeometryContext ctx = geometry.Open())
-            {
-                ctx.BeginFigure(ToPoint(_route.Start), isFilled: false);
-                ctx.CubicBezierTo(ToPoint(_route.Control1), ToPoint(_route.Control2), ToPoint(_route.End));
-                ctx.EndFigure(false);
-            }
-
-            return geometry;
-        }
-
         return new PolylineGeometry(_route.Points.Select(ToPoint).ToList(), isFilled: false);
     }
 
@@ -370,7 +357,7 @@ public sealed class ConnectorViewModel : ViewModelBase
         return Brushes.White;
     }
 
-    /// <summary>The route as a flattened world-coordinate polyline (bezier curves are sampled).</summary>
+    /// <summary>The route as a flattened world-coordinate polyline (curve segments are sampled).</summary>
     public IReadOnlyList<ModelPoint> GetFlattenedPoints()
     {
         if (_route.Cubics is { } cubics)
@@ -391,19 +378,7 @@ public sealed class ConnectorViewModel : ViewModelBase
             return samples;
         }
 
-        if (!_route.IsBezier)
-        {
-            return _route.Points;
-        }
-
-        const int segments = 16;
-        List<ModelPoint> points = new(segments + 1);
-        for (int i = 0; i <= segments; i++)
-        {
-            points.Add(CubicAt(_route.Start, _route.Control1, _route.Control2, _route.End, i / (double)segments));
-        }
-
-        return points;
+        return _route.Points;
     }
 
     private static ModelPoint CubicAt(ModelPoint a, ModelPoint b, ModelPoint c, ModelPoint d, double t)

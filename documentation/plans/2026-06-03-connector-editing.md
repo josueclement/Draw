@@ -16,7 +16,7 @@ connectors, and movable source/center/target labels.
    `ResolveAnchor(kind, bounds, relative)` (ray-cast through the relative point).
 
 3. **Routing** — `ConnectorRouteRequest` gains optional `SourceAnchor`/`TargetAnchor`;
-   `StraightRouter` / `OrthogonalRouter` / `BezierRouter` use `ResolveAnchor` when an anchor is set,
+   `StraightRouter` / `OrthogonalRouter` / `RoundedRouter` use `ResolveAnchor` when an anchor is set,
    else the existing `IntersectFromCenter`.
 
 4. **Connector VM** — `Draw.App/ViewModels/ConnectorViewModel.cs`: pass anchors into the request;
