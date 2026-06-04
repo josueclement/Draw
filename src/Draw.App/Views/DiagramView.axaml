@@ -297,12 +297,15 @@
                                   StrokeThickness="{Binding StrokeThickness}"
                                   Fill="{Binding TargetDecorationFill}" />
                             <TextBlock Text="{Binding CenterLabelText}" FontSize="11"
+                                       Foreground="{Binding LabelForeground}"
                                        Canvas.Left="{Binding CenterLabelX}" Canvas.Top="{Binding CenterLabelY}"
                                        IsVisible="{Binding HasCenterLabel}" />
                             <TextBlock Text="{Binding SourceLabelText}" FontSize="11"
+                                       Foreground="{Binding LabelForeground}"
                                        Canvas.Left="{Binding SourceLabelX}" Canvas.Top="{Binding SourceLabelY}"
                                        IsVisible="{Binding HasSourceLabel}" />
                             <TextBlock Text="{Binding TargetLabelText}" FontSize="11"
+                                       Foreground="{Binding LabelForeground}"
                                        Canvas.Left="{Binding TargetLabelX}" Canvas.Top="{Binding TargetLabelY}"
                                        IsVisible="{Binding HasTargetLabel}" />
                         </Canvas>

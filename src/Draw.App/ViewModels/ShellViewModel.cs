@@ -29,7 +29,8 @@ public sealed class ShellViewModel : ViewModelBase
         IDialogService dialogs,
         IThemeService theme,
         ToolboxViewModel toolbox,
-        InspectorViewModel inspector)
+        InspectorViewModel inspector,
+        StylePaletteViewModel stylePalette)
     {
         _factory = factory;
         _files = files;
@@ -39,6 +40,7 @@ public sealed class ShellViewModel : ViewModelBase
         _theme = theme;
         Toolbox = toolbox;
         Inspector = inspector;
+        StylePalette = stylePalette;
 
         NewCommand = new RelayCommand(OnNew);
         OpenCommand = new AsyncRelayCommand(OnOpenAsync);
@@ -71,6 +73,8 @@ public sealed class ShellViewModel : ViewModelBase
     public ToolboxViewModel Toolbox { get; }
 
     public InspectorViewModel Inspector { get; }
+
+    public StylePaletteViewModel StylePalette { get; }
 
     public RelayCommand NewCommand { get; }
     public AsyncRelayCommand OpenCommand { get; }
@@ -121,6 +125,7 @@ public sealed class ShellViewModel : ViewModelBase
                 }
 
                 Inspector.SetTarget(field);
+                StylePalette.SetActiveDocument(field);
                 OnPropertyChanged(nameof(HasActiveDocument));
                 OnPropertyChanged(nameof(Title));
                 NotifyDocumentCommands();

@@ -4,7 +4,9 @@ namespace Draw.Model.Styling;
 public sealed class StrokeStyle
 {
     // Default outline (shapes and connectors): Carbon "accent" blue (#3574F0).
-    public ArgbColor Color { get; set; } = new(0xFF, 0x35, 0x74, 0xF0);
+    public static readonly ArgbColor DefaultColor = new(0xFF, 0x35, 0x74, 0xF0);
+
+    public ArgbColor Color { get; set; } = DefaultColor;
 
     public double Thickness { get; set; } = 1.5d;
 

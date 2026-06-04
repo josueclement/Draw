@@ -17,6 +17,11 @@ public sealed class ShapeStyle
 
     public TextVerticalAlignment VerticalTextAlignment { get; set; } = TextVerticalAlignment.Center;
 
+    /// <summary>Id of the quick-palette swatch this fill/stroke/text came from, or null when the colours
+    /// are the default sentinel or a custom (hand-edited) value. When set, the App layer resolves the
+    /// rendered colours from the swatch's active-theme variant, so the node recolours on theme toggle.</summary>
+    public string? PaletteId { get; set; }
+
     public static ShapeStyle CreateDefault() => new();
 
     public ShapeStyle Clone() => new()
@@ -26,5 +31,6 @@ public sealed class ShapeStyle
         Font = Font.Clone(),
         TextAlignment = TextAlignment,
         VerticalTextAlignment = VerticalTextAlignment,
+        PaletteId = PaletteId,
     };
 }
