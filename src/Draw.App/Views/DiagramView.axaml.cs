@@ -775,6 +775,7 @@ public partial class DiagramView : UserControl
         {
             _vm.CaptureUndo();
             node.IsEditing = true;
+            FocusEditorFor(node, selectAll: true);
         }
     }
 
