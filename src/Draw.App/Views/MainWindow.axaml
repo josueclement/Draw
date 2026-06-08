@@ -62,8 +62,6 @@
                 <MenuItem Header="_Enum" CommandParameter="{x:Static nodes:ClassNodeKind.Enum}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=list_numbers}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-            </MenuItem>
-            <MenuItem Header="Use _case">
                 <MenuItem Header="_Actor" CommandParameter="{x:Static vm:UseCaseNodeKind.Actor}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=user}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
@@ -106,8 +104,6 @@
                 <MenuItem Header="_Dependency" CommandParameter="{x:Static rel:RelationshipKind.Dependency}">
                     <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Dependency}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-            </MenuItem>
-            <MenuItem Header="Use _case">
                 <MenuItem Header="_Include" CommandParameter="{x:Static rel:RelationshipKind.Include}">
                     <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Dependency}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>

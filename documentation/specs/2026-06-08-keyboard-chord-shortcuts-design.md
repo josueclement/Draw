@@ -114,7 +114,7 @@ stay; the member/column editing handlers are untouched.
 
 The per-shape/connector chords are replaced by two category menus: `menu.shapes` (default `Shift+S`) and
 `menu.connectors` (default `Shift+C`). Each is a `ContextMenu` declared in `MainWindow`'s
-`Window.Resources`, grouped into **Standard / UML / Use case / ER** submenus, with the ribbon icons and
+`Window.Resources`, grouped into **Standard / UML / ER** submenus (use-case tools live under UML), with the ribbon icons and
 `_`-mnemonic access keys. Selecting an item arms the matching tool.
 
 - **Flow**: `menu.*` → `ShellViewModel.ShowToolMenuCommand` (`CanExecute = HasActiveDocument`) raises
