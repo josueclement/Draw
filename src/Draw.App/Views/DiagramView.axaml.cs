@@ -1234,7 +1234,10 @@ public partial class DiagramView : UserControl
         Point2D p = new(world.X, world.Y);
         // Pick the front-most node under the cursor by stacking order (highest ZIndex), so the result
         // follows user reordering rather than collection order and a shape on a boundary wins over it.
-        return _vm?.Nodes.Where(n => n.Model.Bounds.Contains(p)).MaxBy(n => n.Model.ZIndex);
+        // On a ZIndex tie, break by collection order and take the last: OrderBy is stable, so equal-ZIndex
+        // nodes keep their Nodes order, and Avalonia draws the last of them on top — so LastOrDefault
+        // returns exactly the node rendered front-most (MaxBy would return the first/back-most instead).
+        return _vm?.Nodes.Where(n => n.Model.Bounds.Contains(p)).OrderBy(n => n.Model.ZIndex).LastOrDefault();
     }
 
     private int HitTestHandle(Point world)
