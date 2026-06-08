@@ -25,7 +25,7 @@
                  zero desired size, so the ItemsControl measures to 0x0; since ItemsControl defaults
                  ClipToBounds=true, it would otherwise clip every item away. Keep it false — the
                  Viewport border above is what actually clips to the visible region. -->
-            <ItemsControl ItemsSource="{Binding Nodes}" ClipToBounds="False">
+            <ItemsControl x:Name="NodesLayer" ItemsSource="{Binding Nodes}" ClipToBounds="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas />
@@ -344,7 +344,7 @@
                  is never hidden by a filled node such as a System Boundary. The layer is
                  non-hit-testable, so node interaction is unaffected. ClipToBounds=false for the same
                  reason as the node layer above. -->
-            <ItemsControl ItemsSource="{Binding Connectors}" IsHitTestVisible="False" ClipToBounds="False">
+            <ItemsControl x:Name="ConnectorsLayer" ItemsSource="{Binding Connectors}" IsHitTestVisible="False" ClipToBounds="False">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas />

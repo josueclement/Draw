@@ -23,6 +23,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Carbon.Avalonia.Desktop" />
     <PackageReference Include="PhosphorIconsAvalonia" />
+    <PackageReference Include="SkiaSharp" />
   </ItemGroup>
 
   <ItemGroup>

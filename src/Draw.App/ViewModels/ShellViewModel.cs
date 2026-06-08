@@ -57,7 +57,8 @@ public sealed class ShellViewModel : ViewModelBase
         PasteCommand = new AsyncRelayCommand(OnPasteAsync, () => HasActiveDocument);
         DuplicateCommand = new RelayCommand(OnDuplicate, () => ActiveDocument?.HasNodeSelection ?? false);
         InsertImageCommand = new AsyncRelayCommand(OnInsertImageAsync, () => HasActiveDocument);
-        ExportPngCommand = new RelayCommand(OnExportPng, () => HasActiveDocument);
+        ExportImageCommand = new RelayCommand(OnExportImage, () => HasActiveDocument);
+        ExportSvgCommand = new RelayCommand(OnExportSvg, () => HasActiveDocument);
         CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
 
@@ -92,11 +93,14 @@ public sealed class ShellViewModel : ViewModelBase
     public AsyncRelayCommand PasteCommand { get; }
     public RelayCommand DuplicateCommand { get; }
     public AsyncRelayCommand InsertImageCommand { get; }
-    public RelayCommand ExportPngCommand { get; }
+    public RelayCommand ExportImageCommand { get; }
+    public RelayCommand ExportSvgCommand { get; }
     public RelayCommand CopyImageCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
 
-    public event EventHandler? ExportPngRequested;
+    public event EventHandler? ExportImageRequested;
+
+    public event EventHandler? ExportSvgRequested;
 
     public event EventHandler? CopyImageRequested;
 
@@ -282,7 +286,9 @@ public sealed class ShellViewModel : ViewModelBase
         return ext.Length == 0 ? "png" : ext;
     }
 
-    private void OnExportPng() => ExportPngRequested?.Invoke(this, EventArgs.Empty);
+    private void OnExportImage() => ExportImageRequested?.Invoke(this, EventArgs.Empty);
+
+    private void OnExportSvg() => ExportSvgRequested?.Invoke(this, EventArgs.Empty);
 
     private void OnCopyImage() => CopyImageRequested?.Invoke(this, EventArgs.Empty);
 
@@ -328,7 +334,8 @@ public sealed class ShellViewModel : ViewModelBase
         PasteCommand.NotifyCanExecuteChanged();
         DuplicateCommand.NotifyCanExecuteChanged();
         InsertImageCommand.NotifyCanExecuteChanged();
-        ExportPngCommand.NotifyCanExecuteChanged();
+        ExportImageCommand.NotifyCanExecuteChanged();
+        ExportSvgCommand.NotifyCanExecuteChanged();
         CopyImageCommand.NotifyCanExecuteChanged();
     }
 

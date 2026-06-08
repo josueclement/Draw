@@ -122,6 +122,18 @@ public sealed class ConnectorViewModel : ViewModelBase
     /// <summary>The resolved target endpoint (where the connector touches the target shape).</summary>
     public ModelPoint RouteEnd => _route.End;
 
+    /// <summary>Unit vector pointing along the line away from the source endpoint (export decorations).</summary>
+    public ModelPoint RouteStartDirection => _route.StartDirection;
+
+    /// <summary>Unit vector pointing along the line into the target endpoint (export decorations).</summary>
+    public ModelPoint RouteEndDirection => _route.EndDirection;
+
+    /// <summary>The resolved end decoration at the source endpoint (export).</summary>
+    public ConnectorEndDecoration SourceEndDecoration => SourceEnd;
+
+    /// <summary>The resolved end decoration at the target endpoint (export).</summary>
+    public ConnectorEndDecoration TargetEndDecoration => TargetEnd;
+
     /// <summary>The user-controlled bend points, in world coordinates (drawn as draggable handles).</summary>
     public IReadOnlyList<ModelPoint> Waypoints => _model.BendPoints;
 

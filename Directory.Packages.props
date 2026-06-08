@@ -20,6 +20,10 @@
     <!-- MVVM (no source generators are used; see conventions). -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
 
+    <!-- JPEG encoding for image export. Avalonia's Bitmap.Save is PNG-only; SkiaSharp encodes JPEG.
+         Pinned to the version Avalonia.Skia 12.0.4 already pulls transitively, so no graph conflict. -->
+    <PackageVersion Include="SkiaSharp" Version="3.119.4" />
+
     <!-- Hosting / DI / configuration / logging / options. -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
   </ItemGroup>

@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Carbon.Avalonia.Desktop.Controls.Ribbon;
 using CommunityToolkit.Mvvm.Input;
@@ -37,7 +38,8 @@ public partial class MainWindow : Window
         _fileDialogs = fileDialogs;
         _dialogs = dialogs;
         DataContext = shell;
-        shell.ExportPngRequested += OnExportPngRequested;
+        shell.ExportImageRequested += OnExportImageRequested;
+        shell.ExportSvgRequested += OnExportSvgRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
         WireAlignDropdown();
@@ -109,7 +111,7 @@ public partial class MainWindow : Window
                 .OfType<DiagramView>()
                 .FirstOrDefault(v => ReferenceEquals(v.DataContext, _shell.ActiveDocument));
 
-    private async void OnExportPngRequested(object? sender, EventArgs e)
+    private async void OnExportImageRequested(object? sender, EventArgs e)
     {
         if (_exporter is null || _fileDialogs is null)
         {
@@ -122,15 +124,61 @@ public partial class MainWindow : Window
             return;
         }
 
-        string? path = await _fileDialogs.PickSavePngAsync("diagram");
+        string? path = await _fileDialogs.PickSaveImageAsync("diagram");
         if (path is null)
+        {
+            return;
+        }
+
+        // Render after the picker so the synchronous grid-free/identity-transform swap never reaches the
+        // screen. Null means the diagram is empty — nothing to export.
+        using RenderTargetBitmap? bitmap = view.RenderContentBitmap();
+        if (bitmap is null)
         {
             return;
         }
 
         try
         {
-            await _exporter.ExportPngAsync(view.ExportTarget, path);
+            await _exporter.SaveAsync(bitmap, path, FormatFromPath(path));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            if (_dialogs is not null)
+            {
+                await _dialogs.ShowErrorAsync("Export failed", ex.Message);
+            }
+        }
+    }
+
+    private async void OnExportSvgRequested(object? sender, EventArgs e)
+    {
+        if (_fileDialogs is null)
+        {
+            return;
+        }
+
+        DiagramView? view = ActiveDiagramView();
+        if (view is null)
+        {
+            return;
+        }
+
+        string? path = await _fileDialogs.PickSaveSvgAsync("diagram");
+        if (path is null)
+        {
+            return;
+        }
+
+        string? svg = view.BuildSvgDocument();
+        if (svg is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await File.WriteAllTextAsync(path, svg);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -154,9 +202,15 @@ public partial class MainWindow : Window
             return;
         }
 
+        using RenderTargetBitmap? bitmap = view.RenderContentBitmap();
+        if (bitmap is null)
+        {
+            return;
+        }
+
         try
         {
-            await _exporter.CopyPngToClipboardAsync(view.ExportTarget);
+            await _exporter.CopyToClipboardAsync(bitmap);
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or NotSupportedException)
         {
@@ -165,5 +219,11 @@ public partial class MainWindow : Window
                 await _dialogs.ShowErrorAsync("Copy failed", ex.Message);
             }
         }
+    }
+
+    private static ImageExportFormat FormatFromPath(string path)
+    {
+        string ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext is ".jpg" or ".jpeg" ? ImageExportFormat.Jpeg : ImageExportFormat.Png;
     }
 }

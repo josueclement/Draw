@@ -13,7 +13,9 @@ public interface IFileDialogService
 
     Task<string?> PickSaveAsync(string? suggestedFileName);
 
-    Task<string?> PickSavePngAsync(string? suggestedFileName);
+    Task<string?> PickSaveImageAsync(string? suggestedFileName);
+
+    Task<string?> PickSaveSvgAsync(string? suggestedFileName);
 
     Task<string?> PickOpenImageAsync();
 }
@@ -28,6 +30,16 @@ public sealed class FileDialogService : IFileDialogService
     private static readonly FilePickerFileType PngFileType = new("PNG image")
     {
         Patterns = new[] { "*.png" },
+    };
+
+    private static readonly FilePickerFileType JpegFileType = new("JPEG image")
+    {
+        Patterns = new[] { "*.jpg", "*.jpeg" },
+    };
+
+    private static readonly FilePickerFileType SvgFileType = new("SVG image")
+    {
+        Patterns = new[] { "*.svg" },
     };
 
     private static readonly FilePickerFileType ImageFileType = new("Image")
@@ -72,7 +84,7 @@ public sealed class FileDialogService : IFileDialogService
         return file?.TryGetLocalPath();
     }
 
-    public async Task<string?> PickSavePngAsync(string? suggestedFileName)
+    public async Task<string?> PickSaveImageAsync(string? suggestedFileName)
     {
         IStorageProvider? storage = GetStorageProvider();
         if (storage is null)
@@ -82,10 +94,29 @@ public sealed class FileDialogService : IFileDialogService
 
         IStorageFile? file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export PNG",
+            Title = "Export image",
             SuggestedFileName = suggestedFileName ?? "diagram",
             DefaultExtension = "png",
-            FileTypeChoices = new[] { PngFileType },
+            FileTypeChoices = new[] { PngFileType, JpegFileType },
+        }).ConfigureAwait(true);
+
+        return file?.TryGetLocalPath();
+    }
+
+    public async Task<string?> PickSaveSvgAsync(string? suggestedFileName)
+    {
+        IStorageProvider? storage = GetStorageProvider();
+        if (storage is null)
+        {
+            return null;
+        }
+
+        IStorageFile? file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export SVG",
+            SuggestedFileName = suggestedFileName ?? "diagram",
+            DefaultExtension = "svg",
+            FileTypeChoices = new[] { SvgFileType },
         }).ConfigureAwait(true);
 
         return file?.TryGetLocalPath();
