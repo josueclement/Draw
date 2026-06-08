@@ -22,6 +22,7 @@
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
         <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding ActiveDocument.FitToContentCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+L" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Left}" />
         <KeyBinding Gesture="Ctrl+Shift+C" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.CenterHorizontal}" />
         <KeyBinding Gesture="Ctrl+Shift+R" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Right}" />
@@ -274,6 +275,7 @@
                     <ribbon:RibbonButton Header="Zoom In" Command="{Binding ActiveDocument.ZoomInCommand}" IconData="{pia:IconGeometry Icon=magnifying_glass_plus}" />
                     <ribbon:RibbonButton Header="Zoom Out" Command="{Binding ActiveDocument.ZoomOutCommand}" IconData="{pia:IconGeometry Icon=magnifying_glass_minus}" />
                     <ribbon:RibbonButton Header="Reset" Command="{Binding ActiveDocument.ZoomResetCommand}" IconData="{pia:IconGeometry Icon=arrows_out}" />
+                    <ribbon:RibbonButton Header="Fit to content" Command="{Binding ActiveDocument.FitToContentCommand}" IconData="{pia:IconGeometry Icon=arrows_in}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Appearance">
                     <ribbon:RibbonButton Header="Toggle theme" Command="{Binding ToggleThemeCommand}" IconData="{pia:IconGeometry Icon=moon}" />

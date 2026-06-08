@@ -40,6 +40,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private const double MinZoom = 0.1d;
     private const double MaxZoom = 8d;
 
+    // Padding (world units) kept around content when fitting it to the viewport.
+    private const double FitMargin = 40d;
+
     public DiagramDocumentViewModel(
         DiagramDocument document,
         IUndoService undo,
@@ -73,6 +76,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         OrderCommand = new RelayCommand<ZOrderOperation>(
             op => { if (op is { } o) ReorderSelected(o); },
             _ => HasNodeSelection);
+        // Also selection-gated (CanExecute depends on node count) and notified in
+        // RaiseSelectionChanged, so it likewise must exist before RebuildNodes().
+        FitToContentCommand = new RelayCommand(FitToContent, () => Nodes.Count > 0);
 
         RebuildNodes();
         RebuildConnectors();
@@ -144,6 +150,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public RelayCommand ZoomOutCommand { get; }
 
     public RelayCommand ZoomResetCommand { get; }
+
+    public RelayCommand FitToContentCommand { get; }
 
     public RelayCommand<AlignmentMode> AlignCommand { get; }
 
@@ -641,6 +649,51 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         return union;
+    }
+
+    /// <summary>
+    /// World-coordinate bounding box of all diagram content: every node rectangle plus each
+    /// connector's routed geometry (so manual bends extending past the nodes are included).
+    /// Returns null when the diagram has no nodes. Drives the canvas scrollbars and Fit-to-content.
+    /// </summary>
+    public Rect2D? GetContentBounds()
+    {
+        if (Nodes.Count == 0)
+        {
+            return null;
+        }
+
+        Rect2D bounds = Nodes[0].Bounds;
+        for (int i = 1; i < Nodes.Count; i++)
+        {
+            bounds = bounds.Union(Nodes[i].Bounds);
+        }
+
+        foreach (ConnectorViewModel connector in Connectors)
+        {
+            foreach (Point2D point in connector.GetFlattenedPoints())
+            {
+                bounds = bounds.Union(new Rect2D(point.X, point.Y, 0d, 0d));
+            }
+        }
+
+        return bounds;
+    }
+
+    /// <summary>Zooms/pans so all content fits centred in the viewport, never enlarging past 100%.</summary>
+    private void FitToContent()
+    {
+        if (GetContentBounds() is not { } content || ViewportWidth <= 0 || ViewportHeight <= 0)
+        {
+            return;
+        }
+
+        Rect2D b = content.Inflate(FitMargin);
+        double fit = Math.Min(ViewportWidth / b.Width, ViewportHeight / b.Height);
+        double zoom = Math.Clamp(Math.Min(fit, 1d), MinZoom, MaxZoom);
+        Zoom = zoom;
+        PanX = (ViewportWidth / 2d) - (b.Center.X * zoom);
+        PanY = (ViewportHeight / 2d) - (b.Center.Y * zoom);
     }
 
     private Point2D ViewportCenterWorld()
@@ -1332,6 +1385,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         SpaceConnectionsCommand.NotifyCanExecuteChanged();
         MergeConnectionsCommand.NotifyCanExecuteChanged();
         OrderCommand.NotifyCanExecuteChanged();
+        FitToContentCommand.NotifyCanExecuteChanged();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 }
