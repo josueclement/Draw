@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Draw.App.ViewModels"
+             xmlns:pia="using:PhosphorIconsAvalonia.Markup"
+             x:Class="Draw.App.Views.EntityColumnsEditorView"
+             x:DataType="vm:EntityColumnsEditorViewModel"
+             x:CompileBindings="True"
+             MinWidth="620">
+
+    <UserControl.Styles>
+        <!-- Compact square icon buttons for the per-row toolbar. -->
+        <Style Selector="Button.row-action">
+            <Setter Property="Padding" Value="5" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.col-head">
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Grid.IsSharedSizeScope="True" MinWidth="620">
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
+            <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Command="{Binding AddCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="12" Height="12" />
+                    <TextBlock Text="Add column" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+        <!-- Header row (aligned with the data rows via shared-size groups) -->
+        <Grid DockPanel.Dock="Top" ColumnSpacing="8" Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="140" />
+                <ColumnDefinition Width="*" MinWidth="140" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="ColPk" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="ColFk" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="ColNull" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="ColUniq" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="ColAct" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Classes="col-head" Text="Name" />
+            <TextBlock Grid.Column="1" Classes="col-head" Text="Type" />
+            <TextBlock Grid.Column="2" Classes="col-head" Text="PK" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="3" Classes="col-head" Text="FK" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="4" Classes="col-head" Text="Null" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="5" Classes="col-head" Text="Unique" HorizontalAlignment="Center" />
+            <TextBlock Grid.Column="6" Classes="col-head" Text="" />
+        </Grid>
+
+        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource CarbonBorderBrush}" Margin="0,0,0,6" />
+
+        <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Columns}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:EntityColumnEditRow">
+                        <Grid ColumnSpacing="8" Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColPk" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColFk" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColNull" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColUniq" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="ColAct" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" PlaceholderText="name"
+                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            <AutoCompleteBox Grid.Column="1" PlaceholderText="type"
+                                             ItemsSource="{Binding $parent[ItemsControl].((vm:EntityColumnsEditorViewModel)DataContext).TypeSuggestions}"
+                                             Text="{Binding Type, Mode=TwoWay}" />
+                            <CheckBox Grid.Column="2" HorizontalAlignment="Center" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
+                            <CheckBox Grid.Column="3" HorizontalAlignment="Center" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
+                            <CheckBox Grid.Column="4" HorizontalAlignment="Center" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
+                            <CheckBox Grid.Column="5" HorizontalAlignment="Center" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
+                            <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                                <Button Classes="row-action" ToolTip.Tip="Move up"
+                                        Command="{Binding $parent[ItemsControl].((vm:EntityColumnsEditorViewModel)DataContext).MoveUpCommand}"
+                                        CommandParameter="{Binding}">
+                                    <PathIcon Data="{pia:IconGeometry Icon=caret_up}" Width="11" Height="11" />
+                                </Button>
+                                <Button Classes="row-action" ToolTip.Tip="Move down"
+                                        Command="{Binding $parent[ItemsControl].((vm:EntityColumnsEditorViewModel)DataContext).MoveDownCommand}"
+                                        CommandParameter="{Binding}">
+                                    <PathIcon Data="{pia:IconGeometry Icon=caret_down}" Width="11" Height="11" />
+                                </Button>
+                                <Button Classes="row-action" ToolTip.Tip="Remove"
+                                        Command="{Binding $parent[ItemsControl].((vm:EntityColumnsEditorViewModel)DataContext).RemoveCommand}"
+                                        CommandParameter="{Binding}">
+                                    <PathIcon Data="{pia:IconGeometry Icon=trash}" Width="11" Height="11" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

@@ -116,6 +116,27 @@ public sealed class EntityNodeViewModel : NodeViewModelBase
         OnPropertyChanged(nameof(MinHeight));
     }
 
+    /// <summary>
+    /// Replaces the whole column set in one gesture (used by the modal editor's Save). The supplied
+    /// columns are cloned so the editor's working copies stay detached from the document; the swap is
+    /// captured as a single undo step.
+    /// </summary>
+    public void ReplaceColumns(IReadOnlyList<EntityColumn> columns)
+    {
+        _context.BeginMemberEdit();
+
+        Columns.Clear();
+        foreach (EntityColumn column in columns)
+        {
+            Columns.Add(Wrap(column.Clone()));
+        }
+
+        ReorderModelFromCollection();
+        _context.EndMemberEdit();
+        GrowToFitContent();
+        OnPropertyChanged(nameof(MinHeight));
+    }
+
     public void MoveColumn(EntityColumnViewModel column, int delta)
     {
         int index = Columns.IndexOf(column);

@@ -484,74 +484,112 @@
                             </StackPanel>
                             <CheckBox Content="Abstract" IsChecked="{Binding IsAbstract, Mode=TwoWay}" />
 
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="Members" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddPrimaryMemberCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
-                                        <TextBlock Text="Field/Literal" />
-                                    </StackPanel>
-                                </Button>
-                                <Button IsVisible="{Binding HasOperations}"
-                                        Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddOperationCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
-                                        <TextBlock Text="Operation" />
-                                    </StackPanel>
-                                </Button>
+                            <!-- Members: tidy aligned editor. Add/Edit live in the header; each row aligns its
+                                 columns via shared-size groups. Double-clicking an empty/label area opens the full
+                                 modal editor; double-clicking inside a field edits text as usual (see code-behind). -->
+                            <StackPanel Background="Transparent" Grid.IsSharedSizeScope="True"
+                                        DoubleTapped="OnClassMembersDoubleTapped">
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                                    <TextBlock Text="Members" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <Button ToolTip.Tip="Add field/literal"
+                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddPrimaryMemberCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
+                                            <TextBlock Text="Field" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button IsVisible="{Binding HasOperations}" ToolTip.Tip="Add operation"
+                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddOperationCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
+                                            <TextBlock Text="Op" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Content="Edit…" ToolTip.Tip="Open the full members editor"
+                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.EditMembersCommand}" />
+                                </StackPanel>
+
+                                <ItemsControl ItemsSource="{Binding PrimaryMembers}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                            <Grid ColumnSpacing="3" Margin="0,0,0,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PVis" />
+                                                    <ColumnDefinition Width="*" MinWidth="40" />
+                                                    <ColumnDefinition Width="*" MinWidth="40" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PAct" />
+                                                </Grid.ColumnDefinitions>
+                                                <ComboBox Grid.Column="0" MinWidth="52"
+                                                          ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
+                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
+                                                <TextBox Grid.Column="1" PlaceholderText="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                <AutoCompleteBox Grid.Column="2" PlaceholderText="type"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Move up"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveMemberUpCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=caret_up}" Width="9" Height="9" />
+                                                    </Button>
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Move down"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveMemberDownCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=caret_down}" Width="9" Height="9" />
+                                                    </Button>
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Remove"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Text="Operations" Opacity="0.7" Margin="0,4,0,2" IsVisible="{Binding HasOperations}" />
+                                <ItemsControl ItemsSource="{Binding Operations}" IsVisible="{Binding HasOperations}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ClassMemberViewModel">
+                                            <Grid ColumnSpacing="3" Margin="0,0,0,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PVis" />
+                                                    <ColumnDefinition Width="*" MinWidth="40" />
+                                                    <ColumnDefinition Width="*" MinWidth="40" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PAct" />
+                                                </Grid.ColumnDefinitions>
+                                                <ComboBox Grid.Column="0" MinWidth="52"
+                                                          ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
+                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
+                                                <TextBox Grid.Column="1" PlaceholderText="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                <AutoCompleteBox Grid.Column="2" PlaceholderText="ret"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Move up"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveMemberUpCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=caret_up}" Width="9" Height="9" />
+                                                    </Button>
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Move down"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveMemberDownCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=caret_down}" Width="9" Height="9" />
+                                                    </Button>
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Remove"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
-
-                            <ItemsControl ItemsSource="{Binding PrimaryMembers}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ClassMemberViewModel">
-                                        <StackPanel Spacing="2" Margin="0,0,0,6">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
-                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
-                                                <TextBox Width="90" PlaceholderText="name"
-                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <AutoCompleteBox Width="120" PlaceholderText="type"
-                                                                 ItemsSource="{Binding TypeSuggestions}"
-                                                                 Text="{Binding Type, Mode=TwoWay}" />
-                                                <CheckBox Content="stat" IsChecked="{Binding IsStatic, Mode=TwoWay}" />
-                                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
-                                                        CommandParameter="{Binding}">
-                                                    <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
-                                                </Button>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <TextBlock Text="Operations" Opacity="0.7" IsVisible="{Binding HasOperations}" />
-                            <ItemsControl ItemsSource="{Binding Operations}" IsVisible="{Binding HasOperations}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ClassMemberViewModel">
-                                        <StackPanel Spacing="2" Margin="0,0,0,6">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <ComboBox Width="56" ItemsSource="{x:Static vm:InspectorViewModel.VisibilityOptions}"
-                                                          SelectedItem="{Binding Visibility, Mode=TwoWay}" />
-                                                <TextBox Width="90" PlaceholderText="name"
-                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                            </StackPanel>
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBox Width="86" PlaceholderText="params"
-                                                         Text="{Binding Parameters, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                                <AutoCompleteBox Width="80" PlaceholderText="ret"
-                                                                 ItemsSource="{Binding TypeSuggestions}"
-                                                                 Text="{Binding Type, Mode=TwoWay}" />
-                                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveMemberCommand}"
-                                                        CommandParameter="{Binding}">
-                                                    <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
-                                                </Button>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
                         </StackPanel>
                         </StackPanel>
 
@@ -563,41 +601,65 @@
                                 <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddColumnCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
-                                        <TextBlock Text="Column" />
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-
-                            <ItemsControl ItemsSource="{Binding Columns}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:EntityColumnViewModel">
-                                        <StackPanel Spacing="2" Margin="0,0,0,6">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <TextBox Width="110" PlaceholderText="name"
-                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                                <Button Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveColumnCommand}"
-                                                        CommandParameter="{Binding}">
-                                                    <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
-                                                </Button>
-                                            </StackPanel>
-                                            <AutoCompleteBox Width="150" PlaceholderText="type"
-                                                             ItemsSource="{Binding TypeSuggestions}"
-                                                             Text="{Binding Type, Mode=TwoWay}" />
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <CheckBox Content="PK" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
-                                                <CheckBox Content="FK" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
-                                                <CheckBox Content="Null" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
-                                                <CheckBox Content="Uniq" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
-                                            </StackPanel>
+                            <!-- Columns: name + reorder/remove on one aligned row, type below, flags below that.
+                                 Double-clicking an empty/label area opens the full modal editor (see code-behind). -->
+                            <StackPanel Background="Transparent" DoubleTapped="OnEntityColumnsDoubleTapped">
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                                    <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    <Button ToolTip.Tip="Add column"
+                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.AddColumnCommand}">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <PathIcon Data="{pia:IconGeometry Icon=plus}" Width="10" Height="10" />
+                                            <TextBlock Text="Column" />
                                         </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                    </Button>
+                                    <Button Content="Edit…" ToolTip.Tip="Open the full columns editor"
+                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.EditColumnsCommand}" />
+                                </StackPanel>
+
+                                <ItemsControl ItemsSource="{Binding Columns}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:EntityColumnViewModel">
+                                            <StackPanel Spacing="2" Margin="0,0,0,8">
+                                                <Grid ColumnSpacing="3">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" MinWidth="60" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0" PlaceholderText="name"
+                                                             Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                        <Button Padding="3" MinWidth="0" ToolTip.Tip="Move up"
+                                                                Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveColumnUpCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <PathIcon Data="{pia:IconGeometry Icon=caret_up}" Width="9" Height="9" />
+                                                        </Button>
+                                                        <Button Padding="3" MinWidth="0" ToolTip.Tip="Move down"
+                                                                Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveColumnDownCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <PathIcon Data="{pia:IconGeometry Icon=caret_down}" Width="9" Height="9" />
+                                                        </Button>
+                                                        <Button Padding="3" MinWidth="0" ToolTip.Tip="Remove"
+                                                                Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveColumnCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <AutoCompleteBox PlaceholderText="type"
+                                                                 ItemsSource="{Binding TypeSuggestions}"
+                                                                 Text="{Binding Type, Mode=TwoWay}" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <CheckBox Content="PK" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
+                                                    <CheckBox Content="FK" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
+                                                    <CheckBox Content="Null" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
+                                                    <CheckBox Content="Uniq" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </StackPanel>
                         </StackPanel>
 

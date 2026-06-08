@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -5,6 +6,9 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Carbon.Avalonia.Desktop.Controls.ContentDialog;
+using Draw.App.ViewModels;
+using Draw.App.Views;
+using Draw.Model.Nodes;
 using IContentDialogService = Carbon.Avalonia.Desktop.Services.IContentDialogService;
 
 namespace Draw.App.Services;
@@ -28,6 +32,18 @@ public interface IDialogService
     /// Warns that <paramref name="documentName"/> has unsaved changes, offering Save / Don't Save / Cancel.
     /// </summary>
     Task<UnsavedChangesChoice> ConfirmUnsavedAsync(string documentName);
+
+    /// <summary>
+    /// Opens the modal members editor seeded with <paramref name="current"/>. Returns the edited
+    /// members on Save (to be applied by the caller as one undo step) or <c>null</c> on Cancel.
+    /// </summary>
+    Task<IReadOnlyList<ClassMember>?> EditClassMembersAsync(ClassNodeKind kind, IReadOnlyList<ClassMember> current, IReadOnlyList<string> typeSuggestions);
+
+    /// <summary>
+    /// Opens the modal columns editor seeded with <paramref name="current"/>. Returns the edited
+    /// columns on Save (to be applied by the caller as one undo step) or <c>null</c> on Cancel.
+    /// </summary>
+    Task<IReadOnlyList<EntityColumn>?> EditEntityColumnsAsync(IReadOnlyList<EntityColumn> current, IReadOnlyList<string> typeSuggestions);
 }
 
 public sealed class DialogService : IDialogService
@@ -61,6 +77,40 @@ public sealed class DialogService : IDialogService
             DialogResult.Secondary => UnsavedChangesChoice.Discard,
             _ => UnsavedChangesChoice.Cancel,
         };
+    }
+
+    public async Task<IReadOnlyList<ClassMember>?> EditClassMembersAsync(ClassNodeKind kind, IReadOnlyList<ClassMember> current, IReadOnlyList<string> typeSuggestions)
+    {
+        ClassMembersEditorViewModel editor = new(kind, current, typeSuggestions);
+        ClassMembersEditorView view = new() { DataContext = editor };
+
+        DialogResult result = await _contentDialog.ShowAsync(dialog =>
+        {
+            dialog.Title = kind == ClassNodeKind.Enum ? "Edit literals" : "Edit members";
+            dialog.Content = view;
+            dialog.PrimaryButtonText = "Save";
+            dialog.CloseButtonText = "Cancel";
+            dialog.DefaultButton = DefaultButton.Primary;
+        });
+
+        return result == DialogResult.Primary ? editor.BuildResult() : null;
+    }
+
+    public async Task<IReadOnlyList<EntityColumn>?> EditEntityColumnsAsync(IReadOnlyList<EntityColumn> current, IReadOnlyList<string> typeSuggestions)
+    {
+        EntityColumnsEditorViewModel editor = new(current, typeSuggestions);
+        EntityColumnsEditorView view = new() { DataContext = editor };
+
+        DialogResult result = await _contentDialog.ShowAsync(dialog =>
+        {
+            dialog.Title = "Edit columns";
+            dialog.Content = view;
+            dialog.PrimaryButtonText = "Save";
+            dialog.CloseButtonText = "Cancel";
+            dialog.DefaultButton = DefaultButton.Primary;
+        });
+
+        return result == DialogResult.Primary ? editor.BuildResult() : null;
     }
 
     private static async Task<bool> ShowAsync(string title, string message, bool isConfirm)
