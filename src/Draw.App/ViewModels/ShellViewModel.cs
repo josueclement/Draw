@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using Draw.App.Input;
 using Draw.App.Services;
 using Draw.Model.Documents;
 using Draw.Model.Serialization;
@@ -30,7 +31,8 @@ public sealed class ShellViewModel : ViewModelBase
         IThemeService theme,
         ToolboxViewModel toolbox,
         InspectorViewModel inspector,
-        StylePaletteViewModel stylePalette)
+        StylePaletteViewModel stylePalette,
+        KeymapStatusViewModel keymapStatus)
     {
         _factory = factory;
         _files = files;
@@ -41,6 +43,7 @@ public sealed class ShellViewModel : ViewModelBase
         Toolbox = toolbox;
         Inspector = inspector;
         StylePalette = stylePalette;
+        KeymapStatus = keymapStatus;
 
         NewCommand = new RelayCommand(OnNew);
         NewErCommand = new RelayCommand(OnNewEr);
@@ -61,6 +64,9 @@ public sealed class ShellViewModel : ViewModelBase
         ExportSvgCommand = new RelayCommand(OnExportSvg, () => HasActiveDocument);
         CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
+        ShowToolMenuCommand = new RelayCommand<ToolMenuFamily>(
+            family => ToolMenuRequested?.Invoke(this, family),
+            _ => HasActiveDocument);
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
         RefreshRecentFiles();
@@ -77,6 +83,9 @@ public sealed class ShellViewModel : ViewModelBase
     public InspectorViewModel Inspector { get; }
 
     public StylePaletteViewModel StylePalette { get; }
+
+    /// <summary>Status-bar feedback for the keyboard-shortcut dispatcher (pending chord / messages).</summary>
+    public KeymapStatusViewModel KeymapStatus { get; }
 
     public RelayCommand NewCommand { get; }
     public RelayCommand NewErCommand { get; }
@@ -98,11 +107,16 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand CopyImageCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
 
+    public RelayCommand<ToolMenuFamily> ShowToolMenuCommand { get; }
+
     public event EventHandler? ExportImageRequested;
 
     public event EventHandler? ExportSvgRequested;
 
     public event EventHandler? CopyImageRequested;
+
+    /// <summary>Raised when a keymap action requests a category tool menu (handled by the window).</summary>
+    public event EventHandler<ToolMenuFamily>? ToolMenuRequested;
 
     public bool HasActiveDocument => ActiveDocument is not null;
 

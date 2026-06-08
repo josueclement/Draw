@@ -1,4 +1,5 @@
 using Draw.App.Configuration;
+using Draw.App.Input;
 using Draw.App.Services;
 using Draw.App.ViewModels;
 using Draw.App.Views;
@@ -18,6 +19,7 @@ public static class ServiceCollectionExtensions
         services.Configure<EditorOptions>(configuration.GetSection(EditorOptions.SectionName));
         services.Configure<RecentFilesOptions>(configuration.GetSection(RecentFilesOptions.SectionName));
         services.Configure<UndoOptions>(configuration.GetSection("Undo"));
+        services.Configure<KeymapOptions>(configuration.GetSection(KeymapOptions.SectionName));
 
         // Stateless / shared services.
         services.AddSingleton<IClock, SystemClock>();
@@ -36,6 +38,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IDiagramDocumentViewModelFactory, DiagramDocumentViewModelFactory>();
+
+        // Keyboard shortcuts (JSON-configured keymap + chord dispatcher).
+        services.AddSingleton<KeymapStatusViewModel>();
+        services.AddSingleton<IKeymapService, KeymapService>();
+        services.AddSingleton<KeymapActionRegistry>();
+        services.AddSingleton<ChordInputDispatcher>();
 
         // View models.
         services.AddSingleton<ToolboxViewModel>();

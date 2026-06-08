@@ -154,6 +154,20 @@ on theme toggle — generalising the single default-fill sentinel into ~10 named
 data is UI-agnostic in `Draw.Diagramming/Styling/StylePalette.cs`; apply reuses the style-edit memento
 undo. See `documentation/plans/2026-06-04-quick-style-palette.md`.
 
+## JSON-configured keyboard shortcuts (vim/blender chords) 🚧 (cross-cutting, pending visual verification)
+
+Replaces the two hard-coded shortcut sites (the `<Window.KeyBindings>` block and the `OnKeyDown`
+clipboard switch) with a single **data-driven keymap**. One window-level `ChordInputDispatcher` reads a
+merged keymap — baked-in defaults plus an optional user override at `%APPDATA%/Draw/keymap.json` (a
+commented `keymap.example.json` is written on first run) — and handles **single gestures** (`Ctrl+S`)
+and **multi-key chords** (`a s r` → arm rectangle, `a c a` → arm association). "Add" chords arm the
+matching tool; other actions invoke immediately. A `KeymapActionRegistry` resolves action ids
+(`tool.shape.*`, `align.*`, `file.save`, …, generated from the enums) to commands lazily against the
+live `ActiveDocument`. Pending chords show in the status bar with a ~1 s idle timeout; the dispatcher is
+suppressed while a text-entry surface has focus, so in-place editing keys are untouched. New code in
+`src/Draw.App/Input/`; reuses the `IOptions<T>`/DI and `RecentFilesService` APPDATA/fallback patterns.
+Rather than one chord per shape/connector, the defaults now bind **Shift+S** / **Shift+C** to open category-grouped tool menus (Standard/UML/Use case/ER submenus, ribbon icons + access keys; picking an item arms the tool) via `menu.shapes`/`menu.connectors`; the granular `tool.*` ids stay bindable. See `documentation/plans/2026-06-08-keyboard-chord-shortcuts.md`.
+
 ## Canvas scrollbars + fit-to-content 🚧 (cross-cutting, pending visual verification)
 
 Content-aware **scrollbars** on each document canvas plus a **Fit to content** command, so shapes
