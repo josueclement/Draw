@@ -6,6 +6,8 @@ using Draw.App.Views;
 using Draw.Diagramming.Routing;
 using Draw.Diagramming.Undo;
 using Draw.Model.Serialization;
+using IContentDialogService = Carbon.Avalonia.Desktop.Services.IContentDialogService;
+using ContentDialogService = Carbon.Avalonia.Desktop.Services.ContentDialogService;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IRecentFilesService, RecentFilesService>();
         services.AddSingleton<IImageExportService, ImageExportService>();
         services.AddSingleton<IClipboardService, ClipboardService>();
+        services.AddSingleton<IContentDialogService, ContentDialogService>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IDiagramDocumentViewModelFactory, DiagramDocumentViewModelFactory>();

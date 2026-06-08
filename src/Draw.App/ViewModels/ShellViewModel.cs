@@ -76,6 +76,9 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ObservableCollection<DiagramDocumentViewModel> Documents { get; } = new();
 
+    /// <summary>True when any open document has changes that have not been written to disk.</summary>
+    public bool HasUnsavedChanges => Documents.Any(d => d.IsModified);
+
     public ObservableCollection<string> RecentFiles { get; } = new();
 
     public ToolboxViewModel Toolbox { get; }
@@ -235,15 +238,9 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
-        if (document.IsModified)
+        if (!await EnsureSavedBeforeDiscardAsync(document))
         {
-            bool save = await _dialogs.ConfirmAsync(
-                "Unsaved changes",
-                $"Save changes to {document.DisplayName} before closing?");
-            if (save && !await SaveAsync(document, document.FilePath))
-            {
-                return;
-            }
+            return;
         }
 
         int index = Documents.IndexOf(document);
@@ -254,6 +251,47 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         document.Dispose();
+    }
+
+    /// <summary>
+    /// Prompts to save when <paramref name="document"/> has unsaved changes. Returns false when the
+    /// caller must abort the close — the user chose Cancel, or chose Save but the save failed / was
+    /// itself cancelled (e.g. the Save As picker was dismissed).
+    /// </summary>
+    private async Task<bool> EnsureSavedBeforeDiscardAsync(DiagramDocumentViewModel document)
+    {
+        if (!document.IsModified)
+        {
+            return true;
+        }
+
+        ActiveDocument = document;
+        switch (await _dialogs.ConfirmUnsavedAsync(document.DisplayName))
+        {
+            case UnsavedChangesChoice.Save:
+                return await SaveAsync(document, document.FilePath);
+            case UnsavedChangesChoice.Discard:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Walks every open document, prompting to save each modified one in turn. Returns false as soon
+    /// as the user cancels (or a save fails), signalling that the window must stay open.
+    /// </summary>
+    public async Task<bool> TryCloseAllAsync()
+    {
+        foreach (DiagramDocumentViewModel document in Documents.ToList())
+        {
+            if (!await EnsureSavedBeforeDiscardAsync(document))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void OnUndo() => ActiveDocument?.Undo();
