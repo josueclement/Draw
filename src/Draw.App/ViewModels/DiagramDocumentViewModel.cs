@@ -770,6 +770,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         MarkModified();
+        // Selection set is unchanged, but its geometry moved — re-raise so the view rebuilds
+        // the overlay resize handles at the new positions (they aren't data-bound).
+        RaiseSelectionChanged();
     }
 
     /// <summary>
