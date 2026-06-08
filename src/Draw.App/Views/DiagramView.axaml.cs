@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -51,6 +52,10 @@ public partial class DiagramView : UserControl
 
     private const double HandleScreenSize = 10d;
 
+    // World-space padding added around content when sizing the scrollbars, so you can scroll a little
+    // past the outermost shapes.
+    private const double ScrollContentMargin = 50d;
+
     // Selection accent shared by the resize handles, marquee and connect-preview.
     private static readonly Color SelectionAccentColor = Color.Parse("#3D7EFF");
     private static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
@@ -83,6 +88,12 @@ public partial class DiagramView : UserControl
     private ConnectorLabelKind _editLabelKind;
     private Point _labelGrabDelta;
 
+    // Scrollbar sync state: guard against feedback while pushing values, plus the world-space origin
+    // (top-left of the scrollable region) used to map a scrollbar Value back to a pan offset.
+    private bool _updatingScrollBars;
+    private double _scrollOriginX;
+    private double _scrollOriginY;
+
     public DiagramView()
     {
         InitializeComponent();
@@ -92,10 +103,13 @@ public partial class DiagramView : UserControl
         Viewport.PointerReleased += OnPointerReleased;
         Viewport.PointerWheelChanged += OnPointerWheel;
         Viewport.DoubleTapped += OnDoubleTapped;
+        HScroll.Scroll += OnHScroll;
+        VScroll.Scroll += OnVScroll;
         Viewport.SizeChanged += (_, _) =>
         {
             UpdateGridBounds();
             PushViewportSize();
+            UpdateScrollBars();
         };
         KeyDown += OnKeyDown;
         DataContextChanged += OnDataContextChanged;
@@ -228,6 +242,101 @@ public partial class DiagramView : UserControl
         Canvas.SetTop(GridBackground, top);
         GridBackground.Width = right - left;
         GridBackground.Height = bottom - top;
+    }
+
+    // Maps the union of the content bounds and the visible region onto the two scrollbars, so the
+    // thumb position/size reveals off-screen content. Each bar is hidden (its gutter collapsing to 0)
+    // when content fits that axis. Driven from UpdateHandles (covers zoom/pan/selection/content moves)
+    // and the Viewport SizeChanged handler (resize). Pan stays unbounded — the bars only reflect it.
+    private void UpdateScrollBars()
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        if (_vm.GetContentBounds() is not { } content)
+        {
+            HScroll.IsVisible = false;
+            VScroll.IsVisible = false;
+            FitCorner.IsVisible = false;
+            return;
+        }
+
+        double zoom = Zoom <= 0 ? 1d : Zoom;
+        double viewWidth = Viewport.Bounds.Width;
+        double viewHeight = Viewport.Bounds.Height;
+        if (viewWidth <= 0 || viewHeight <= 0)
+        {
+            return;
+        }
+
+        // Visible region in world coordinates.
+        double worldLeft = -_vm.PanX / zoom;
+        double worldTop = -_vm.PanY / zoom;
+        double worldWidth = viewWidth / zoom;
+        double worldHeight = viewHeight / zoom;
+
+        // Scrollable region = padded content unioned with the current view (standard infinite canvas).
+        Rect2D region = content.Inflate(ScrollContentMargin)
+            .Union(new Rect2D(worldLeft, worldTop, worldWidth, worldHeight));
+
+        _scrollOriginX = region.Left;
+        _scrollOriginY = region.Top;
+
+        const double epsilon = 0.5d;
+        bool needsH = region.Width > worldWidth + epsilon;
+        bool needsV = region.Height > worldHeight + epsilon;
+
+        _updatingScrollBars = true;
+        try
+        {
+            if (needsH)
+            {
+                HScroll.Minimum = 0d;
+                HScroll.Maximum = System.Math.Max(0d, region.Width - worldWidth);
+                HScroll.ViewportSize = worldWidth;
+                HScroll.Value = System.Math.Clamp(worldLeft - region.Left, 0d, HScroll.Maximum);
+            }
+
+            if (needsV)
+            {
+                VScroll.Minimum = 0d;
+                VScroll.Maximum = System.Math.Max(0d, region.Height - worldHeight);
+                VScroll.ViewportSize = worldHeight;
+                VScroll.Value = System.Math.Clamp(worldTop - region.Top, 0d, VScroll.Maximum);
+            }
+        }
+        finally
+        {
+            _updatingScrollBars = false;
+        }
+
+        HScroll.IsVisible = needsH;
+        VScroll.IsVisible = needsV;
+        FitCorner.IsVisible = needsH && needsV;
+    }
+
+    private void OnHScroll(object? sender, ScrollEventArgs e)
+    {
+        if (_updatingScrollBars || _vm is null)
+        {
+            return;
+        }
+
+        double zoom = Zoom <= 0 ? 1d : Zoom;
+        _vm.PanX = -(_scrollOriginX + e.NewValue) * zoom;
+    }
+
+    private void OnVScroll(object? sender, ScrollEventArgs e)
+    {
+        if (_updatingScrollBars || _vm is null)
+        {
+            return;
+        }
+
+        double zoom = Zoom <= 0 ? 1d : Zoom;
+        _vm.PanY = -(_scrollOriginY + e.NewValue) * zoom;
     }
 
     private void UpdateGrid()
@@ -1408,6 +1517,8 @@ public partial class DiagramView : UserControl
         {
             DrawConnectorHandles(connector);
         }
+
+        UpdateScrollBars();
     }
 
     // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);

@@ -139,3 +139,15 @@ on theme toggle — generalising the single default-fill sentinel into ~10 named
 (`Style.PaletteId`, resolved at render time; additive, backward-compatible serialisation). Palette
 data is UI-agnostic in `Draw.Diagramming/Styling/StylePalette.cs`; apply reuses the style-edit memento
 undo. See `documentation/plans/2026-06-04-quick-style-palette.md`.
+
+## Canvas scrollbars + fit-to-content 🚧 (cross-cutting, pending visual verification)
+
+Content-aware **scrollbars** on each document canvas plus a **Fit to content** command, so shapes
+panned off-screen are discoverable and recoverable. Each bar appears only when content overflows that
+axis (reserved gutter, no auto-hide); its range is the padded content extent (node bounds + connector
+geometry) unioned with the current view, so the thumb reveals where shapes sit relative to the
+viewport. **Fit to content** (View ribbon, a corner button where the bars meet, and `Ctrl+Shift+F`)
+centres all content, zoom-capped at 100%. The hand-rolled unbounded pan/zoom is preserved — bars only
+reflect it. Scrollbar geometry lives in `DiagramView` code-behind beside the grid/handle logic;
+`DiagramDocumentViewModel.GetContentBounds()`/`FitToContentCommand` back it. See
+`documentation/plans/2026-06-08-canvas-scrollbars.md`.
