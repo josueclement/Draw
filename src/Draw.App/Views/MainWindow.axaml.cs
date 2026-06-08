@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Carbon.Avalonia.Desktop.Controls.Ribbon;
+using IContentDialogService = Carbon.Avalonia.Desktop.Services.IContentDialogService;
 using CommunityToolkit.Mvvm.Input;
 using Draw.App.Input;
 using Draw.App.Services;
@@ -27,6 +29,9 @@ public partial class MainWindow : Window
     private readonly IDialogService? _dialogs;
     private readonly ChordInputDispatcher? _dispatcher;
 
+    // Set once the user has confirmed (or there was nothing to save), so the re-entrant Close() passes through.
+    private bool _forceClose;
+
     // Parameterless constructor for the XAML previewer/designer.
     public MainWindow()
     {
@@ -38,6 +43,7 @@ public partial class MainWindow : Window
         IImageExportService exporter,
         IFileDialogService fileDialogs,
         IDialogService dialogs,
+        IContentDialogService contentDialog,
         ChordInputDispatcher dispatcher)
         : this()
     {
@@ -47,6 +53,9 @@ public partial class MainWindow : Window
         _dialogs = dialogs;
         _dispatcher = dispatcher;
         DataContext = shell;
+
+        // The overlay ContentDialog declared in XAML is the single host the service drives.
+        contentDialog.RegisterHost(DialogHost);
         shell.ExportImageRequested += OnExportImageRequested;
         shell.ExportSvgRequested += OnExportSvgRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
@@ -69,6 +78,30 @@ public partial class MainWindow : Window
     }
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
+
+    // Closing the window (X button, File ▸ Exit, OS quit) discards every open document, so guard it the
+    // same way a tab close is guarded. Closing is synchronous; the dialog is async — so cancel the close
+    // synchronously, run the prompts, then re-issue Close() once the user has committed.
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+        if (_forceClose || _shell is null || !_shell.HasUnsavedChanges)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        _ = ConfirmAndCloseAsync();
+    }
+
+    private async Task ConfirmAndCloseAsync()
+    {
+        if (_shell is not null && await _shell.TryCloseAllAsync())
+        {
+            _forceClose = true;
+            Close();
+        }
+    }
 
     private void OnWindowDeactivated(object? sender, EventArgs e) => _dispatcher?.Reset();
 

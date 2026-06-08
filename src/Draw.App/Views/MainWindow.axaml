@@ -3,6 +3,7 @@
         xmlns:vm="using:Draw.App.ViewModels"
         xmlns:v="using:Draw.App.Views"
         xmlns:ribbon="using:Carbon.Avalonia.Desktop.Controls.Ribbon"
+        xmlns:dialog="using:Carbon.Avalonia.Desktop.Controls.ContentDialog"
         xmlns:pia="using:PhosphorIconsAvalonia.Markup"
         xmlns:nodes="using:Draw.Model.Nodes"
         xmlns:rel="using:Draw.Model.Connectors"
@@ -119,6 +120,8 @@
         </ContextMenu>
     </Window.Resources>
 
+    <!-- Grid wrapper hosts the full-window ContentDialog overlay above the editor chrome. -->
+    <Grid>
     <DockPanel>
 
         <Menu DockPanel.Dock="Top">
@@ -658,4 +661,8 @@
             </Border>
         </Grid>
     </DockPanel>
+
+        <!-- Registered with IContentDialogService at construction; driven by DialogService. -->
+        <dialog:ContentDialog x:Name="DialogHost" />
+    </Grid>
 </Window>

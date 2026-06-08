@@ -168,6 +168,17 @@ suppressed while a text-entry surface has focus, so in-place editing keys are un
 `src/Draw.App/Input/`; reuses the `IOptions<T>`/DI and `RecentFilesService` APPDATA/fallback patterns.
 Rather than one chord per shape/connector, the defaults now bind **Shift+S** / **Shift+C** to open category-grouped tool menus (Standard/UML/Use case/ER submenus, ribbon icons + access keys; picking an item arms the tool) via `menu.shapes`/`menu.connectors`; the granular `tool.*` ids stay bindable. See `documentation/plans/2026-06-08-keyboard-chord-shortcuts.md`.
 
+## Unsaved-changes warning dialog 🚧 (cross-cutting, pending visual verification)
+
+Stops silent loss of work: a **Save / Don't Save / Cancel** warning (Carbon `Carbon.Avalonia.Desktop`
+**ContentDialog**, an in-window overlay) now guards every path that discards a modified document —
+tab close (`Ctrl+W` / tab X) *and* the window X / File ▸ Exit / quit, which previously did no check at
+all. Dirty = `DiagramDocumentViewModel.IsModified`; on exit each modified document is prompted in turn
+(Cancel aborts the whole quit). One `ShellViewModel.EnsureSavedBeforeDiscardAsync` helper backs both the
+tab-close command and a new `TryCloseAllAsync()`; `MainWindow.OnClosing` cancels-then-async-confirms. The
+dialog host is registered with `IContentDialogService`; `New`/`Open` are unaffected (they open new tabs).
+See `documentation/plans/2026-06-08-unsaved-changes-dialog.md`.
+
 ## Canvas scrollbars + fit-to-content 🚧 (cross-cutting, pending visual verification)
 
 Content-aware **scrollbars** on each document canvas plus a **Fit to content** command, so shapes
