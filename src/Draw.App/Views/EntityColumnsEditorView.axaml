@@ -5,7 +5,7 @@
              x:Class="Draw.App.Views.EntityColumnsEditorView"
              x:DataType="vm:EntityColumnsEditorViewModel"
              x:CompileBindings="True"
-             MinWidth="620">
+             MinWidth="520">
 
     <UserControl.Styles>
         <!-- Compact square icon buttons for the per-row toolbar. -->
@@ -21,7 +21,7 @@
         </Style>
     </UserControl.Styles>
 
-    <DockPanel Grid.IsSharedSizeScope="True" MinWidth="620">
+    <DockPanel Grid.IsSharedSizeScope="True" MinWidth="520">
         <!-- Toolbar -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
             <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -36,8 +36,8 @@
         <!-- Header row (aligned with the data rows via shared-size groups) -->
         <Grid DockPanel.Dock="Top" ColumnSpacing="8" Margin="0,0,0,4">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="140" />
-                <ColumnDefinition Width="*" MinWidth="140" />
+                <ColumnDefinition Width="*" MinWidth="110" />
+                <ColumnDefinition Width="*" MinWidth="110" />
                 <ColumnDefinition Width="Auto" SharedSizeGroup="ColPk" />
                 <ColumnDefinition Width="Auto" SharedSizeGroup="ColFk" />
                 <ColumnDefinition Width="Auto" SharedSizeGroup="ColNull" />
@@ -55,14 +55,14 @@
 
         <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource CarbonBorderBrush}" Margin="0,0,0,6" />
 
-        <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Columns}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:EntityColumnEditRow">
                         <Grid ColumnSpacing="8" Margin="0,0,0,6">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" MinWidth="140" />
-                                <ColumnDefinition Width="*" MinWidth="140" />
+                                <ColumnDefinition Width="*" MinWidth="110" />
+                                <ColumnDefinition Width="*" MinWidth="110" />
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="ColPk" />
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="ColFk" />
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="ColNull" />

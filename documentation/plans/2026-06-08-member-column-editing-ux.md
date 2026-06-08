@@ -42,7 +42,14 @@ column flags, which are core ER semantics).
 - [x] 1 Dialog VMs · [x] 2 Dialog views · [x] 3 DialogService · [x] 4 Node Replace · [x] 5 Inspector commands · [x] 6 Panel + double-tap · [x] 7 Build (clean)
 
 Implemented; `dotnet build Draw.slnx` clean (0 warnings, 0 errors). Pending: manual verification on
-Windows/macOS (no GUI under WSL2). Known risk to confirm there: the Carbon `ContentDialog` hosting an
-interactive editor (focus, AutoCompleteBox popups, sizing); if it proves cramped/buggy, the fallback
-is a dedicated modal `Window` — the editor view/VM are reusable as-is. Per the request, the user will
-review both surfaces and decide which to keep.
+Windows/macOS (no GUI under WSL2).
+
+Dialog sizing: Carbon's `ContentDialog` surface is a `Border` hard-capped at `MaxWidth="600"` (with a
+24px inner margin → ~550px usable) and its width is **not** settable from the configurator
+(`Themes/Controls/ContentDialog.axaml`). The first cut forced the content to `MinWidth="620/660"`, so
+it spilled past the dialog border. Fixed by dropping each editor's root `MinWidth` to `520` (so
+`Stretch` fills the ~550 slot and the box maxes at 600, no overflow), enabling horizontal scroll as a
+safety net for the dense operations row, and trimming a few column min-widths. Remaining runtime
+things to confirm on a real GUI: editor focus and AutoCompleteBox popups inside the overlay. If the
+overlay still proves too constrained, the fallback is a dedicated modal `Window` — the editor view/VM
+are reusable as-is. Per the request, the user will review both surfaces and decide which to keep.

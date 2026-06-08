@@ -5,7 +5,7 @@
              x:Class="Draw.App.Views.ClassMembersEditorView"
              x:DataType="vm:ClassMembersEditorViewModel"
              x:CompileBindings="True"
-             MinWidth="660">
+             MinWidth="520">
 
     <UserControl.Styles>
         <Style Selector="Button.row-action">
@@ -24,8 +24,8 @@
         </Style>
     </UserControl.Styles>
 
-    <DockPanel Grid.IsSharedSizeScope="True" MinWidth="660">
-        <ScrollViewer MaxHeight="460" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <DockPanel Grid.IsSharedSizeScope="True" MinWidth="520">
+        <ScrollViewer MaxHeight="460" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
             <StackPanel Spacing="16">
 
                 <!-- Fields / Literals -->
@@ -116,9 +116,9 @@
                     <Grid ColumnSpacing="8" Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="MVis" />
-                            <ColumnDefinition Width="*" MinWidth="110" />
-                            <ColumnDefinition Width="*" MinWidth="140" />
-                            <ColumnDefinition Width="*" MinWidth="100" />
+                            <ColumnDefinition Width="*" MinWidth="90" />
+                            <ColumnDefinition Width="*" MinWidth="120" />
+                            <ColumnDefinition Width="*" MinWidth="90" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="MStatic" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="MAbs" />
                             <ColumnDefinition Width="Auto" SharedSizeGroup="MAct" />
@@ -140,9 +140,9 @@
                                 <Grid ColumnSpacing="8" Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="MVis" />
-                                        <ColumnDefinition Width="*" MinWidth="110" />
-                                        <ColumnDefinition Width="*" MinWidth="140" />
-                                        <ColumnDefinition Width="*" MinWidth="100" />
+                                        <ColumnDefinition Width="*" MinWidth="90" />
+                                        <ColumnDefinition Width="*" MinWidth="120" />
+                                        <ColumnDefinition Width="*" MinWidth="90" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="MStatic" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="MAbs" />
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="MAct" />
