@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -13,6 +14,8 @@ using Draw.App.Input;
 using Draw.App.Services;
 using Draw.App.ViewModels;
 using Draw.Diagramming.Layout;
+using Draw.Model.Connectors;
+using Draw.Model.Nodes;
 
 namespace Draw.App.Views;
 
@@ -49,6 +52,8 @@ public partial class MainWindow : Window
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
         WireAlignDropdown();
+        WireToolMenus(shell.Toolbox);
+        shell.ToolMenuRequested += OnToolMenuRequested;
 
         // Global keyboard shortcuts (single gestures + multi-key chords) come from the JSON keymap.
         // Tunnel so plain letters reach the dispatcher before a focused control consumes them; a chord
@@ -145,6 +150,53 @@ public partial class MainWindow : Window
         foreach (RibbonMenuItem item in AlignDropDown.Items)
         {
             item.Command = align;
+        }
+    }
+
+    // The Shift+S / Shift+C tool menus are declared statically in XAML (icons + access keys); assign each
+    // leaf item's arm command here by its CommandParameter type, mirroring WireToolDropdowns. Selecting a
+    // ContextMenu item closes the menu automatically, so the raw arm command can be used directly.
+    private void WireToolMenus(ToolboxViewModel toolbox)
+    {
+        WireToolMenu((ContextMenu)this.FindResource("ShapesToolMenu")!, toolbox);
+        WireToolMenu((ContextMenu)this.FindResource("ConnectorsToolMenu")!, toolbox);
+    }
+
+    private static void WireToolMenu(ContextMenu menu, ToolboxViewModel toolbox)
+    {
+        foreach (object? top in menu.Items)
+        {
+            if (top is not MenuItem category)
+            {
+                continue;
+            }
+
+            foreach (object? leaf in category.Items)
+            {
+                if (leaf is MenuItem item)
+                {
+                    item.Command = ArmCommandFor(item, toolbox);
+                }
+            }
+        }
+    }
+
+    private static ICommand? ArmCommandFor(MenuItem item, ToolboxViewModel toolbox) => item.CommandParameter switch
+    {
+        ShapeKind => toolbox.SelectShapeToolCommand,
+        RelationshipKind => toolbox.SelectConnectorToolCommand,
+        ClassNodeKind => toolbox.SelectClassNodeToolCommand,
+        UseCaseNodeKind => toolbox.SelectUseCaseToolCommand,
+        _ when (item.Tag as string) == "entity" => toolbox.SelectEntityToolCommand,
+        _ => item.Command,
+    };
+
+    private void OnToolMenuRequested(object? sender, ToolMenuFamily family)
+    {
+        string key = family == ToolMenuFamily.Shapes ? "ShapesToolMenu" : "ConnectorsToolMenu";
+        if (this.FindResource(key) is ContextMenu menu)
+        {
+            ActiveDiagramView()?.OpenToolMenu(menu);
         }
     }
 

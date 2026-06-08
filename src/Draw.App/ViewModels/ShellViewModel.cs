@@ -64,6 +64,9 @@ public sealed class ShellViewModel : ViewModelBase
         ExportSvgCommand = new RelayCommand(OnExportSvg, () => HasActiveDocument);
         CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
+        ShowToolMenuCommand = new RelayCommand<ToolMenuFamily>(
+            family => ToolMenuRequested?.Invoke(this, family),
+            _ => HasActiveDocument);
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
         RefreshRecentFiles();
@@ -104,11 +107,16 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand CopyImageCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
 
+    public RelayCommand<ToolMenuFamily> ShowToolMenuCommand { get; }
+
     public event EventHandler? ExportImageRequested;
 
     public event EventHandler? ExportSvgRequested;
 
     public event EventHandler? CopyImageRequested;
+
+    /// <summary>Raised when a keymap action requests a category tool menu (handled by the window).</summary>
+    public event EventHandler<ToolMenuFamily>? ToolMenuRequested;
 
     public bool HasActiveDocument => ActiveDocument is not null;
 

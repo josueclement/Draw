@@ -75,3 +75,27 @@ class `a u {c,i,e}`, use-case `a k {a,u,b}`, ER table `a t`; convenience `z {i,o
   verification checklist.
 
 See `documentation/specs/2026-06-08-keyboard-chord-shortcuts-design.md` for the full design.
+
+## Update — category tool menus (replaces per-shape chords)
+
+One chord per shape/connector proved excessive. The granular `tool.*` chords are removed from the
+defaults and replaced by **two keyboard-opened, category-grouped context menus**:
+
+- `Shift+S` → **Shapes** menu, `Shift+C` → **Connectors** menu (both remappable; new actions
+  `menu.shapes` / `menu.connectors`). Each is grouped into **Standard / UML / Use case / ER** submenus.
+- Picking an item **arms the matching tool** (unchanged placement flow). Items show the ribbon icons and
+  carry `_`-mnemonic **access keys**; the menu opens at the cursor on the active canvas.
+- All granular `tool.*` action ids remain **bindable** in `keymap.json` for power users.
+
+Design: a `menu.*` action runs `ShellViewModel.ShowToolMenuCommand`, which raises `ToolMenuRequested`
+(same event→code-behind idiom as the export commands); `MainWindow` opens the matching XAML-declared
+`ContextMenu` (in `Window.Resources`) on the active `DiagramView` via `OpenToolMenu` (reusing the
+arrange-menu `Dispatcher.UIThread.Post(() => menu.Open(Viewport))` deferral). The menus are fully static
+XAML (icons + access-key headers + `x:Static` `CommandParameter`s); the shared arm command is assigned per
+item in code-behind (`WireToolMenu`, by `CommandParameter` type) — mirroring `WireToolDropdowns`.
+
+**Shift is now significant** for letter gestures (the dispatcher's bare-letter Shift-stripping was
+removed) so `Shift+S`/`Shift+C` are distinct from `s`/`c`. Files: `ViewModels/ToolMenuFamily.cs` (new),
+`ShellViewModel`, `Input/KeymapActionRegistry`, `Input/ChordInputDispatcher` (`Normalize`),
+`Input/DefaultKeymap`, `Views/MainWindow.axaml(.cs)`, `Views/DiagramView.axaml.cs`. Build clean; pending
+visual verification on Windows.

@@ -191,18 +191,6 @@ public sealed class ChordInputDispatcher
         or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt
         or Key.LWin or Key.RWin;
 
-    private static KeyStroke Normalize(Key key, KeyModifiers modifiers)
-    {
-        bool isLetterOrDigit = (key >= Key.A && key <= Key.Z) || (key >= Key.D0 && key <= Key.D9);
-        bool hasNonShiftModifier = (modifiers & (KeyModifiers.Control | KeyModifiers.Alt | KeyModifiers.Meta)) != 0;
-
-        // Bare letters/digits ignore Shift so a held Shift can't break a chord like "a s r"; but a
-        // Shift combined with Ctrl/Alt/Meta (e.g. Ctrl+Shift+L) is a distinct, deliberate gesture.
-        if (isLetterOrDigit && !hasNonShiftModifier)
-        {
-            return new KeyStroke(key, KeyModifiers.None);
-        }
-
-        return new KeyStroke(key, modifiers);
-    }
+    // Shift is significant, so "Shift+S" is distinct from "s" (lets shortcuts like Shift+S open a menu).
+    private static KeyStroke Normalize(Key key, KeyModifiers modifiers) => new(key, modifiers);
 }

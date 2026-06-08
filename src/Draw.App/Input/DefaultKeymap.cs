@@ -41,36 +41,8 @@ public static class DefaultKeymap
 
         { "keys": "Escape", "action": "tool.select" },
 
-        { "keys": "a s r", "action": "tool.shape.rectangle" },
-        { "keys": "a s o", "action": "tool.shape.roundedRectangle" },
-        { "keys": "a s e", "action": "tool.shape.ellipse" },
-        { "keys": "a s c", "action": "tool.shape.circle" },
-        { "keys": "a s d", "action": "tool.shape.diamond" },
-        { "keys": "a s p", "action": "tool.shape.parallelogram" },
-        { "keys": "a s z", "action": "tool.shape.trapezoid" },
-        { "keys": "a s t", "action": "tool.shape.triangle" },
-        { "keys": "a s n", "action": "tool.shape.note" },
-
-        { "keys": "a c a", "action": "tool.connector.association" },
-        { "keys": "a c d", "action": "tool.connector.directedAssociation" },
-        { "keys": "a c g", "action": "tool.connector.aggregation" },
-        { "keys": "a c o", "action": "tool.connector.composition" },
-        { "keys": "a c n", "action": "tool.connector.generalization" },
-        { "keys": "a c r", "action": "tool.connector.realization" },
-        { "keys": "a c p", "action": "tool.connector.dependency" },
-        { "keys": "a c i", "action": "tool.connector.include" },
-        { "keys": "a c e", "action": "tool.connector.extend" },
-        { "keys": "a c l", "action": "tool.connector.relationship" },
-
-        { "keys": "a u c", "action": "tool.classNode.class" },
-        { "keys": "a u i", "action": "tool.classNode.interface" },
-        { "keys": "a u e", "action": "tool.classNode.enum" },
-
-        { "keys": "a k a", "action": "tool.useCase.actor" },
-        { "keys": "a k u", "action": "tool.useCase.useCase" },
-        { "keys": "a k b", "action": "tool.useCase.systemBoundary" },
-
-        { "keys": "a t", "action": "tool.entity" },
+        { "keys": "Shift+S", "action": "menu.shapes" },
+        { "keys": "Shift+C", "action": "menu.connectors" },
 
         { "keys": "z i", "action": "view.zoomIn" },
         { "keys": "z o", "action": "view.zoomOut" },
@@ -112,6 +84,7 @@ public static class DefaultKeymap
     //   tool.classNode.{class|interface|enum}
     //   tool.useCase.{actor|useCase|systemBoundary}
     //   tool.entity
+    //   menu.shapes, menu.connectors   (open a category-grouped tool menu at the cursor; default Shift+S / Shift+C)
     //   file.{new|newEr|open|save|saveAs|close}
     //   edit.{undo|redo|copy|cut|paste|duplicate|delete|insertImage|spaceConnections|mergeConnections}
     //   align.{left|centerHorizontal|right|top|centerVertical|bottom}
@@ -123,7 +96,10 @@ public static class DefaultKeymap
     // Examples:
     {
       "bindings": [
-        // Remap "add rectangle" to a shorter chord:
+        // Open the shapes menu with a different key (default is Shift+S):
+        { "keys": "Insert", "action": "menu.shapes" },
+
+        // Bind a direct chord to add a rectangle (the per-tool actions are still available):
         { "keys": "r r", "action": "tool.shape.rectangle" },
 
         // Bind a single key to fit-to-content:

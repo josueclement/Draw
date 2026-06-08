@@ -111,6 +111,10 @@ public sealed class KeymapActionRegistry
         Add("export.image", false, () => (_shell.ExportImageCommand, null));
         Add("export.svg", false, () => (_shell.ExportSvgCommand, null));
         Add("export.copyImage", false, () => (_shell.CopyImageCommand, null));
+
+        // Category tool menus (open a keyboard-driven, category-grouped context menu that arms a tool).
+        Add("menu.shapes", false, () => (_shell.ShowToolMenuCommand, ToolMenuFamily.Shapes));
+        Add("menu.connectors", false, () => (_shell.ShowToolMenuCommand, ToolMenuFamily.Connectors));
     }
 
     private void Arm(string id, Func<(ICommand Command, object? Parameter)> resolve)

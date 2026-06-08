@@ -166,7 +166,7 @@ matching tool; other actions invoke immediately. A `KeymapActionRegistry` resolv
 live `ActiveDocument`. Pending chords show in the status bar with a ~1 s idle timeout; the dispatcher is
 suppressed while a text-entry surface has focus, so in-place editing keys are untouched. New code in
 `src/Draw.App/Input/`; reuses the `IOptions<T>`/DI and `RecentFilesService` APPDATA/fallback patterns.
-See `documentation/plans/2026-06-08-keyboard-chord-shortcuts.md`.
+Rather than one chord per shape/connector, the defaults now bind **Shift+S** / **Shift+C** to open category-grouped tool menus (Standard/UML/Use case/ER submenus, ribbon icons + access keys; picking an item arms the tool) via `menu.shapes`/`menu.connectors`; the granular `tool.*` ids stay bindable. See `documentation/plans/2026-06-08-keyboard-chord-shortcuts.md`.
 
 ## Canvas scrollbars + fit-to-content 🚧 (cross-cutting, pending visual verification)
 

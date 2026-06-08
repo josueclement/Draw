@@ -17,6 +17,112 @@
     <!-- Keyboard shortcuts are not declared here: all gestures and multi-key chords come from the
          JSON keymap, dispatched at the window level in code-behind (see ChordInputDispatcher). -->
 
+    <Window.Resources>
+        <!-- Category tool menus opened by keyboard shortcuts (default Shift+S / Shift+C). Items are static
+             (icons reuse the ribbon's markup; headers carry _access-key letters); the shared arm command is
+             assigned per item in code-behind by CommandParameter type (see WireToolMenu), and the menu is
+             opened at the cursor on the active canvas (see DiagramView.OpenToolMenu). -->
+        <ContextMenu x:Key="ShapesToolMenu">
+            <MenuItem Header="_Standard">
+                <MenuItem Header="_Rectangle" CommandParameter="{x:Static nodes:ShapeKind.Rectangle}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=rectangle}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="R_ounded rectangle" CommandParameter="{x:Static nodes:ShapeKind.RoundedRectangle}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.RoundedRectangle}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Ellipse" CommandParameter="{x:Static nodes:ShapeKind.Ellipse}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Ellipse}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Circle" CommandParameter="{x:Static nodes:ShapeKind.Circle}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=circle}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Diamond" CommandParameter="{x:Static nodes:ShapeKind.Diamond}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=diamond}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Parallelogram" CommandParameter="{x:Static nodes:ShapeKind.Parallelogram}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=parallelogram}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Trapezoid" CommandParameter="{x:Static nodes:ShapeKind.Trapezoid}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Trapezoid}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Tr_iangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=triangle}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_UML">
+                <MenuItem Header="_Note" CommandParameter="{x:Static nodes:ShapeKind.Note}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Note}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Class" CommandParameter="{x:Static nodes:ClassNodeKind.Class}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=square_split_horizontal}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Interface" CommandParameter="{x:Static nodes:ClassNodeKind.Interface}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Interface}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Enum" CommandParameter="{x:Static nodes:ClassNodeKind.Enum}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=list_numbers}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Use _case">
+                <MenuItem Header="_Actor" CommandParameter="{x:Static vm:UseCaseNodeKind.Actor}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=user}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Use case" CommandParameter="{x:Static vm:UseCaseNodeKind.UseCase}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Ellipse}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=bounding_box}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_ER">
+                <MenuItem Header="_Table" Tag="entity">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=table}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </ContextMenu>
+
+        <ContextMenu x:Key="ConnectorsToolMenu">
+            <MenuItem Header="_Standard">
+                <MenuItem Header="_Association" CommandParameter="{x:Static rel:RelationshipKind.Association}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Association}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Directed association" CommandParameter="{x:Static rel:RelationshipKind.DirectedAssociation}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.DirectedAssociation}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_UML">
+                <MenuItem Header="_Aggregation" CommandParameter="{x:Static rel:RelationshipKind.Aggregation}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Aggregation}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Composition" CommandParameter="{x:Static rel:RelationshipKind.Composition}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Composition}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Generalization" CommandParameter="{x:Static rel:RelationshipKind.Generalization}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Generalization}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Realization" CommandParameter="{x:Static rel:RelationshipKind.Realization}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Realization}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Dependency" CommandParameter="{x:Static rel:RelationshipKind.Dependency}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Dependency}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Use _case">
+                <MenuItem Header="_Include" CommandParameter="{x:Static rel:RelationshipKind.Include}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Dependency}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Dependency}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_ER">
+                <MenuItem Header="_Relationship" CommandParameter="{x:Static rel:RelationshipKind.Relationship}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=line_segment}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </ContextMenu>
+    </Window.Resources>
+
     <DockPanel>
 
         <Menu DockPanel.Dock="Top">

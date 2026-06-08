@@ -725,6 +725,11 @@ public partial class DiagramView : UserControl
     private static MenuItem ArrangeItem<T>(string header, RelayCommand<T> command, T parameter)
         => new() { Header = header, Command = command, CommandParameter = parameter };
 
+    /// <summary>Opens a prebuilt tool menu (Shift+S / Shift+C) at the pointer over this canvas.</summary>
+    public void OpenToolMenu(ContextMenu menu)
+        // Defer so any in-flight pointer capture is released before the popup opens (matches the arrange menu).
+        => Dispatcher.UIThread.Post(() => menu.Open(Viewport));
+
     private void OnPointerWheel(object? sender, PointerWheelEventArgs e)
     {
         if (_vm is null)

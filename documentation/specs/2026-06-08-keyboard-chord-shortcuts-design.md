@@ -109,3 +109,29 @@ stay; the member/column editing handlers are untouched.
   - Menu items still invoke their commands (gesture hint text intentionally removed).
   - Delete `keymap.json` → defaults load + `keymap.example.json` appears; add an override → it applies;
     a corrupt file → silent fallback; an `""`-action entry unbinds a default.
+
+## Update — category tool menus
+
+The per-shape/connector chords are replaced by two category menus: `menu.shapes` (default `Shift+S`) and
+`menu.connectors` (default `Shift+C`). Each is a `ContextMenu` declared in `MainWindow`'s
+`Window.Resources`, grouped into **Standard / UML / Use case / ER** submenus, with the ribbon icons and
+`_`-mnemonic access keys. Selecting an item arms the matching tool.
+
+- **Flow**: `menu.*` → `ShellViewModel.ShowToolMenuCommand` (`CanExecute = HasActiveDocument`) raises
+  `event ToolMenuRequested(ToolMenuFamily)` → `MainWindow.OnToolMenuRequested` resolves the menu by key
+  and calls `DiagramView.OpenToolMenu(menu)` → `Dispatcher.UIThread.Post(() => menu.Open(Viewport))`
+  (default `Placement=Pointer`). Mirrors the existing `ExportImageRequested` event→code-behind idiom and
+  the arrange-menu deferral.
+- **Static menus, code-wired commands**: the menus contain no bindings — headers, icons, and
+  `x:Static` `CommandParameter`s only. `MainWindow.WireToolMenu` assigns each leaf's arm command by
+  `CommandParameter` type (`ShapeKind`→`SelectShapeToolCommand`, `RelationshipKind`→…,
+  `ClassNodeKind`→…, `UseCaseNodeKind`→…; the `Tag="entity"` leaf →`SelectEntityToolCommand`). A
+  `ContextMenu` item closes the menu on click, so the raw arm command is used directly (no wrapper).
+- **Shift significance**: `ChordInputDispatcher.Normalize` no longer strips Shift from bare letters, so
+  `Shift+S`/`Shift+C` are distinct gestures. Trade-off: a held Shift no longer passes through a
+  plain-letter chord (standard). `Ctrl+Shift+*` is unaffected (it always kept modifiers).
+- **Bindable**: the granular `tool.*` action ids stay in the registry; only the defaults dropped them.
+- **Verification (added)**: `Shift+S`/`Shift+C` open the category menus at the cursor with icons; access
+  keys + arrows/Enter/Escape navigate; picking arms the tool (status hint shows) and a canvas click
+  places it; nothing happens with no document open; re-adding `a s r`-style chords to `keymap.json` still
+  works.
