@@ -12,6 +12,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -769,8 +770,82 @@ public partial class DiagramView : UserControl
         }
     }
 
-    /// <summary>The visual rendered when exporting to PNG / clipboard (the current viewport).</summary>
-    public Control ExportTarget => Viewport;
+    /// <summary>Padding (world units) added around the content bounds in every export.</summary>
+    private const double ExportPadding = 16d;
+
+    /// <summary>
+    /// Renders the diagram content — shapes and connectors only, no grid and no selection overlay — to a
+    /// bitmap at a fixed <paramref name="scale"/> (1 = 1 world unit per pixel @ 96 DPI), independent of the
+    /// on-screen zoom/pan. The whole diagram is captured (selection is ignored) with a fixed margin; the
+    /// background is transparent. Returns <c>null</c> when the diagram is empty.
+    /// </summary>
+    /// <remarks>
+    /// Renders <c>Viewport</c> (not <c>World</c>) so that <c>World</c>'s own <c>RenderTransform</c> is
+    /// applied as a child transform — the same proven path the on-screen render uses. The grid, overlay,
+    /// viewport clip and viewport background are swapped out and restored synchronously, so the on-screen
+    /// view never repaints the intermediate state (this runs after the file picker, with no awaits in
+    /// between).
+    /// </remarks>
+    public RenderTargetBitmap? RenderContentBitmap(double scale = 1d)
+    {
+        if (_vm?.GetContentBounds() is not { } content)
+        {
+            return null;
+        }
+
+        double width = content.Width + (ExportPadding * 2d);
+        double height = content.Height + (ExportPadding * 2d);
+
+        ITransform? savedTransform = World.RenderTransform;
+        bool savedClip = Viewport.ClipToBounds;
+        IBrush? savedBackground = Viewport.Background;
+        bool gridVisible = GridBackground.IsVisible;
+        bool overlayVisible = Overlay.IsVisible;
+        try
+        {
+            Viewport.ClipToBounds = false;
+            Viewport.Background = null;
+            GridBackground.IsVisible = false;
+            Overlay.IsVisible = false;
+            World.RenderTransform = new MatrixTransform(new Matrix(
+                scale, 0, 0, scale,
+                (ExportPadding - content.X) * scale,
+                (ExportPadding - content.Y) * scale));
+
+            PixelSize pixelSize = new(
+                Math.Max(1, (int)Math.Ceiling(width * scale)),
+                Math.Max(1, (int)Math.Ceiling(height * scale)));
+            RenderTargetBitmap bitmap = new(pixelSize, new Vector(96d, 96d));
+            bitmap.Render(Viewport);
+            return bitmap;
+        }
+        finally
+        {
+            World.RenderTransform = savedTransform;
+            Viewport.ClipToBounds = savedClip;
+            Viewport.Background = savedBackground;
+            GridBackground.IsVisible = gridVisible;
+            Overlay.IsVisible = overlayVisible;
+            UpdateTransform();
+            UpdateHandles();
+        }
+    }
+
+    /// <summary>
+    /// Builds a full-parity SVG document for the diagram content (shapes + connectors only, no grid or
+    /// overlay), zoom-independently at 1:1 with the same fixed margin and transparent background as the
+    /// raster export. Returns <c>null</c> when the diagram is empty. Reads the already-laid-out node
+    /// controls, so it must be called on the UI thread.
+    /// </summary>
+    public string? BuildSvgDocument()
+    {
+        if (_vm?.GetContentBounds() is not { } content)
+        {
+            return null;
+        }
+
+        return Draw.App.Rendering.DiagramSvgRenderer.Render(NodesLayer, _vm.Nodes, _vm.Connectors, content, ExportPadding);
+    }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {

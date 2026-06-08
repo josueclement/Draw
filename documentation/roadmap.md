@@ -100,6 +100,20 @@ The action now **force-pins every end** touching the selection, not just crowded
 side is centred on that edge so the whole arrangement is locked. See
 `documentation/plans/2026-06-04-force-pin-on-arrange.md`.
 
+## Image + SVG export 🚧 (cross-cutting, pending visual verification)
+
+Shareable diagram export, replacing the zoom-and-grid-capturing **Export PNG…** with a **File ▸ Export**
+submenu — **Export Image…** (PNG/JPEG) and **Export SVG…** — plus an upgraded **Copy as Image**. All
+render the whole diagram **zoom-independently at 1:1**, containing **only shapes + connectors** (no grid,
+no selection overlay), with a 16px margin; PNG/SVG are transparent, JPEG is white-backed. Both outputs
+read `DiagramView`'s already-laid-out node/connector controls (resolved colours + class/entity layout for
+free): raster does a guarded grid-free identity-transform `RenderTargetBitmap` render (`RenderContentBitmap`,
+JPEG encoded via SkiaSharp), and **full-parity SVG** (`BuildSvgDocument`) walks the same controls — text
+as real `<text>`, boxes/separators/images directly, and `Path` geometry re-emitted from source builders
+(`ShapeSvgPathBuilder`/`SvgConnectorBuilder`) since Avalonia `StreamGeometry` isn't introspectable. This
+delivers the `Draw.Export` SVG slice of Phase 5 (in `Draw.App`, no separate project; PDF/`Draw.Sql` still
+pending). See `documentation/plans/2026-06-08-export-image-svg.md`.
+
 A sibling **Merge connections** action (same Connections group + context menu) is the inverse: it
 collapses every connector end touching the selected shape(s) onto the centre of the side it lands on,
 so the two buttons fan out ↔ regroup a shape's connectors. See
