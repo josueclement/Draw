@@ -576,7 +576,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
         Dictionary<Guid, Guid> idMap = new();
         List<NodeViewModelBase> pasted = new();
-        foreach (NodeBase source in sourceNodes)
+        // Clone in ascending stacking order so a multi-node duplicate keeps its internal front/back
+        // order: each ordinary clone is assigned a successively higher ZIndex below.
+        foreach (NodeBase source in sourceNodes.OrderBy(n => n.ZIndex))
         {
             NodeBase clone = source.Clone();
             Guid newId = Guid.NewGuid();
@@ -587,6 +589,12 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             {
                 clone.Bounds = clone.Bounds.PositionSnappedToGrid(GridSize);
             }
+
+            // Give the clone a fresh ZIndex (Clone copied the source's, which would tie with it and make
+            // hit-testing ambiguous): ordinary clones go on top (matching AddShape), boundaries stay in
+            // their reserved lower band (matching AddSystemBoundary) so they keep drawing behind the nodes
+            // they enclose. Computed before the Add so it reflects clones already placed in this batch.
+            clone.ZIndex = clone is SystemBoundaryNode ? LowestZIndex() - 1 : NextZIndex();
 
             _document.Nodes.Add(clone);
             NodeViewModelBase vm = CreateNodeViewModel(clone);
