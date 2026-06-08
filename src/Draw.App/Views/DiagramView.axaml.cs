@@ -475,6 +475,32 @@ public partial class DiagramView : UserControl
             }
         }
 
+        // Connectors win over nodes within tolerance: they always render in the layer on top of nodes,
+        // so a click on a line should select the line even where it crosses a shape's filled body or a
+        // system boundary — otherwise the rectangular node hit-test below would always swallow it.
+        ConnectorViewModel? connector = _vm.HitTestConnector(new Point2D(world.X, world.Y), 6d / Zoom);
+        if (connector is not null)
+        {
+            // Ctrl+click on a straight/orthogonal connector splits it: insert a bend point at the
+            // click and immediately drag it (one undo step covers the add + reposition).
+            if (ctrl && connector.SupportsWaypoints)
+            {
+                _vm.CaptureUndo();
+                _vm.SelectConnector(connector);
+                _editConnector = connector;
+                _editBendIndex = connector.InsertBendPointAt(new Point2D(world.X, world.Y));
+                _mode = DragMode.WaypointMove;
+                _undoCaptured = true;
+                UpdateHandles();
+                e.Pointer.Capture(Viewport);
+                return;
+            }
+
+            _vm.SelectConnector(connector);
+            e.Pointer.Capture(Viewport);
+            return;
+        }
+
         NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
         {
@@ -493,29 +519,6 @@ public partial class DiagramView : UserControl
         }
         else
         {
-            ConnectorViewModel? connector = _vm.HitTestConnector(new Point2D(world.X, world.Y), 6d / Zoom);
-            if (connector is not null)
-            {
-                // Ctrl+click on a straight/orthogonal connector splits it: insert a bend point at the
-                // click and immediately drag it (one undo step covers the add + reposition).
-                if (ctrl && connector.SupportsWaypoints)
-                {
-                    _vm.CaptureUndo();
-                    _vm.SelectConnector(connector);
-                    _editConnector = connector;
-                    _editBendIndex = connector.InsertBendPointAt(new Point2D(world.X, world.Y));
-                    _mode = DragMode.WaypointMove;
-                    _undoCaptured = true;
-                    UpdateHandles();
-                    e.Pointer.Capture(Viewport);
-                    return;
-                }
-
-                _vm.SelectConnector(connector);
-                e.Pointer.Capture(Viewport);
-                return;
-            }
-
             _mode = DragMode.Marquee;
             _marqueeStartWorld = world;
             _marqueeAdditive = ctrl;
