@@ -849,7 +849,7 @@ public partial class DiagramView : UserControl
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
-        // Don't steal keys while editing a node's text.
+        // Don't steal keys while editing a node's text; Escape ends editing.
         if (e.Source is TextBox)
         {
             if (e.Key == Key.Escape)
@@ -860,37 +860,9 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        // Clipboard shortcuts are handled here (not as window key bindings) so they only act on the
-        // diagram when no text editor has focus — the TextBox guard above lets them edit text normally.
-        if (_vm is not null && e.KeyModifiers.HasFlag(KeyModifiers.Control))
-        {
-            switch (e.Key)
-            {
-                case Key.C:
-                    _ = _vm.CopySelectionAsync();
-                    e.Handled = true;
-                    return;
-                case Key.X:
-                    _ = _vm.CutSelectionAsync();
-                    e.Handled = true;
-                    return;
-                case Key.V:
-                    _ = _vm.PasteAsync();
-                    e.Handled = true;
-                    return;
-                case Key.D:
-                    _vm.DuplicateSelection();
-                    e.Handled = true;
-                    return;
-            }
-        }
-
-        if (e.Key == Key.Delete)
-        {
-            _vm?.DeleteSelected();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Escape)
+        // Editor commands (copy/cut/paste/duplicate/delete/…) are driven by the window-level keymap
+        // dispatcher now. This only ends an in-progress canvas text edit when Escape isn't bound there.
+        if (e.Key == Key.Escape)
         {
             EndEditing();
         }

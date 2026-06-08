@@ -1,12 +1,15 @@
 using System;
 using System.IO;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 using Carbon.Avalonia.Desktop.Controls.Ribbon;
 using CommunityToolkit.Mvvm.Input;
+using Draw.App.Input;
 using Draw.App.Services;
 using Draw.App.ViewModels;
 using Draw.Diagramming.Layout;
@@ -19,6 +22,7 @@ public partial class MainWindow : Window
     private readonly IImageExportService? _exporter;
     private readonly IFileDialogService? _fileDialogs;
     private readonly IDialogService? _dialogs;
+    private readonly ChordInputDispatcher? _dispatcher;
 
     // Parameterless constructor for the XAML previewer/designer.
     public MainWindow()
@@ -30,19 +34,27 @@ public partial class MainWindow : Window
         ShellViewModel shell,
         IImageExportService exporter,
         IFileDialogService fileDialogs,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        ChordInputDispatcher dispatcher)
         : this()
     {
         _shell = shell;
         _exporter = exporter;
         _fileDialogs = fileDialogs;
         _dialogs = dialogs;
+        _dispatcher = dispatcher;
         DataContext = shell;
         shell.ExportImageRequested += OnExportImageRequested;
         shell.ExportSvgRequested += OnExportSvgRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
         WireAlignDropdown();
+
+        // Global keyboard shortcuts (single gestures + multi-key chords) come from the JSON keymap.
+        // Tunnel so plain letters reach the dispatcher before a focused control consumes them; a chord
+        // mid-flight is reset when the window loses focus. Text-entry surfaces are skipped (see handler).
+        AddHandler(InputElement.KeyDownEvent, OnGlobalKeyDown, RoutingStrategies.Tunnel);
+        Deactivated += OnWindowDeactivated;
 
         // Open on the Insert (tools) tab. This must be set here, not as a literal SelectedIndex in XAML:
         // the XAML attribute is applied while Ribbon.Tabs is still empty, so Ribbon never syncs SelectedTab
@@ -52,6 +64,38 @@ public partial class MainWindow : Window
     }
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnWindowDeactivated(object? sender, EventArgs e) => _dispatcher?.Reset();
+
+    private void OnGlobalKeyDown(object? sender, KeyEventArgs e)
+    {
+        // Never intercept keys while a text-entry surface has focus (renaming, the inspector, etc.).
+        if (_dispatcher is null || IsTextEntryFocused())
+        {
+            return;
+        }
+
+        if (_dispatcher.HandleKeyDown(e))
+        {
+            e.Handled = true;
+        }
+    }
+
+    // At tunnel time e.Source is the window, so consult the focus manager. AutoCompleteBox/ComboBox host
+    // an inner TextBox as the focused element, so an ancestor walk catches those too.
+    private bool IsTextEntryFocused()
+    {
+        IInputElement? focused = FocusManager?.GetFocusedElement();
+        if (focused is TextBox or AutoCompleteBox)
+        {
+            return true;
+        }
+
+        return focused is Visual visual
+            && (visual.FindAncestorOfType<TextBox>() is not null
+                || visual.FindAncestorOfType<AutoCompleteBox>() is not null
+                || visual.FindAncestorOfType<ComboBox>() is not null);
+    }
 
     // Carbon's RibbonMenuItem is a plain AvaloniaObject (no DataContext), so its Command cannot be data-bound
     // in XAML. Each dropdown's items share one "arm tool" command; assign it here. The per-item kind is set

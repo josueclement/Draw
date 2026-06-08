@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using Draw.App.Input;
 using Draw.App.Services;
 using Draw.Model.Documents;
 using Draw.Model.Serialization;
@@ -30,7 +31,8 @@ public sealed class ShellViewModel : ViewModelBase
         IThemeService theme,
         ToolboxViewModel toolbox,
         InspectorViewModel inspector,
-        StylePaletteViewModel stylePalette)
+        StylePaletteViewModel stylePalette,
+        KeymapStatusViewModel keymapStatus)
     {
         _factory = factory;
         _files = files;
@@ -41,6 +43,7 @@ public sealed class ShellViewModel : ViewModelBase
         Toolbox = toolbox;
         Inspector = inspector;
         StylePalette = stylePalette;
+        KeymapStatus = keymapStatus;
 
         NewCommand = new RelayCommand(OnNew);
         NewErCommand = new RelayCommand(OnNewEr);
@@ -77,6 +80,9 @@ public sealed class ShellViewModel : ViewModelBase
     public InspectorViewModel Inspector { get; }
 
     public StylePaletteViewModel StylePalette { get; }
+
+    /// <summary>Status-bar feedback for the keyboard-shortcut dispatcher (pending chord / messages).</summary>
+    public KeymapStatusViewModel KeymapStatus { get; }
 
     public RelayCommand NewCommand { get; }
     public RelayCommand NewErCommand { get; }

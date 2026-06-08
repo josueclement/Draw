@@ -14,40 +14,20 @@
         Background="{DynamicResource CarbonBackgroundBrush}"
         WindowStartupLocation="CenterScreen">
 
-    <Window.KeyBindings>
-        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewCommand}" />
-        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCommand}" />
-        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
-        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
-        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
-        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
-        <KeyBinding Gesture="Ctrl+W" Command="{Binding CloseDocumentCommand}" />
-        <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding ActiveDocument.FitToContentCommand}" />
-        <KeyBinding Gesture="Ctrl+Shift+L" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Left}" />
-        <KeyBinding Gesture="Ctrl+Shift+C" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.CenterHorizontal}" />
-        <KeyBinding Gesture="Ctrl+Shift+R" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Right}" />
-        <KeyBinding Gesture="Ctrl+Shift+T" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Top}" />
-        <KeyBinding Gesture="Ctrl+Shift+M" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.CenterVertical}" />
-        <KeyBinding Gesture="Ctrl+Shift+B" Command="{Binding ActiveDocument.AlignCommand}" CommandParameter="{x:Static layout:AlignmentMode.Bottom}" />
-        <KeyBinding Gesture="Ctrl+Shift+H" Command="{Binding ActiveDocument.DistributeCommand}" CommandParameter="{x:Static layout:DistributionMode.Horizontal}" />
-        <KeyBinding Gesture="Ctrl+Shift+V" Command="{Binding ActiveDocument.DistributeCommand}" CommandParameter="{x:Static layout:DistributionMode.Vertical}" />
-        <KeyBinding Gesture="Ctrl+OemCloseBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.BringForward}" />
-        <KeyBinding Gesture="Ctrl+OemOpenBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.SendBackward}" />
-        <KeyBinding Gesture="Ctrl+Shift+OemCloseBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.BringToFront}" />
-        <KeyBinding Gesture="Ctrl+Shift+OemOpenBrackets" Command="{Binding ActiveDocument.OrderCommand}" CommandParameter="{x:Static layout:ZOrderOperation.SendToBack}" />
-    </Window.KeyBindings>
+    <!-- Keyboard shortcuts are not declared here: all gestures and multi-key chords come from the
+         JSON keymap, dispatched at the window level in code-behind (see ChordInputDispatcher). -->
 
     <DockPanel>
 
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_New" Command="{Binding NewCommand}" InputGesture="Ctrl+N">
+                <MenuItem Header="_New" Command="{Binding NewCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=file_plus}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="New _ER diagram" Command="{Binding NewErCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=table}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Open…" Command="{Binding OpenCommand}" InputGesture="Ctrl+O">
+                <MenuItem Header="_Open…" Command="{Binding OpenCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=folder_open}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <MenuItem x:Name="OpenRecentMenu" Header="Open _Recent" ItemsSource="{Binding RecentFiles}">
@@ -68,10 +48,10 @@
                     </MenuItem.Styles>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="_Save" Command="{Binding SaveCommand}" InputGesture="Ctrl+S">
+                <MenuItem Header="_Save" Command="{Binding SaveCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=floppy_disk}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Save _As…" Command="{Binding SaveAsCommand}" InputGesture="Ctrl+Shift+S">
+                <MenuItem Header="Save _As…" Command="{Binding SaveAsCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=floppy_disk_back}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <Separator />
@@ -88,29 +68,29 @@
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="_Close" Command="{Binding CloseDocumentCommand}" InputGesture="Ctrl+W">
+                <MenuItem Header="_Close" Command="{Binding CloseDocumentCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=x}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="E_xit" Click="OnExitClick" />
             </MenuItem>
             <MenuItem Header="_Edit">
-                <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
+                <MenuItem Header="_Undo" Command="{Binding UndoCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=arrow_counter_clockwise}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y">
+                <MenuItem Header="_Redo" Command="{Binding RedoCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=arrow_clockwise}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Cu_t" Command="{Binding CutCommand}" InputGesture="Ctrl+X">
+                <MenuItem Header="Cu_t" Command="{Binding CutCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=scissors}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Copy" Command="{Binding CopyCommand}" InputGesture="Ctrl+C">
+                <MenuItem Header="_Copy" Command="{Binding CopyCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="_Paste" Command="{Binding PasteCommand}" InputGesture="Ctrl+V">
+                <MenuItem Header="_Paste" Command="{Binding PasteCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=clipboard}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="D_uplicate" Command="{Binding DuplicateCommand}" InputGesture="Ctrl+D">
+                <MenuItem Header="D_uplicate" Command="{Binding DuplicateCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy_simple}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <Separator />
@@ -118,7 +98,7 @@
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=image}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="_Delete" Command="{Binding DeleteCommand}" InputGesture="Delete">
+                <MenuItem Header="_Delete" Command="{Binding DeleteCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=trash}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
@@ -300,6 +280,8 @@
                 <TextBlock Text="{Binding ActiveDocument.DisplayName, FallbackValue='No document'}" />
                 <TextBlock Text="{Binding ActiveDocument.Zoom, StringFormat='Zoom: {0:P0}', FallbackValue=''}" />
                 <TextBlock Text="{Binding Toolbox.ActiveToolHint}" FontWeight="SemiBold" />
+                <!-- Keyboard chord feedback: the pending key sequence or a transient message. -->
+                <TextBlock Text="{Binding KeymapStatus.Display}" FontWeight="SemiBold" Opacity="0.8" />
             </StackPanel>
         </Border>
 
