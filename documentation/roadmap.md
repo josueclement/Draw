@@ -217,3 +217,14 @@ centres all content, zoom-capped at 100%. The hand-rolled unbounded pan/zoom is 
 reflect it. Scrollbar geometry lives in `DiagramView` code-behind beside the grid/handle logic;
 `DiagramDocumentViewModel.GetContentBounds()`/`FitToContentCommand` back it. See
 `documentation/plans/2026-06-08-canvas-scrollbars.md`.
+
+## Arrow-key nudge 🚧 (pending visual verification)
+
+Move the current selection with the **arrow keys**: plain arrow = one grid cell (`GridSize`),
+**Shift+arrow** = a 1px fine step. Selected nodes move together; a selected connector instead
+shifts **all its bend points** so the whole route moves as a unit. A contiguous run of nudges on
+the same selection **coalesces into one undo entry** (like a drag), and the move is exactly the
+requested delta (no implicit grid snap), so the fine step stays meaningful with snap-to-grid on.
+Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bubble past the
+suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
+a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.

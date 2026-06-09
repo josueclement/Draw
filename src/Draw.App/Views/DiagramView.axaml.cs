@@ -95,6 +95,10 @@ public partial class DiagramView : UserControl
     private ConnectorLabelKind _editLabelKind;
     private Point _labelGrabDelta;
 
+    // Arrow-key nudge coalescing: one undo entry per contiguous run of nudges on the same selection.
+    private bool _arrowNudgeUndoCaptured;
+    private readonly HashSet<object> _arrowNudgeSelection = new();
+
     // Scrollbar sync state: guard against feedback while pushing values, plus the world-space origin
     // (top-left of the scrollable region) used to map a scrollbar Value back to a pan offset.
     private bool _updatingScrollBars;
@@ -380,6 +384,9 @@ public partial class DiagramView : UserControl
 
         EndEditing();
         Focus();
+
+        // A mouse gesture ends the current arrow-nudge run, so the next nudge starts a fresh undo entry.
+        _arrowNudgeUndoCaptured = false;
 
         PointerPoint point = e.GetCurrentPoint(Viewport);
         Point screen = point.Position;
@@ -933,6 +940,77 @@ public partial class DiagramView : UserControl
         if (e.Key == Key.Escape)
         {
             EndEditing();
+            return;
+        }
+
+        if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down && _vm is not null)
+        {
+            NudgeSelection(e.Key, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            e.Handled = true;
+        }
+    }
+
+    // Arrow keys nudge the current selection: plain = one grid cell, Shift = a 1px fine step. Selected
+    // nodes move together; a selected connector with bend points shifts its whole route. Moving by exactly
+    // the requested delta (no implicit grid snap, unlike a drag release) keeps the fine step meaningful.
+    private void NudgeSelection(Key key, bool fine)
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        double step = fine ? 1d : _vm.GridSize;
+        (double dx, double dy) = key switch
+        {
+            Key.Left => (-step, 0d),
+            Key.Right => (step, 0d),
+            Key.Up => (0d, -step),
+            Key.Down => (0d, step),
+            _ => (0d, 0d),
+        };
+
+        if (_vm.SelectedConnector is { } connector && connector.Waypoints.Count > 0)
+        {
+            EnsureArrowNudgeUndo();
+            connector.MoveBendPointsBy(dx, dy);
+        }
+        else if (_vm.SelectedNodes.Any())
+        {
+            EnsureArrowNudgeUndo();
+            _vm.MoveSelectedBy(dx, dy);
+        }
+        else
+        {
+            // Nothing movable selected (no nodes, or an anchored connector with no bend points): no-op.
+            return;
+        }
+
+        _vm.MarkModified();
+        UpdateHandles();
+    }
+
+    // Captures a single undo snapshot at the start of a contiguous nudge run; changing the selection
+    // (by mouse, which also clears the flag, or by a command that re-selects) begins a fresh run.
+    private void EnsureArrowNudgeUndo()
+    {
+        if (_vm is null)
+        {
+            return;
+        }
+
+        HashSet<object> current = new(_vm.SelectedNodes);
+        if (_vm.SelectedConnector is { } connector)
+        {
+            current.Add(connector);
+        }
+
+        if (!_arrowNudgeUndoCaptured || !current.SetEquals(_arrowNudgeSelection))
+        {
+            _vm.CaptureUndo();
+            _arrowNudgeUndoCaptured = true;
+            _arrowNudgeSelection.Clear();
+            _arrowNudgeSelection.UnionWith(current);
         }
     }
 

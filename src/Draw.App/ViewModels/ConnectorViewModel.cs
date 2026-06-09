@@ -201,6 +201,22 @@ public sealed class ConnectorViewModel : ViewModelBase
         Recompute();
     }
 
+    /// <summary>Shifts every bend point by <paramref name="dx"/>/<paramref name="dy"/>, moving the whole route as a unit.</summary>
+    public void MoveBendPointsBy(double dx, double dy)
+    {
+        if (_model.BendPoints.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _model.BendPoints.Count; i++)
+        {
+            _model.BendPoints[i] = _model.BendPoints[i].Offset(dx, dy);
+        }
+
+        Recompute();
+    }
+
     /// <summary>Removes the bend point at <paramref name="index"/>.</summary>
     public void RemoveBendPoint(int index)
     {
