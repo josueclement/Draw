@@ -101,6 +101,18 @@ and a top-of-canvas banner. Transient, per-tab state on `DiagramDocumentViewMode
 (`ShapeArranger.AlignToReference`); one undo step per align; connectors re-route automatically. See
 `documentation/plans/2026-06-09-align-to-reference.md`.
 
+## Snap-to-grid toggle + group-coherent move 🚧 (cross-cutting, pending visual verification)
+
+Fixes distributed shapes losing their spacing when moved, and makes snapping optional. On
+drag-release the selection now snaps **as a single unit** — one offset derived from the
+bounding-box top-left applied to every node — so a lone shape still lands on the grid while a
+multi-shape group keeps its relative spacing (Align/Distribute layouts no longer drift). A new
+**Snap to grid** toggle in the **View ▸ Appearance** ribbon group turns snapping on/off app-wide
+(backed by the shared `EditorOptions` singleton; governs move/resize/create/paste/connectors via
+the existing `SnapEnabled` guard). The visible grid background is unaffected; the toggle is
+session-only (resets to on at startup). See
+`documentation/plans/2026-06-09-snap-to-grid-toggle-and-group-move.md`.
+
 ## Connection point spacing ✅ (cross-cutting)
 
 Tidy the connectors landing on a shape: a one-shot **Space connections** action spreads the connectors
