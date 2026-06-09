@@ -101,12 +101,6 @@ public sealed class InspectorViewModel : ViewModelBase
         private set => SetProperty(ref field, value);
     }
 
-    public IReadOnlyList<string> TypeSuggestions
-    {
-        get;
-        private set => SetProperty(ref field, value);
-    } = System.Array.Empty<string>();
-
     public bool HasNoSelection => !IsLabelNodeSelected && !IsConnectorSelected && !IsClassNodeSelected && !IsEntityNodeSelected;
 
     // --- Shape properties ---
@@ -316,11 +310,6 @@ public sealed class InspectorViewModel : ViewModelBase
                 if (node.HasInlineLabel)
                 {
                     Text = node.Label;
-                }
-
-                if (klass is not null || entity is not null)
-                {
-                    TypeSuggestions = _target!.GetTypeSuggestions();
                 }
             }
         }

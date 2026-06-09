@@ -173,6 +173,30 @@ public sealed class ClassNodeViewModel : NodeViewModelBase
         OnPropertyChanged(nameof(MinHeight));
     }
 
+    /// <summary>
+    /// Replaces the whole member set in one gesture (used by the modal editor's Save). The supplied
+    /// members are cloned so the editor's working copies stay detached from the document; the swap is
+    /// captured as a single undo step.
+    /// </summary>
+    public void ReplaceMembers(System.Collections.Generic.IReadOnlyList<ClassMember> members)
+    {
+        _context.BeginMemberEdit();
+
+        PrimaryMembers.Clear();
+        Operations.Clear();
+        foreach (ClassMember member in members)
+        {
+            ClassMember clone = member.Clone();
+            ClassMemberViewModel vm = Wrap(clone);
+            (IsPrimary(clone) ? PrimaryMembers : Operations).Add(vm);
+        }
+
+        ReorderModelFromCollections();
+        _context.EndMemberEdit();
+        GrowToFitContent();
+        OnPropertyChanged(nameof(MinHeight));
+    }
+
     public void MoveMember(ClassMemberViewModel member, int delta)
     {
         ObservableCollection<ClassMemberViewModel> list = PrimaryMembers.Contains(member) ? PrimaryMembers : Operations;
