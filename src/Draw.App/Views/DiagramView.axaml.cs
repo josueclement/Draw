@@ -23,6 +23,7 @@ using Draw.Diagramming.Layout;
 using Draw.Model.Connectors;
 using Draw.Model.Nodes;
 using Draw.Model.Primitives;
+using PhosphorIconsAvalonia;
 
 namespace Draw.App.Views;
 
@@ -698,35 +699,47 @@ public partial class DiagramView : UserControl
     // gives correct enable/disable (Distribute needs >=3 selected) with no DataContext plumbing.
     private static ContextMenu BuildArrangeMenu(DiagramDocumentViewModel vm)
     {
+        // Icons mirror the ribbon's Arrange group exactly (MainWindow.axaml): align glyphs come from
+        // Phosphor, the rest from the ToolIcon.* geometries in Resources/ToolIcons.axaml. The Phosphor
+        // align-center quirk is intentional — align_center_vertical depicts horizontal centering.
         MenuItem align = new() { Header = "Align" };
-        align.Items.Add(ArrangeItem("Align left", vm.AlignCommand, AlignmentMode.Left));
-        align.Items.Add(ArrangeItem("Align center", vm.AlignCommand, AlignmentMode.CenterHorizontal));
-        align.Items.Add(ArrangeItem("Align right", vm.AlignCommand, AlignmentMode.Right));
+        align.Items.Add(ArrangeItem("Align left", vm.AlignCommand, AlignmentMode.Left, Phosphor(Icon.align_left)));
+        align.Items.Add(ArrangeItem("Align center", vm.AlignCommand, AlignmentMode.CenterHorizontal, Phosphor(Icon.align_center_vertical)));
+        align.Items.Add(ArrangeItem("Align right", vm.AlignCommand, AlignmentMode.Right, Phosphor(Icon.align_right)));
         align.Items.Add(new Separator());
-        align.Items.Add(ArrangeItem("Align top", vm.AlignCommand, AlignmentMode.Top));
-        align.Items.Add(ArrangeItem("Align middle", vm.AlignCommand, AlignmentMode.CenterVertical));
-        align.Items.Add(ArrangeItem("Align bottom", vm.AlignCommand, AlignmentMode.Bottom));
+        align.Items.Add(ArrangeItem("Align top", vm.AlignCommand, AlignmentMode.Top, Phosphor(Icon.align_top)));
+        align.Items.Add(ArrangeItem("Align middle", vm.AlignCommand, AlignmentMode.CenterVertical, Phosphor(Icon.align_center_horizontal)));
+        align.Items.Add(ArrangeItem("Align bottom", vm.AlignCommand, AlignmentMode.Bottom, Phosphor(Icon.align_bottom)));
 
         MenuItem order = new() { Header = "Order" };
-        order.Items.Add(ArrangeItem("Bring to front", vm.OrderCommand, ZOrderOperation.BringToFront));
-        order.Items.Add(ArrangeItem("Bring forward", vm.OrderCommand, ZOrderOperation.BringForward));
-        order.Items.Add(ArrangeItem("Send backward", vm.OrderCommand, ZOrderOperation.SendBackward));
-        order.Items.Add(ArrangeItem("Send to back", vm.OrderCommand, ZOrderOperation.SendToBack));
+        order.Items.Add(ArrangeItem("Bring to front", vm.OrderCommand, ZOrderOperation.BringToFront, ToolGeometry("ToolIcon.BringToFront")));
+        order.Items.Add(ArrangeItem("Bring forward", vm.OrderCommand, ZOrderOperation.BringForward, ToolGeometry("ToolIcon.BringForward")));
+        order.Items.Add(ArrangeItem("Send backward", vm.OrderCommand, ZOrderOperation.SendBackward, ToolGeometry("ToolIcon.SendBackward")));
+        order.Items.Add(ArrangeItem("Send to back", vm.OrderCommand, ZOrderOperation.SendToBack, ToolGeometry("ToolIcon.SendToBack")));
 
         ContextMenu menu = new();
         menu.Items.Add(align);
         menu.Items.Add(order);
         menu.Items.Add(new Separator());
-        menu.Items.Add(ArrangeItem("Distribute horizontally", vm.DistributeCommand, DistributionMode.Horizontal));
-        menu.Items.Add(ArrangeItem("Distribute vertically", vm.DistributeCommand, DistributionMode.Vertical));
+        menu.Items.Add(ArrangeItem("Distribute horizontally", vm.DistributeCommand, DistributionMode.Horizontal, ToolGeometry("ToolIcon.DistributeHorizontal")));
+        menu.Items.Add(ArrangeItem("Distribute vertically", vm.DistributeCommand, DistributionMode.Vertical, ToolGeometry("ToolIcon.DistributeVertical")));
         menu.Items.Add(new Separator());
-        menu.Items.Add(new MenuItem { Header = "Space connections", Command = vm.SpaceConnectionsCommand });
-        menu.Items.Add(new MenuItem { Header = "Merge connections", Command = vm.MergeConnectionsCommand });
+        menu.Items.Add(new MenuItem { Header = "Space connections", Command = vm.SpaceConnectionsCommand, Icon = MenuIcon(ToolGeometry("ToolIcon.SpaceConnections")) });
+        menu.Items.Add(new MenuItem { Header = "Merge connections", Command = vm.MergeConnectionsCommand, Icon = MenuIcon(ToolGeometry("ToolIcon.MergeConnections")) });
         return menu;
     }
 
-    private static MenuItem ArrangeItem<T>(string header, RelayCommand<T> command, T parameter)
-        => new() { Header = header, Command = command, CommandParameter = parameter };
+    private static MenuItem ArrangeItem<T>(string header, RelayCommand<T> command, T parameter, Geometry? icon)
+        => new() { Header = header, Command = command, CommandParameter = parameter, Icon = MenuIcon(icon) };
+
+    private static PathIcon? MenuIcon(Geometry? geometry)
+        => geometry is null ? null : new PathIcon { Data = geometry, Width = 16, Height = 16 };
+
+    private static Geometry Phosphor(Icon icon)
+        => IconService.CreateGeometry(icon, IconType.regular);
+
+    private static Geometry? ToolGeometry(string key)
+        => Application.Current!.TryGetResource(key, null, out object? value) ? value as Geometry : null;
 
     /// <summary>Opens a prebuilt tool menu (Shift+S / Shift+C) at the pointer over this canvas.</summary>
     public void OpenToolMenu(ContextMenu menu)
