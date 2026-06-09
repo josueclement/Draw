@@ -238,10 +238,15 @@
                     <ribbon:RibbonButton Header="Duplicate" Command="{Binding DuplicateCommand}" IconData="{pia:IconGeometry Icon=copy_simple}" />
                     <ribbon:RibbonButton Header="Delete" Command="{Binding DeleteCommand}" IconData="{pia:IconGeometry Icon=trash}" />
                 </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Export">
+                    <ribbon:RibbonButton Header="Image" Command="{Binding ExportImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
+                    <ribbon:RibbonButton Header="SVG" Command="{Binding ExportSvgCommand}" IconData="{pia:IconGeometry Icon=file_svg}" />
+                    <ribbon:RibbonButton Header="Copy image" Command="{Binding CopyImageCommand}" IconData="{pia:IconGeometry Icon=copy}" />
+                </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
             <ribbon:RibbonTab Header="Insert">
-                <ribbon:RibbonGroup Header="Shapes">
+                <ribbon:RibbonGroup Header="Common">
                     <ribbon:RibbonDropDownButton x:Name="ShapesDropDown" Header="{Binding Toolbox.ShapesHeader}" IconData="{pia:IconGeometry Icon=shapes}">
                         <ribbon:RibbonMenuItem Header="Rectangle" CommandParameter="{x:Static nodes:ShapeKind.Rectangle}" IconData="{pia:IconGeometry Icon=rectangle}" />
                         <ribbon:RibbonMenuItem Header="Rounded rectangle" CommandParameter="{x:Static nodes:ShapeKind.RoundedRectangle}" IconData="{StaticResource ToolIcon.RoundedRectangle}" />
@@ -252,18 +257,9 @@
                         <ribbon:RibbonMenuItem Header="Trapezoid" CommandParameter="{x:Static nodes:ShapeKind.Trapezoid}" IconData="{StaticResource ToolIcon.Trapezoid}" />
                         <ribbon:RibbonMenuItem Header="Triangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}" IconData="{pia:IconGeometry Icon=triangle}" />
                     </ribbon:RibbonDropDownButton>
-                </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="Connectors">
-                    <ribbon:RibbonDropDownButton x:Name="ConnectorsDropDown" Header="{Binding Toolbox.ConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
+                    <ribbon:RibbonDropDownButton x:Name="CommonConnectorsDropDown" Header="{Binding Toolbox.CommonConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
                         <ribbon:RibbonMenuItem Header="Association" CommandParameter="{x:Static rel:RelationshipKind.Association}" IconData="{StaticResource ToolIcon.Association}" />
                         <ribbon:RibbonMenuItem Header="Directed association" CommandParameter="{x:Static rel:RelationshipKind.DirectedAssociation}" IconData="{StaticResource ToolIcon.DirectedAssociation}" />
-                        <ribbon:RibbonMenuItem Header="Aggregation" CommandParameter="{x:Static rel:RelationshipKind.Aggregation}" IconData="{StaticResource ToolIcon.Aggregation}" />
-                        <ribbon:RibbonMenuItem Header="Composition" CommandParameter="{x:Static rel:RelationshipKind.Composition}" IconData="{StaticResource ToolIcon.Composition}" />
-                        <ribbon:RibbonMenuItem Header="Generalization" CommandParameter="{x:Static rel:RelationshipKind.Generalization}" IconData="{StaticResource ToolIcon.Generalization}" />
-                        <ribbon:RibbonMenuItem Header="Realization" CommandParameter="{x:Static rel:RelationshipKind.Realization}" IconData="{StaticResource ToolIcon.Realization}" />
-                        <ribbon:RibbonMenuItem Header="Dependency" CommandParameter="{x:Static rel:RelationshipKind.Dependency}" IconData="{StaticResource ToolIcon.Dependency}" />
-                        <ribbon:RibbonMenuItem Header="Include" CommandParameter="{x:Static rel:RelationshipKind.Include}" IconData="{StaticResource ToolIcon.Dependency}" />
-                        <ribbon:RibbonMenuItem Header="Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}" IconData="{StaticResource ToolIcon.Dependency}" />
                     </ribbon:RibbonDropDownButton>
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="UML">
@@ -276,6 +272,15 @@
                         <ribbon:RibbonMenuItem Header="Actor" CommandParameter="{x:Static vm:UseCaseNodeKind.Actor}" IconData="{pia:IconGeometry Icon=user}" />
                         <ribbon:RibbonMenuItem Header="Use case" CommandParameter="{x:Static vm:UseCaseNodeKind.UseCase}" IconData="{StaticResource ToolIcon.Ellipse}" />
                         <ribbon:RibbonMenuItem Header="System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}" IconData="{pia:IconGeometry Icon=bounding_box}" />
+                    </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonDropDownButton x:Name="UmlConnectorsDropDown" Header="{Binding Toolbox.UmlConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
+                        <ribbon:RibbonMenuItem Header="Aggregation" CommandParameter="{x:Static rel:RelationshipKind.Aggregation}" IconData="{StaticResource ToolIcon.Aggregation}" />
+                        <ribbon:RibbonMenuItem Header="Composition" CommandParameter="{x:Static rel:RelationshipKind.Composition}" IconData="{StaticResource ToolIcon.Composition}" />
+                        <ribbon:RibbonMenuItem Header="Generalization" CommandParameter="{x:Static rel:RelationshipKind.Generalization}" IconData="{StaticResource ToolIcon.Generalization}" />
+                        <ribbon:RibbonMenuItem Header="Realization" CommandParameter="{x:Static rel:RelationshipKind.Realization}" IconData="{StaticResource ToolIcon.Realization}" />
+                        <ribbon:RibbonMenuItem Header="Dependency" CommandParameter="{x:Static rel:RelationshipKind.Dependency}" IconData="{StaticResource ToolIcon.Dependency}" />
+                        <ribbon:RibbonMenuItem Header="Include" CommandParameter="{x:Static rel:RelationshipKind.Include}" IconData="{StaticResource ToolIcon.Dependency}" />
+                        <ribbon:RibbonMenuItem Header="Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}" IconData="{StaticResource ToolIcon.Dependency}" />
                     </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonButton Header="Note" Command="{Binding Toolbox.SelectShapeToolCommand}" CommandParameter="{x:Static nodes:ShapeKind.Note}" IconData="{StaticResource ToolIcon.Note}" />
                 </ribbon:RibbonGroup>
@@ -401,11 +406,6 @@
                     <ribbon:RibbonToggleButton Header="Snap to grid"
                                                IconData="{pia:IconGeometry Icon=grid_four}"
                                                IsChecked="{Binding SnapToGrid, Mode=TwoWay}" />
-                </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="Export">
-                    <ribbon:RibbonButton Header="Image" Command="{Binding ExportImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
-                    <ribbon:RibbonButton Header="SVG" Command="{Binding ExportSvgCommand}" IconData="{pia:IconGeometry Icon=file_svg}" />
-                    <ribbon:RibbonButton Header="Copy image" Command="{Binding CopyImageCommand}" IconData="{pia:IconGeometry Icon=copy}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
         </ribbon:Ribbon>
