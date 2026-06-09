@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Options;
+using Draw.App.Configuration;
 using Draw.App.Input;
 using Draw.App.Services;
 using Draw.Model.Documents;
@@ -21,6 +23,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly IRecentFilesService _recent;
     private readonly IDialogService _dialogs;
     private readonly IThemeService _theme;
+    private readonly EditorOptions _editorOptions;
 
     public ShellViewModel(
         IDiagramDocumentViewModelFactory factory,
@@ -29,6 +32,7 @@ public sealed class ShellViewModel : ViewModelBase
         IRecentFilesService recent,
         IDialogService dialogs,
         IThemeService theme,
+        IOptions<EditorOptions> editorOptions,
         ToolboxViewModel toolbox,
         InspectorViewModel inspector,
         StylePaletteViewModel stylePalette,
@@ -40,6 +44,7 @@ public sealed class ShellViewModel : ViewModelBase
         _recent = recent;
         _dialogs = dialogs;
         _theme = theme;
+        _editorOptions = editorOptions.Value;
         Toolbox = toolbox;
         Inspector = inspector;
         StylePalette = stylePalette;
@@ -143,6 +148,21 @@ public sealed class ShellViewModel : ViewModelBase
     } = true;
 
     public bool IsInspectorCollapsed => !IsInspectorOpen;
+
+    /// <summary>App-wide snap-to-grid toggle, backed by the shared <see cref="EditorOptions"/> singleton so
+    /// flipping it affects every open document at once. Session-only — not persisted across restarts.</summary>
+    public bool SnapToGrid
+    {
+        get => _editorOptions.SnapToGrid;
+        set
+        {
+            if (_editorOptions.SnapToGrid != value)
+            {
+                _editorOptions.SnapToGrid = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     public DiagramDocumentViewModel? ActiveDocument
     {

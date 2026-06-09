@@ -399,6 +399,11 @@
                     <ribbon:RibbonToggleButton Header="Properties"
                                                IconData="{pia:IconGeometry Icon=sidebar}"
                                                IsChecked="{Binding IsInspectorOpen, Mode=TwoWay}" />
+                    <!-- Self-toggles like Properties above; TwoWay writes back to the shared editor options,
+                         so snapping turns on/off for every open document at once. -->
+                    <ribbon:RibbonToggleButton Header="Snap to grid"
+                                               IconData="{pia:IconGeometry Icon=grid_four}"
+                                               IsChecked="{Binding SnapToGrid, Mode=TwoWay}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Export">
                     <ribbon:RibbonButton Header="Image" Command="{Binding ExportImageCommand}" IconData="{pia:IconGeometry Icon=image}" />

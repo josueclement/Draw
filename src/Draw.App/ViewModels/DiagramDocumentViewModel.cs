@@ -843,11 +843,30 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             return;
         }
 
-        foreach (NodeViewModelBase vm in SelectedNodes)
+        List<NodeViewModelBase> nodes = SelectedNodes.ToList();
+        if (nodes.Count == 0)
         {
-            Rect2D snapped = vm.Model.Bounds.PositionSnappedToGrid(GridSize);
-            vm.X = snapped.X;
-            vm.Y = snapped.Y;
+            return;
+        }
+
+        // Snap the selection as a single unit: derive one offset from the bounding-box top-left and apply
+        // it to every node. A lone shape still lands on the grid; a multi-shape group keeps its relative
+        // spacing, so shapes laid out with Align/Distribute don't drift apart when the group is moved.
+        double minX = nodes.Min(n => n.Model.Bounds.X);
+        double minY = nodes.Min(n => n.Model.Bounds.Y);
+        Point2D origin = new(minX, minY);
+        Point2D snapped = origin.SnappedToGrid(GridSize);
+        double dx = snapped.X - origin.X;
+        double dy = snapped.Y - origin.Y;
+        if (dx == 0d && dy == 0d)
+        {
+            return;
+        }
+
+        foreach (NodeViewModelBase vm in nodes)
+        {
+            vm.X += dx;
+            vm.Y += dy;
         }
     }
 
