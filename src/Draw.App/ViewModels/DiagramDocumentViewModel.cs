@@ -35,6 +35,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private DiagramDocument _document;
     private string _cleanSnapshot;
 
+    // Transient (never serialized), per-tab "alignment reference": the node ids that stay put while the
+    // current selection (the "movers") is lined up against their combined bounding box. Stale ids are
+    // pruned in RaiseSelectionChanged, so the live reference always reflects existing shapes.
+    private readonly HashSet<Guid> _referenceIds = new();
+
     // Ribbon View-tab zoom step + bounds; bounds mirror the Ctrl+wheel clamp in DiagramView.
     private const double ZoomStep = 1.2d;
     private const double MinZoom = 0.1d;
@@ -79,6 +84,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         // Also selection-gated (CanExecute depends on node count) and notified in
         // RaiseSelectionChanged, so it likewise must exist before RebuildNodes().
         FitToContentCommand = new RelayCommand(FitToContent, () => Nodes.Count > 0);
+        // Relative-alignment commands; selection-gated and notified in RaiseSelectionChanged, so they
+        // must exist before RebuildNodes() too.
+        SetReferenceCommand = new RelayCommand(SetReference, () => CanSetReference);
+        ClearReferenceCommand = new RelayCommand(ClearReference, () => HasReference);
+        AlignToReferenceCommand = new RelayCommand<AlignmentMode>(
+            mode => { if (mode is { } m) AlignSelectedToReference(m); },
+            _ => CanAlignToReference);
 
         RebuildNodes();
         RebuildConnectors();
@@ -163,6 +175,15 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public RelayCommand<ZOrderOperation> OrderCommand { get; }
 
+    /// <summary>Captures the current selection as the fixed alignment reference.</summary>
+    public RelayCommand SetReferenceCommand { get; }
+
+    /// <summary>Clears the captured alignment reference.</summary>
+    public RelayCommand ClearReferenceCommand { get; }
+
+    /// <summary>Lines the movers (selection minus reference) up against the reference's bounding box.</summary>
+    public RelayCommand<AlignmentMode> AlignToReferenceCommand { get; }
+
     public double PanX
     {
         get;
@@ -208,6 +229,31 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     /// <summary>Connector merging operates on every connector attached to the selected shape(s).</summary>
     public bool CanMergeConnections => SelectedNodes.Any();
+
+    /// <summary>The captured reference nodes that still exist in the document (stale ids are ignored).</summary>
+    public IEnumerable<NodeViewModelBase> ReferenceNodes => Nodes.Where(n => _referenceIds.Contains(n.Id));
+
+    /// <summary>True while an alignment reference is captured (at least one reference node still present).</summary>
+    public bool HasReference => ReferenceNodes.Any();
+
+    /// <summary>The selected nodes that will actually move — the selection minus any reference nodes.</summary>
+    private IEnumerable<NodeViewModelBase> MoverNodes => SelectedNodes.Where(n => !_referenceIds.Contains(n.Id));
+
+    /// <summary>"Set as reference" needs at least one selected node to capture.</summary>
+    public bool CanSetReference => HasNodeSelection;
+
+    /// <summary>"Align to reference" needs a captured reference and at least one mover (selected non-reference node).</summary>
+    public bool CanAlignToReference => HasReference && MoverNodes.Any();
+
+    /// <summary>Banner text shown while a reference is active.</summary>
+    public string ReferenceStatusText
+    {
+        get
+        {
+            int count = ReferenceNodes.Count();
+            return $"Reference set: {count} {(count == 1 ? "shape" : "shapes")}. Select other shapes, then Align to reference. Esc to clear.";
+        }
+    }
 
     public bool HasConnectorSelection => SelectedConnector is not null;
 
@@ -837,6 +883,75 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     }
 
     /// <summary>
+    /// Captures the current selection as the alignment reference: those shapes stay put while a later
+    /// selection is lined up against them. Clears the live selection so the next pick is the movers; the
+    /// reference keeps its own highlight independently. Transient (not serialized) and per-tab.
+    /// </summary>
+    public void SetReference()
+    {
+        HashSet<Guid> ids = SelectedNodes.Select(n => n.Id).ToHashSet();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        _referenceIds.Clear();
+        foreach (Guid id in ids)
+        {
+            _referenceIds.Add(id);
+        }
+
+        // Drop the live selection so the user's next pick is the movers; ClearSelection() raises the
+        // selection-changed refresh (which also notifies the reference properties + commands).
+        ClearSelection();
+    }
+
+    /// <summary>Clears the alignment reference. Transient state only — no document mutation, no undo step.</summary>
+    public void ClearReference()
+    {
+        if (_referenceIds.Count == 0)
+        {
+            return;
+        }
+
+        _referenceIds.Clear();
+        RaiseSelectionChanged();
+    }
+
+    /// <summary>
+    /// Lines the movers (the selection minus the reference) up against the reference's combined bounding
+    /// box, moving them as one block so their relative layout is preserved (one undo step). The reference
+    /// shapes never move; positions are applied exactly — deliberately not re-snapped to the grid.
+    /// </summary>
+    public void AlignSelectedToReference(AlignmentMode mode)
+    {
+        List<NodeViewModelBase> movers = MoverNodes.ToList();
+        List<NodeViewModelBase> references = ReferenceNodes.ToList();
+        if (movers.Count == 0 || references.Count == 0)
+        {
+            return;
+        }
+
+        Rect2D referenceBox = references[0].Model.Bounds;
+        for (int i = 1; i < references.Count; i++)
+        {
+            referenceBox = referenceBox.Union(references[i].Model.Bounds);
+        }
+
+        CaptureUndo();
+        IReadOnlyList<Rect2D> result = ShapeArranger.AlignToReference(
+            movers.Select(n => n.Model.Bounds).ToList(), referenceBox, mode);
+        for (int i = 0; i < movers.Count; i++)
+        {
+            movers[i].X = result[i].X;
+            movers[i].Y = result[i].Y;
+        }
+
+        MarkModified();
+        RaiseSelectionChanged();
+    }
+
+    /// <summary>
     /// Changes the front-to-back stacking of the selected shapes (one undo step). Nodes are kept in two
     /// bands — system boundaries always below ordinary shapes — and each band is reordered independently,
     /// so a boundary can be re-stacked relative to other boundaries but can never rise above a shape. The
@@ -1374,18 +1489,33 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     private void RaiseSelectionChanged()
     {
+        // Drop any reference ids whose node no longer exists (deleted, or gone after undo/redo) so the
+        // reference reflects only live shapes — and so a deleted reference can't resurrect on undo.
+        if (_referenceIds.Count > 0)
+        {
+            HashSet<Guid> live = Nodes.Select(n => n.Id).ToHashSet();
+            _referenceIds.RemoveWhere(id => !live.Contains(id));
+        }
+
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(HasNodeSelection));
         OnPropertyChanged(nameof(CanAlignSelection));
         OnPropertyChanged(nameof(CanDistributeSelection));
         OnPropertyChanged(nameof(CanSpaceConnections));
         OnPropertyChanged(nameof(CanMergeConnections));
+        OnPropertyChanged(nameof(HasReference));
+        OnPropertyChanged(nameof(CanSetReference));
+        OnPropertyChanged(nameof(CanAlignToReference));
+        OnPropertyChanged(nameof(ReferenceStatusText));
         AlignCommand.NotifyCanExecuteChanged();
         DistributeCommand.NotifyCanExecuteChanged();
         SpaceConnectionsCommand.NotifyCanExecuteChanged();
         MergeConnectionsCommand.NotifyCanExecuteChanged();
         OrderCommand.NotifyCanExecuteChanged();
         FitToContentCommand.NotifyCanExecuteChanged();
+        SetReferenceCommand.NotifyCanExecuteChanged();
+        ClearReferenceCommand.NotifyCanExecuteChanged();
+        AlignToReferenceCommand.NotifyCanExecuteChanged();
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 }

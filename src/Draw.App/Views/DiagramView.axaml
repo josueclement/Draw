@@ -389,6 +389,21 @@
         </Canvas>
         </Border>
 
+        <!-- Alignment-reference banner: shown only while a reference is captured. Floats at the top of
+             the canvas cell (screen-space, not zoomed); bound to the document VM. -->
+        <Border Grid.Row="0" Grid.Column="0"
+                VerticalAlignment="Top" HorizontalAlignment="Stretch"
+                IsVisible="{Binding HasReference}"
+                Background="{DynamicResource CarbonSurfaceBrush}"
+                BorderBrush="{DynamicResource CarbonBorderBrush}"
+                BorderThickness="0,0,0,1" Padding="8,4">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Ellipse Width="8" Height="8" Fill="#F2A93B" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ReferenceStatusText}" VerticalAlignment="Center" />
+                <Button Content="Clear reference" Command="{Binding ClearReferenceCommand}" Padding="8,2" />
+            </StackPanel>
+        </Border>
+
         <ScrollBar x:Name="VScroll" Grid.Row="0" Grid.Column="1"
                    Orientation="Vertical" AllowAutoHide="False" IsVisible="False" />
         <ScrollBar x:Name="HScroll" Grid.Row="1" Grid.Column="0"
