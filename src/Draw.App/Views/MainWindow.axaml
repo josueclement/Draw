@@ -392,11 +392,13 @@
 
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
+                <!-- Canvas: MinWidth keeps the splitter from dragging it down to nothing. -->
+                <ColumnDefinition Width="*" MinWidth="320" />
                 <ColumnDefinition Width="Auto" />
-                <!-- Inspector: resizable via the splitter; MinWidth keeps the fixed-width
-                     member rows from clipping, MaxWidth stops it eating the canvas. -->
-                <ColumnDefinition Width="260" MinWidth="220" MaxWidth="560" />
+                <!-- Inspector: resizable via the splitter; MinWidth keeps the fixed-width member rows
+                     from clipping. No MaxWidth — the user can widen it freely (bounded only by the
+                     canvas MinWidth). -->
+                <ColumnDefinition Width="260" MinWidth="220" />
             </Grid.ColumnDefinitions>
 
             <!-- Document tabs -->
@@ -432,7 +434,9 @@
             <Border Grid.Column="2" Background="{DynamicResource CarbonSurfaceBrush}"
                     Padding="10">
                 <ScrollViewer>
-                    <StackPanel Spacing="10">
+                    <!-- Right margin reserves a gutter for the vertical scrollbar (Avalonia overlays it
+                         on the content edge, otherwise it covers the fields / row remove buttons). -->
+                    <StackPanel Spacing="10" Margin="0,0,14,0">
                         <TextBlock Text="Properties" FontWeight="SemiBold" />
                         <TextBlock Text="No selection" Opacity="0.6"
                                    IsVisible="{Binding Inspector.HasNoSelection}" />
@@ -484,11 +488,9 @@
                             </StackPanel>
                             <CheckBox Content="Abstract" IsChecked="{Binding IsAbstract, Mode=TwoWay}" />
 
-                            <!-- Members: tidy aligned editor. Add/Edit live in the header; each row aligns its
-                                 columns via shared-size groups. Double-clicking an empty/label area opens the full
-                                 modal editor; double-clicking inside a field edits text as usual (see code-behind). -->
-                            <StackPanel Background="Transparent" Grid.IsSharedSizeScope="True"
-                                        DoubleTapped="OnClassMembersDoubleTapped">
+                            <!-- Members: tidy aligned editor. Add lives in the header; each row aligns its
+                                 columns via shared-size groups. -->
+                            <StackPanel Grid.IsSharedSizeScope="True">
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
                                     <TextBlock Text="Members" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <Button ToolTip.Tip="Add field/literal"
@@ -505,8 +507,6 @@
                                             <TextBlock Text="Op" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Content="Edit…" ToolTip.Tip="Open the full members editor"
-                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.EditMembersCommand}" />
                                 </StackPanel>
 
                                 <ItemsControl ItemsSource="{Binding PrimaryMembers}">
@@ -601,9 +601,8 @@
                                 <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
-                            <!-- Columns: name + reorder/remove on one aligned row, type below, flags below that.
-                                 Double-clicking an empty/label area opens the full modal editor (see code-behind). -->
-                            <StackPanel Background="Transparent" DoubleTapped="OnEntityColumnsDoubleTapped">
+                            <!-- Columns: name + reorder/remove on one aligned row, type below, flags below that. -->
+                            <StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
                                     <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <Button ToolTip.Tip="Add column"
@@ -613,8 +612,6 @@
                                             <TextBlock Text="Column" />
                                         </StackPanel>
                                     </Button>
-                                    <Button Content="Edit…" ToolTip.Tip="Open the full columns editor"
-                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.EditColumnsCommand}" />
                                 </StackPanel>
 
                                 <ItemsControl ItemsSource="{Binding Columns}">

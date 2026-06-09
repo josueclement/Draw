@@ -105,38 +105,6 @@ public partial class MainWindow : Window
 
     private void OnWindowDeactivated(object? sender, EventArgs e) => _dispatcher?.Reset();
 
-    private void OnClassMembersDoubleTapped(object? sender, TappedEventArgs e)
-        => OpenEditorOnDoubleTap(e, _shell?.Inspector.EditMembersCommand);
-
-    private void OnEntityColumnsDoubleTapped(object? sender, TappedEventArgs e)
-        => OpenEditorOnDoubleTap(e, _shell?.Inspector.EditColumnsCommand);
-
-    // Double-clicking the panel opens the spacious modal editor — but only on a non-interactive spot
-    // (a label, a gap). A double-click inside a TextBox/AutoCompleteBox/etc. must keep its normal
-    // text-selection behaviour, so those sources are ignored.
-    private static void OpenEditorOnDoubleTap(TappedEventArgs e, ICommand? command)
-    {
-        if (command is null || IsInteractiveSource(e.Source))
-        {
-            return;
-        }
-
-        if (command.CanExecute(null))
-        {
-            command.Execute(null);
-            e.Handled = true;
-        }
-    }
-
-    private static bool IsInteractiveSource(object? source)
-        => source is Visual visual
-            && (visual is TextBox or AutoCompleteBox or ComboBox or CheckBox or Button
-                || visual.FindAncestorOfType<TextBox>() is not null
-                || visual.FindAncestorOfType<AutoCompleteBox>() is not null
-                || visual.FindAncestorOfType<ComboBox>() is not null
-                || visual.FindAncestorOfType<CheckBox>() is not null
-                || visual.FindAncestorOfType<Button>() is not null);
-
     private void OnGlobalKeyDown(object? sender, KeyEventArgs e)
     {
         // Never intercept keys while a text-entry surface has focus (renaming, the inspector, etc.).

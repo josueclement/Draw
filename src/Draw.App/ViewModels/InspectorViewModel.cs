@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
-using Draw.App.Services;
 using Draw.Model.Connectors;
 using Draw.Model.Nodes;
 using ModelStyle = Draw.Model.Styling;
@@ -13,7 +11,6 @@ namespace Draw.App.ViewModels;
 /// <summary>Edits text/styling for the active document's selection — a shape or a connector.</summary>
 public sealed class InspectorViewModel : ViewModelBase
 {
-    private readonly IDialogService _dialogs;
     private DiagramDocumentViewModel? _target;
     private bool _loading;
 
@@ -103,12 +100,6 @@ public sealed class InspectorViewModel : ViewModelBase
         get;
         private set => SetProperty(ref field, value);
     }
-
-    public IReadOnlyList<string> TypeSuggestions
-    {
-        get;
-        private set => SetProperty(ref field, value);
-    } = System.Array.Empty<string>();
 
     public bool HasNoSelection => !IsLabelNodeSelected && !IsConnectorSelected && !IsClassNodeSelected && !IsEntityNodeSelected;
 
@@ -230,9 +221,6 @@ public sealed class InspectorViewModel : ViewModelBase
 
     public IRelayCommand<ClassMemberViewModel> MoveMemberDownCommand { get; }
 
-    /// <summary>Opens the spacious modal members editor for the selected class node.</summary>
-    public IAsyncRelayCommand EditMembersCommand { get; }
-
     // --- Entity column-editor commands ---
 
     public IRelayCommand AddColumnCommand { get; }
@@ -243,53 +231,18 @@ public sealed class InspectorViewModel : ViewModelBase
 
     public IRelayCommand<EntityColumnViewModel> MoveColumnDownCommand { get; }
 
-    /// <summary>Opens the spacious modal columns editor for the selected entity node.</summary>
-    public IAsyncRelayCommand EditColumnsCommand { get; }
-
-    public InspectorViewModel(IDialogService dialogs)
+    public InspectorViewModel()
     {
-        _dialogs = dialogs;
-
         AddPrimaryMemberCommand = new RelayCommand(() => SelectedClassNode?.AddPrimaryMember());
         AddOperationCommand = new RelayCommand(() => SelectedClassNode?.AddOperation());
         RemoveMemberCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.RemoveMember(m); });
         MoveMemberUpCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.MoveMember(m, -1); });
         MoveMemberDownCommand = new RelayCommand<ClassMemberViewModel>(m => { if (m is not null) SelectedClassNode?.MoveMember(m, +1); });
-        EditMembersCommand = new AsyncRelayCommand(EditMembersAsync);
 
         AddColumnCommand = new RelayCommand(() => SelectedEntityNode?.AddColumn());
         RemoveColumnCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.RemoveColumn(c); });
         MoveColumnUpCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.MoveColumn(c, -1); });
         MoveColumnDownCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.MoveColumn(c, +1); });
-        EditColumnsCommand = new AsyncRelayCommand(EditColumnsAsync);
-    }
-
-    private async Task EditMembersAsync()
-    {
-        if (SelectedClassNode is not { } node)
-        {
-            return;
-        }
-
-        IReadOnlyList<ClassMember>? edited = await _dialogs.EditClassMembersAsync(node.Kind, node.Model.Members, TypeSuggestions);
-        if (edited is not null)
-        {
-            node.ReplaceMembers(edited);
-        }
-    }
-
-    private async Task EditColumnsAsync()
-    {
-        if (SelectedEntityNode is not { } node)
-        {
-            return;
-        }
-
-        IReadOnlyList<EntityColumn>? edited = await _dialogs.EditEntityColumnsAsync(node.Model.Columns, TypeSuggestions);
-        if (edited is not null)
-        {
-            node.ReplaceColumns(edited);
-        }
     }
 
     public void SetTarget(DiagramDocumentViewModel? target)
@@ -357,11 +310,6 @@ public sealed class InspectorViewModel : ViewModelBase
                 if (node.HasInlineLabel)
                 {
                     Text = node.Label;
-                }
-
-                if (klass is not null || entity is not null)
-                {
-                    TypeSuggestions = _target!.GetTypeSuggestions();
                 }
             }
         }

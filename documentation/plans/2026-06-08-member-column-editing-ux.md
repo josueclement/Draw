@@ -44,12 +44,11 @@ column flags, which are core ER semantics).
 Implemented; `dotnet build Draw.slnx` clean (0 warnings, 0 errors). Pending: manual verification on
 Windows/macOS (no GUI under WSL2).
 
-Dialog sizing: Carbon's `ContentDialog` surface is a `Border` hard-capped at `MaxWidth="600"` (with a
-24px inner margin → ~550px usable) and its width is **not** settable from the configurator
-(`Themes/Controls/ContentDialog.axaml`). The first cut forced the content to `MinWidth="620/660"`, so
-it spilled past the dialog border. Fixed by dropping each editor's root `MinWidth` to `520` (so
-`Stretch` fills the ~550 slot and the box maxes at 600, no overflow), enabling horizontal scroll as a
-safety net for the dense operations row, and trimming a few column min-widths. Remaining runtime
-things to confirm on a real GUI: editor focus and AutoCompleteBox popups inside the overlay. If the
-overlay still proves too constrained, the fallback is a dedicated modal `Window` — the editor view/VM
-are reusable as-is. Per the request, the user will review both surfaces and decide which to keep.
+**Resolved (2026-06-09): the modal editor was dropped.** After reviewing both surfaces, the modal
+`ContentDialog` member/column editor was **removed entirely** — it duplicated the inline inspector
+editor, which is now the single editing surface. The brief experiment that widened Carbon's
+`ContentDialog` to 750 (a local `ControlTheme` override) was reverted and the dialog-only editor
+views/VMs (`ClassMembersEditorView`/`EntityColumnsEditorView` + their VMs and edit-row types) were
+deleted. The inspector's own layout problems (panel max-width cap, scrollbar overlapping the fields /
+row buttons) were fixed in its place — see
+`documentation/plans/2026-06-09-inspector-panel-editing.md`.
