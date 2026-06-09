@@ -700,15 +700,14 @@ public partial class DiagramView : UserControl
     private static ContextMenu BuildArrangeMenu(DiagramDocumentViewModel vm)
     {
         // Icons mirror the ribbon's Arrange group exactly (MainWindow.axaml): align glyphs come from
-        // Phosphor, the rest from the ToolIcon.* geometries in Resources/ToolIcons.axaml. The Phosphor
-        // align-center quirk is intentional — align_center_vertical depicts horizontal centering.
+        // Phosphor, the rest from the ToolIcon.* geometries in Resources/ToolIcons.axaml.
         MenuItem align = new() { Header = "Align" };
         align.Items.Add(ArrangeItem("Align left", vm.AlignCommand, AlignmentMode.Left, Phosphor(Icon.align_left)));
-        align.Items.Add(ArrangeItem("Align center", vm.AlignCommand, AlignmentMode.CenterHorizontal, Phosphor(Icon.align_center_vertical)));
+        align.Items.Add(ArrangeItem("Align center", vm.AlignCommand, AlignmentMode.CenterHorizontal, Phosphor(Icon.align_center_horizontal)));
         align.Items.Add(ArrangeItem("Align right", vm.AlignCommand, AlignmentMode.Right, Phosphor(Icon.align_right)));
         align.Items.Add(new Separator());
         align.Items.Add(ArrangeItem("Align top", vm.AlignCommand, AlignmentMode.Top, Phosphor(Icon.align_top)));
-        align.Items.Add(ArrangeItem("Align middle", vm.AlignCommand, AlignmentMode.CenterVertical, Phosphor(Icon.align_center_horizontal)));
+        align.Items.Add(ArrangeItem("Align middle", vm.AlignCommand, AlignmentMode.CenterVertical, Phosphor(Icon.align_center_vertical)));
         align.Items.Add(ArrangeItem("Align bottom", vm.AlignCommand, AlignmentMode.Bottom, Phosphor(Icon.align_bottom)));
 
         MenuItem order = new() { Header = "Order" };

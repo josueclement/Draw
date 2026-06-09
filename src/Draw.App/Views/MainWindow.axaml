@@ -322,10 +322,10 @@
                                                  IsEnabled="{Binding ActiveDocument.CanAlignSelection}"
                                                  IconData="{pia:IconGeometry Icon=align_left}">
                         <ribbon:RibbonMenuItem Header="Align left" CommandParameter="{x:Static layout:AlignmentMode.Left}" IconData="{pia:IconGeometry Icon=align_left}" />
-                        <ribbon:RibbonMenuItem Header="Align center" CommandParameter="{x:Static layout:AlignmentMode.CenterHorizontal}" IconData="{pia:IconGeometry Icon=align_center_vertical}" />
+                        <ribbon:RibbonMenuItem Header="Align center" CommandParameter="{x:Static layout:AlignmentMode.CenterHorizontal}" IconData="{pia:IconGeometry Icon=align_center_horizontal}" />
                         <ribbon:RibbonMenuItem Header="Align right" CommandParameter="{x:Static layout:AlignmentMode.Right}" IconData="{pia:IconGeometry Icon=align_right}" />
                         <ribbon:RibbonMenuItem Header="Align top" CommandParameter="{x:Static layout:AlignmentMode.Top}" IconData="{pia:IconGeometry Icon=align_top}" />
-                        <ribbon:RibbonMenuItem Header="Align middle" CommandParameter="{x:Static layout:AlignmentMode.CenterVertical}" IconData="{pia:IconGeometry Icon=align_center_horizontal}" />
+                        <ribbon:RibbonMenuItem Header="Align middle" CommandParameter="{x:Static layout:AlignmentMode.CenterVertical}" IconData="{pia:IconGeometry Icon=align_center_vertical}" />
                         <ribbon:RibbonMenuItem Header="Align bottom" CommandParameter="{x:Static layout:AlignmentMode.Bottom}" IconData="{pia:IconGeometry Icon=align_bottom}" />
                     </ribbon:RibbonDropDownButton>
                 </ribbon:RibbonGroup>
