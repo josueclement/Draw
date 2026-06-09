@@ -65,7 +65,6 @@ public sealed class KeymapActionRegistry
 
         // File / shell commands.
         Add("file.new", false, () => (_shell.NewCommand, null));
-        Add("file.newEr", false, () => (_shell.NewErCommand, null));
         Add("file.open", false, () => (_shell.OpenCommand, null));
         Add("file.save", false, () => (_shell.SaveCommand, null));
         Add("file.saveAs", false, () => (_shell.SaveAsCommand, null));
