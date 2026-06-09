@@ -398,7 +398,7 @@
                 <!-- Inspector: resizable via the splitter; MinWidth keeps the fixed-width member rows
                      from clipping. No MaxWidth — the user can widen it freely (bounded only by the
                      canvas MinWidth). -->
-                <ColumnDefinition Width="260" MinWidth="220" />
+                <ColumnDefinition Width="520" MinWidth="220" />
             </Grid.ColumnDefinitions>
 
             <!-- Document tabs -->
@@ -601,8 +601,9 @@
                                 <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
 
-                            <!-- Columns: name + reorder/remove on one aligned row, type below, flags below that. -->
-                            <StackPanel>
+                            <!-- Columns: each row inlines name, type, the PK/FK/Null/Uniq flags and
+                                 reorder/remove, aligned across rows via shared-size groups (like members). -->
+                            <StackPanel Grid.IsSharedSizeScope="True">
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
                                     <TextBlock Text="Columns" FontWeight="SemiBold" VerticalAlignment="Center" />
                                     <Button ToolTip.Tip="Add column"
@@ -617,42 +618,43 @@
                                 <ItemsControl ItemsSource="{Binding Columns}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:EntityColumnViewModel">
-                                            <StackPanel Spacing="2" Margin="0,0,0,8">
-                                                <Grid ColumnSpacing="3">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" MinWidth="60" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBox Grid.Column="0" PlaceholderText="name"
-                                                             Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                                                        <Button Padding="3" MinWidth="0" ToolTip.Tip="Move up"
-                                                                Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveColumnUpCommand}"
-                                                                CommandParameter="{Binding}">
-                                                            <PathIcon Data="{pia:IconGeometry Icon=caret_up}" Width="9" Height="9" />
-                                                        </Button>
-                                                        <Button Padding="3" MinWidth="0" ToolTip.Tip="Move down"
-                                                                Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveColumnDownCommand}"
-                                                                CommandParameter="{Binding}">
-                                                            <PathIcon Data="{pia:IconGeometry Icon=caret_down}" Width="9" Height="9" />
-                                                        </Button>
-                                                        <Button Padding="3" MinWidth="0" ToolTip.Tip="Remove"
-                                                                Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveColumnCommand}"
-                                                                CommandParameter="{Binding}">
-                                                            <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
-                                                        </Button>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <AutoCompleteBox PlaceholderText="type"
+                                            <Grid ColumnSpacing="3" Margin="0,0,0,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" MinWidth="40" />
+                                                    <ColumnDefinition Width="*" MinWidth="40" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CPk" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CFk" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CNull" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CUniq" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="CAct" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Grid.Column="0" PlaceholderText="name"
+                                                         Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                                <AutoCompleteBox Grid.Column="1" PlaceholderText="type"
                                                                  ItemsSource="{Binding TypeSuggestions}"
                                                                  Text="{Binding Type, Mode=TwoWay}" />
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <CheckBox Content="PK" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
-                                                    <CheckBox Content="FK" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
-                                                    <CheckBox Content="Null" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
-                                                    <CheckBox Content="Uniq" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
+                                                <CheckBox Grid.Column="2" Content="PK" VerticalAlignment="Center" IsChecked="{Binding IsPrimaryKey, Mode=TwoWay}" />
+                                                <CheckBox Grid.Column="3" Content="FK" VerticalAlignment="Center" IsChecked="{Binding IsForeignKey, Mode=TwoWay}" />
+                                                <CheckBox Grid.Column="4" Content="Null" VerticalAlignment="Center" IsChecked="{Binding IsNullable, Mode=TwoWay}" />
+                                                <CheckBox Grid.Column="5" Content="Uniq" VerticalAlignment="Center" IsChecked="{Binding IsUnique, Mode=TwoWay}" />
+                                                <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Move up"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveColumnUpCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=caret_up}" Width="9" Height="9" />
+                                                    </Button>
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Move down"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.MoveColumnDownCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=caret_down}" Width="9" Height="9" />
+                                                    </Button>
+                                                    <Button Padding="3" MinWidth="0" ToolTip.Tip="Remove"
+                                                            Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).Inspector.RemoveColumnCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                                    </Button>
                                                 </StackPanel>
-                                            </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

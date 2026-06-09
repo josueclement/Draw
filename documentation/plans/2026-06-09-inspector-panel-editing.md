@@ -40,6 +40,11 @@ The single inspector `ScrollViewer` overlays its vertical scrollbar on the conte
 buttons. Fix: `Margin="0,0,14,0"` on the inner content `StackPanel` reserves a right gutter for the
 scrollbar across every section. (Gutter width tunable.)
 
+### 5. Column row inlined (follow-up)
+Each ER column row was collapsed from three lines (name+actions / full-width type / flags row) to a
+single aligned `Grid` — `name(*) type(*) PK FK Null Uniq actions` with shared-size groups — matching
+the class-member editor, so name/type are no longer oversized.
+
 ## Verification
 
 - `dotnet build Draw.slnx` clean (0/0). Note: stale build-server file handles on the `/mnt/c` DrvFs
