@@ -672,12 +672,15 @@ public partial class DiagramView : UserControl
         UpdateHandles();
     }
 
-    // Right-clicking the canvas (a click, not a pan drag) with at least one selected shape opens the
-    // arrange menu. Align/Distribute need >=2 / >=3 and grey themselves out below that; Space connections
-    // works on a single shape. Right-dragging still pans; the middle button never opens the menu.
+    // Right-clicking the canvas (a click, not a pan drag) opens the arrange menu. Right-clicking an
+    // unselected shape selects it first (mirrors left-click), so the menu works with no prior selection;
+    // a shape already in a multi-selection keeps the whole group. Right-clicking empty space leaves the
+    // selection untouched, so the menu still opens for an existing selection and stays closed otherwise.
+    // Align/Distribute need >=2 / >=3 and grey themselves out below that; Space connections works on a
+    // single shape. Right-dragging still pans; the middle button never opens the menu.
     private void MaybeShowArrangeMenu(PointerReleasedEventArgs e)
     {
-        if (_vm is null || e.InitialPressMouseButton != MouseButton.Right || !_vm.SelectedNodes.Any())
+        if (_vm is null || e.InitialPressMouseButton != MouseButton.Right)
         {
             return;
         }
@@ -686,6 +689,17 @@ public partial class DiagramView : UserControl
         double dx = release.X - _panStartScreen.X;
         double dy = release.Y - _panStartScreen.Y;
         if (((dx * dx) + (dy * dy)) > ContextClickThresholdSquared)
+        {
+            return;
+        }
+
+        NodeViewModelBase? node = HitTestNode(ScreenToWorld(release));
+        if (node is not null && !node.IsSelected)
+        {
+            _vm.SelectOnly(node);
+        }
+
+        if (!_vm.SelectedNodes.Any())
         {
             return;
         }
