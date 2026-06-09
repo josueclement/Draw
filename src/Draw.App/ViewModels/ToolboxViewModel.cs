@@ -208,7 +208,17 @@ public sealed class ToolboxViewModel : ViewModelBase
     /// <summary>Dropdown-button captions: the active pick's name, or the category label when nothing is armed.</summary>
     public string ShapesHeader => SelectedShape?.Name ?? "Shapes";
 
-    public string ConnectorsHeader => SelectedConnector?.Name ?? "Connectors";
+    // One armed connector feeds two dropdowns; each shows the pick only when it owns that kind,
+    // else its category label. ER "Relationship" lives in the ER group, so neither claims it.
+    public string CommonConnectorsHeader =>
+        SelectedConnector is { } c && IsCommonConnector(c.Kind) ? c.Name : "Connector";
+
+    public string UmlConnectorsHeader =>
+        SelectedConnector is { } c && !IsCommonConnector(c.Kind) && c.Kind != RelationshipKind.Relationship
+            ? c.Name : "Relationship";
+
+    private static bool IsCommonConnector(RelationshipKind kind) =>
+        kind is RelationshipKind.Association or RelationshipKind.DirectedAssociation;
 
     public string ClassHeader => SelectedClassNode?.Name ?? "Class diagram";
 
@@ -268,7 +278,8 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
         OnPropertyChanged(nameof(IsEntityNodeMode));
         OnPropertyChanged(nameof(ShapesHeader));
-        OnPropertyChanged(nameof(ConnectorsHeader));
+        OnPropertyChanged(nameof(CommonConnectorsHeader));
+        OnPropertyChanged(nameof(UmlConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));
         OnPropertyChanged(nameof(UseCaseHeader));
         OnPropertyChanged(nameof(ActiveToolHint));
