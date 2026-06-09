@@ -64,6 +64,7 @@ public sealed class ShellViewModel : ViewModelBase
         ExportSvgCommand = new RelayCommand(OnExportSvg, () => HasActiveDocument);
         CopyImageCommand = new RelayCommand(OnCopyImage, () => HasActiveDocument);
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
+        ToggleInspectorCommand = new RelayCommand(() => IsInspectorOpen = !IsInspectorOpen);
         ShowToolMenuCommand = new RelayCommand<ToolMenuFamily>(
             family => ToolMenuRequested?.Invoke(this, family),
             _ => HasActiveDocument);
@@ -110,6 +111,9 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand CopyImageCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
 
+    /// <summary>Toggles the right-side inspector panel between open and collapsed (strip) states.</summary>
+    public RelayCommand ToggleInspectorCommand { get; }
+
     public RelayCommand<ToolMenuFamily> ShowToolMenuCommand { get; }
 
     public event EventHandler? ExportImageRequested;
@@ -124,6 +128,21 @@ public sealed class ShellViewModel : ViewModelBase
     public bool HasActiveDocument => ActiveDocument is not null;
 
     public string Title => ActiveDocument is null ? "Draw" : $"Draw — {ActiveDocument.DisplayName}";
+
+    /// <summary>Whether the right-side inspector panel is expanded. When false it collapses to a thin strip.</summary>
+    public bool IsInspectorOpen
+    {
+        get;
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(IsInspectorCollapsed));
+            }
+        }
+    } = true;
+
+    public bool IsInspectorCollapsed => !IsInspectorOpen;
 
     public DiagramDocumentViewModel? ActiveDocument
     {

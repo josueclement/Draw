@@ -211,6 +211,12 @@
                 <MenuItem Header="Toggle _Theme" Command="{Binding ToggleThemeCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=moon}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
+                <!-- Checkable; OneWay IsChecked reflects state regardless of whether MenuItem self-toggles. -->
+                <MenuItem Header="_Properties Panel" ToggleType="CheckBox"
+                          IsChecked="{Binding IsInspectorOpen}"
+                          Command="{Binding ToggleInspectorCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=sidebar}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
         </Menu>
 
@@ -370,6 +376,11 @@
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Appearance">
                     <ribbon:RibbonButton Header="Toggle theme" Command="{Binding ToggleThemeCommand}" IconData="{pia:IconGeometry Icon=moon}" />
+                    <!-- Self-toggles IsChecked on click; binding writes it back to the VM (no Command, or it
+                         would toggle twice). Stays in sync with the menu item / panel chevron via TwoWay. -->
+                    <ribbon:RibbonToggleButton Header="Properties"
+                                               IconData="{pia:IconGeometry Icon=sidebar}"
+                                               IsChecked="{Binding IsInspectorOpen, Mode=TwoWay}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Export">
                     <ribbon:RibbonButton Header="Image" Command="{Binding ExportImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
@@ -390,7 +401,7 @@
             </StackPanel>
         </Border>
 
-        <Grid>
+        <Grid x:Name="EditorGrid">
             <Grid.ColumnDefinitions>
                 <!-- Canvas: MinWidth keeps the splitter from dragging it down to nothing. -->
                 <ColumnDefinition Width="*" MinWidth="320" />
@@ -426,18 +437,45 @@
             </TabControl>
 
             <!-- Drag handle between canvas and inspector. Sits in the Auto column and doubles
-                 as the divider, so the inspector border drops its left edge below. -->
+                 as the divider, so the inspector border drops its left edge below. Hidden when the
+                 inspector is collapsed — resizing a strip is meaningless. -->
             <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns"
+                          IsVisible="{Binding IsInspectorOpen}"
                           Background="{DynamicResource CarbonBorderBrush}" />
 
-            <!-- Inspector -->
-            <Border Grid.Column="2" Background="{DynamicResource CarbonSurfaceBrush}"
-                    Padding="10">
-                <ScrollViewer>
+            <!-- Inspector. Two states overlap in a Panel: a thin re-open strip when collapsed, and the
+                 full panel when open. The collapse width/splitter are driven from code-behind (see
+                 ApplyInspectorState) so the splitter-resized width survives a collapse/reopen. -->
+            <Border Grid.Column="2" Background="{DynamicResource CarbonSurfaceBrush}">
+                <Panel>
+                    <!-- Collapsed: thin strip with a re-open chevron pinned to the top. -->
+                    <Border Width="32" IsVisible="{Binding IsInspectorCollapsed}">
+                        <Button VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,8,0,0"
+                                Padding="4" Background="Transparent" BorderThickness="0"
+                                ToolTip.Tip="Show properties"
+                                Command="{Binding ToggleInspectorCommand}">
+                            <PathIcon Data="{pia:IconGeometry Icon=caret_left}" Width="12" Height="12" />
+                        </Button>
+                    </Border>
+
+                    <!-- Open: fixed header (title + collapse chevron) above the scrollable properties. -->
+                    <DockPanel IsVisible="{Binding IsInspectorOpen}">
+                        <Grid DockPanel.Dock="Top" Margin="10,10,10,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Properties" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Padding="4" Background="Transparent" BorderThickness="0"
+                                    ToolTip.Tip="Hide properties"
+                                    Command="{Binding ToggleInspectorCommand}">
+                                <PathIcon Data="{pia:IconGeometry Icon=caret_right}" Width="12" Height="12" />
+                            </Button>
+                        </Grid>
+                <ScrollViewer Padding="10,0,10,10">
                     <!-- Right margin reserves a gutter for the vertical scrollbar (Avalonia overlays it
                          on the content edge, otherwise it covers the fields / row remove buttons). -->
                     <StackPanel Spacing="10" Margin="0,0,14,0">
-                        <TextBlock Text="Properties" FontWeight="SemiBold" />
                         <TextBlock Text="No selection" Opacity="0.6"
                                    IsVisible="{Binding Inspector.HasNoSelection}" />
 
@@ -719,6 +757,8 @@
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+                    </DockPanel>
+                </Panel>
             </Border>
         </Grid>
     </DockPanel>

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,6 +33,10 @@ public partial class MainWindow : Window
     // Set once the user has confirmed (or there was nothing to save), so the re-entrant Close() passes through.
     private bool _forceClose;
 
+    // Inspector collapse: width of the re-open strip, and the last expanded width restored on reopen.
+    private const double InspectorStripWidth = 32;
+    private double _inspectorWidth = 520;
+
     // Parameterless constructor for the XAML previewer/designer.
     public MainWindow()
     {
@@ -63,6 +68,7 @@ public partial class MainWindow : Window
         WireAlignDropdown();
         WireToolMenus(shell.Toolbox);
         shell.ToolMenuRequested += OnToolMenuRequested;
+        shell.PropertyChanged += OnShellPropertyChanged;
 
         // Global keyboard shortcuts (single gestures + multi-key chords) come from the JSON keymap.
         // Tunnel so plain letters reach the dispatcher before a focused control consumes them; a chord
@@ -78,6 +84,37 @@ public partial class MainWindow : Window
     }
 
     private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ShellViewModel.IsInspectorOpen))
+        {
+            ApplyInspectorState();
+        }
+    }
+
+    // The inspector column can't both stay splitter-resizable and collapse to a strip in pure XAML (a
+    // GridSplitter won't size an Auto column, and a fixed-pixel column won't shrink when its child hides),
+    // so drive the width here. Reopening restores the width the user last dragged to.
+    private void ApplyInspectorState()
+    {
+        ColumnDefinition column = EditorGrid.ColumnDefinitions[2];
+        if (_shell?.IsInspectorOpen ?? true)
+        {
+            column.MinWidth = 220;
+            column.Width = new GridLength(_inspectorWidth);
+        }
+        else
+        {
+            if (column.ActualWidth > InspectorStripWidth)
+            {
+                _inspectorWidth = column.ActualWidth;
+            }
+
+            column.MinWidth = 0;
+            column.Width = new GridLength(InspectorStripWidth);
+        }
+    }
 
     // Closing the window (X button, File ▸ Exit, OS quit) discards every open document, so guard it the
     // same way a tab close is guarded. Closing is synchronous; the dialog is async — so cancel the close
