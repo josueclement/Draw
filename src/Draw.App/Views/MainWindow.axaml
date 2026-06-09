@@ -24,7 +24,7 @@
              assigned per item in code-behind by CommandParameter type (see WireToolMenu), and the menu is
              opened at the cursor on the active canvas (see DiagramView.OpenToolMenu). -->
         <ContextMenu x:Key="ShapesToolMenu">
-            <MenuItem Header="_Standard">
+            <MenuItem Header="_Common">
                 <MenuItem Header="_Rectangle" CommandParameter="{x:Static nodes:ShapeKind.Rectangle}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=rectangle}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
@@ -81,7 +81,7 @@
         </ContextMenu>
 
         <ContextMenu x:Key="ConnectorsToolMenu">
-            <MenuItem Header="_Standard">
+            <MenuItem Header="_Common">
                 <MenuItem Header="_Association" CommandParameter="{x:Static rel:RelationshipKind.Association}">
                     <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Association}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
