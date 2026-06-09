@@ -85,7 +85,7 @@ public static class DefaultKeymap
     //   tool.useCase.{actor|useCase|systemBoundary}
     //   tool.entity
     //   menu.shapes, menu.connectors   (open a category-grouped tool menu at the cursor; default Shift+S / Shift+C)
-    //   file.{new|newEr|open|save|saveAs|close}
+    //   file.{new|open|save|saveAs|close}
     //   edit.{undo|redo|copy|cut|paste|duplicate|delete|insertImage|spaceConnections|mergeConnections}
     //   align.{left|centerHorizontal|right|top|centerVertical|bottom}
     //   distribute.{horizontal|vertical}

@@ -732,7 +732,7 @@ public partial class DiagramView : UserControl
     {
         // Icons mirror the ribbon's Arrange group exactly (MainWindow.axaml): align glyphs come from
         // Phosphor, the rest from the ToolIcon.* geometries in Resources/ToolIcons.axaml.
-        MenuItem align = new() { Header = "Align" };
+        MenuItem align = new() { Header = "Align", IsEnabled = vm.CanAlignSelection };
         align.Items.Add(ArrangeItem("Align left", vm.AlignCommand, AlignmentMode.Left, Phosphor(Icon.align_left)));
         align.Items.Add(ArrangeItem("Align center", vm.AlignCommand, AlignmentMode.CenterHorizontal, Phosphor(Icon.align_center_horizontal)));
         align.Items.Add(ArrangeItem("Align right", vm.AlignCommand, AlignmentMode.Right, Phosphor(Icon.align_right)));
@@ -759,7 +759,7 @@ public partial class DiagramView : UserControl
 
         // Relative alignment: capture the selection as a fixed reference, then line a later selection up
         // against it. Align-to-reference items gate on a reference being set + movers selected (CanExecute).
-        MenuItem alignToRef = new() { Header = "Align to reference" };
+        MenuItem alignToRef = new() { Header = "Align to reference", IsEnabled = vm.CanAlignToReference };
         alignToRef.Items.Add(ArrangeItem("Align left", vm.AlignToReferenceCommand, AlignmentMode.Left, Phosphor(Icon.align_left)));
         alignToRef.Items.Add(ArrangeItem("Align center", vm.AlignToReferenceCommand, AlignmentMode.CenterHorizontal, Phosphor(Icon.align_center_horizontal)));
         alignToRef.Items.Add(ArrangeItem("Align right", vm.AlignToReferenceCommand, AlignmentMode.Right, Phosphor(Icon.align_right)));
