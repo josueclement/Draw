@@ -69,6 +69,11 @@ public partial class DiagramView : UserControl
     // a click that opens the arrange context menu rather than a pan drag.
     private const double ContextClickThresholdSquared = 16d;
 
+    // A left press on a shape must travel at least this far (screen px, squared) before it starts moving
+    // the shape. Below it the press only selects, so clicking to select no longer nudges the shape.
+    // Screen-space, so the feel is consistent at any zoom.
+    private const double MoveDragThresholdSquared = 16d; // 4px
+
     private readonly List<Rectangle> _handles = new();
     private readonly List<Control> _connectorHandles = new();
     private readonly List<Rectangle> _referenceOutlines = new();
@@ -78,6 +83,8 @@ public partial class DiagramView : UserControl
     private Point _lastScreen;
     private Point _panStartScreen;
     private Point _moveLastWorld;
+    private Point _moveStartScreen;
+    private bool _moveThresholdPassed;
     private Point _marqueeStartWorld;
     private Point _marqueeStartScreen;
     private bool _marqueeAdditive;
@@ -528,6 +535,8 @@ public partial class DiagramView : UserControl
 
             _mode = DragMode.Move;
             _moveLastWorld = world;
+            _moveStartScreen = screen;
+            _moveThresholdPassed = false;
             _undoCaptured = false;
         }
         else
@@ -566,6 +575,19 @@ public partial class DiagramView : UserControl
                 break;
 
             case DragMode.Move:
+                if (!_moveThresholdPassed)
+                {
+                    double mdx = screen.X - _moveStartScreen.X;
+                    double mdy = screen.Y - _moveStartScreen.Y;
+                    if (((mdx * mdx) + (mdy * mdy)) <= MoveDragThresholdSquared)
+                    {
+                        break; // still inside the dead-zone: a select-click, not a drag
+                    }
+
+                    _moveThresholdPassed = true;
+                    _moveLastWorld = world; // anchor here so the first applied delta is 0 (no jump)
+                }
+
                 EnsureUndoCaptured();
                 _vm.MoveSelectedBy(world.X - _moveLastWorld.X, world.Y - _moveLastWorld.Y);
                 _moveLastWorld = world;
@@ -616,7 +638,11 @@ public partial class DiagramView : UserControl
             switch (_mode)
             {
                 case DragMode.Move:
-                    _vm.SnapSelectionToGrid();
+                    if (_moveThresholdPassed)
+                    {
+                        _vm.SnapSelectionToGrid();
+                    }
+
                     break;
 
                 case DragMode.Resize when _resizeTarget is not null && _vm.SnapEnabled:
@@ -687,6 +713,7 @@ public partial class DiagramView : UserControl
 
         _mode = DragMode.None;
         _undoCaptured = false;
+        _moveThresholdPassed = false;
         _resizeHandle = -1;
         _resizeTarget = null;
         _connectSource = null;
