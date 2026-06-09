@@ -66,6 +66,7 @@ public partial class MainWindow : Window
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
         WireAlignDropdown();
+        WireAlignToReferenceDropdown();
         WireToolMenus(shell.Toolbox);
         shell.ToolMenuRequested += OnToolMenuRequested;
         shell.PropertyChanged += OnShellPropertyChanged;
@@ -150,6 +151,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Escape also clears any alignment reference on the active document (the keymap still gets the
+        // key — Escape arms the select tool as before).
+        if (e.Key == Key.Escape && _shell?.ActiveDocument is { HasReference: true } doc)
+        {
+            doc.ClearReference();
+        }
+
         if (_dispatcher.HandleKeyDown(e))
         {
             e.Handled = true;
@@ -220,6 +228,26 @@ public partial class MainWindow : Window
         foreach (RibbonMenuItem item in AlignDropDown.Items)
         {
             item.Command = align;
+        }
+    }
+
+    // Mirrors WireAlignDropdown for the "Align to reference" dropdown: one shared command resolves the
+    // active document at click time; each item's AlignmentMode arrives via the XAML CommandParameter.
+    private void WireAlignToReferenceDropdown()
+    {
+        RelayCommand<AlignmentMode> alignToRef = new(mode =>
+        {
+            if (mode is { } m)
+            {
+                _shell?.ActiveDocument?.AlignSelectedToReference(m);
+            }
+
+            AlignToReferenceDropDown.IsDropDownOpen = false;
+        });
+
+        foreach (RibbonMenuItem item in AlignToReferenceDropDown.Items)
+        {
+            item.Command = alignToRef;
         }
     }
 

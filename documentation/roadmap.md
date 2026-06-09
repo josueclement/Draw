@@ -86,6 +86,21 @@ shortcuts, and a right-click canvas menu (right-drag still pans). Pure geometry 
 `Draw.Diagramming/Layout/ShapeArranger.cs`; one undo step per action; connectors re-route
 automatically. See `documentation/plans/2026-06-04-align-distribute-shapes.md`.
 
+## Align to reference 🚧 (cross-cutting, pending visual verification)
+
+Relative alignment, the deferred follow-up to Align & distribute: capture a set of shapes as a fixed
+**reference**, then line a later selection (the **movers**) up against the reference's combined
+bounding box — so a loose shape snaps to the middle of a column, or to the midpoint of a two-shape
+gap, without disturbing the reference. Movers **move as a block** (relative layout preserved);
+multiple mover-sets can be aligned to the same **sticky** reference in turn (cleared on Esc / Clear
+reference / bare empty-canvas click / new reference / deleting a reference shape). Purely additive —
+the existing six Align + two Distribute actions are unchanged. A new **Reference** group on the
+**Arrange** ribbon tab (*Set as reference*, an *Align to reference* dropdown, *Clear reference*) plus
+the same three entries on the canvas context menu; reference shapes get a dashed amber overlay outline
+and a top-of-canvas banner. Transient, per-tab state on `DiagramDocumentViewModel`; pure geometry
+(`ShapeArranger.AlignToReference`); one undo step per align; connectors re-route automatically. See
+`documentation/plans/2026-06-09-align-to-reference.md`.
+
 ## Connection point spacing ✅ (cross-cutting)
 
 Tidy the connectors landing on a shape: a one-shot **Space connections** action spreads the connectors

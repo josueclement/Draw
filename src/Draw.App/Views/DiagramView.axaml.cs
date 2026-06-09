@@ -62,12 +62,16 @@ public partial class DiagramView : UserControl
     private static readonly Color SelectionAccentColor = Color.Parse("#3D7EFF");
     private static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
 
+    // Reference accent (amber) — distinguishes the fixed alignment reference from the blue selection.
+    private static readonly SolidColorBrush ReferenceAccentBrush = new(Color.Parse("#F2A93B"));
+
     // A right-button press that travels less than this (screen px, squared) before release is treated as
     // a click that opens the arrange context menu rather than a pan drag.
     private const double ContextClickThresholdSquared = 16d;
 
     private readonly List<Rectangle> _handles = new();
     private readonly List<Control> _connectorHandles = new();
+    private readonly List<Rectangle> _referenceOutlines = new();
     private DiagramDocumentViewModel? _vm;
     private DragMode _mode = DragMode.None;
     private bool _undoCaptured;
@@ -75,6 +79,7 @@ public partial class DiagramView : UserControl
     private Point _panStartScreen;
     private Point _moveLastWorld;
     private Point _marqueeStartWorld;
+    private Point _marqueeStartScreen;
     private bool _marqueeAdditive;
     private Rectangle? _marquee;
     private int _resizeHandle = -1;
@@ -522,6 +527,7 @@ public partial class DiagramView : UserControl
         {
             _mode = DragMode.Marquee;
             _marqueeStartWorld = world;
+            _marqueeStartScreen = screen;
             _marqueeAdditive = ctrl;
             if (!ctrl)
             {
@@ -612,12 +618,23 @@ public partial class DiagramView : UserControl
                     break;
 
                 case DragMode.Marquee:
-                    Point world = ScreenToWorld(e.GetPosition(Viewport));
+                    Point marqueeReleaseScreen = e.GetPosition(Viewport);
+                    Point world = ScreenToWorld(marqueeReleaseScreen);
                     Rect2D rect = Rect2D.FromPoints(
                         new Point2D(_marqueeStartWorld.X, _marqueeStartWorld.Y),
                         new Point2D(world.X, world.Y));
                     _vm.SelectInRect(rect, _marqueeAdditive);
                     EndMarquee();
+                    // A bare click on empty canvas (no drag, not additive) dismisses the alignment
+                    // reference; a marquee drag to select the movers does not.
+                    double clickDx = marqueeReleaseScreen.X - _marqueeStartScreen.X;
+                    double clickDy = marqueeReleaseScreen.Y - _marqueeStartScreen.Y;
+                    if (!_marqueeAdditive && _vm.HasReference
+                        && ((clickDx * clickDx) + (clickDy * clickDy)) <= ContextClickThresholdSquared)
+                    {
+                        _vm.ClearReference();
+                    }
+
                     break;
 
                 case DragMode.Connect:
@@ -739,6 +756,22 @@ public partial class DiagramView : UserControl
         menu.Items.Add(new Separator());
         menu.Items.Add(new MenuItem { Header = "Space connections", Command = vm.SpaceConnectionsCommand, Icon = MenuIcon(ToolGeometry("ToolIcon.SpaceConnections")) });
         menu.Items.Add(new MenuItem { Header = "Merge connections", Command = vm.MergeConnectionsCommand, Icon = MenuIcon(ToolGeometry("ToolIcon.MergeConnections")) });
+
+        // Relative alignment: capture the selection as a fixed reference, then line a later selection up
+        // against it. Align-to-reference items gate on a reference being set + movers selected (CanExecute).
+        MenuItem alignToRef = new() { Header = "Align to reference" };
+        alignToRef.Items.Add(ArrangeItem("Align left", vm.AlignToReferenceCommand, AlignmentMode.Left, Phosphor(Icon.align_left)));
+        alignToRef.Items.Add(ArrangeItem("Align center", vm.AlignToReferenceCommand, AlignmentMode.CenterHorizontal, Phosphor(Icon.align_center_horizontal)));
+        alignToRef.Items.Add(ArrangeItem("Align right", vm.AlignToReferenceCommand, AlignmentMode.Right, Phosphor(Icon.align_right)));
+        alignToRef.Items.Add(new Separator());
+        alignToRef.Items.Add(ArrangeItem("Align top", vm.AlignToReferenceCommand, AlignmentMode.Top, Phosphor(Icon.align_top)));
+        alignToRef.Items.Add(ArrangeItem("Align middle", vm.AlignToReferenceCommand, AlignmentMode.CenterVertical, Phosphor(Icon.align_center_vertical)));
+        alignToRef.Items.Add(ArrangeItem("Align bottom", vm.AlignToReferenceCommand, AlignmentMode.Bottom, Phosphor(Icon.align_bottom)));
+
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = "Set as reference", Command = vm.SetReferenceCommand, Icon = MenuIcon(Phosphor(Icon.push_pin)) });
+        menu.Items.Add(alignToRef);
+        menu.Items.Add(new MenuItem { Header = "Clear reference", Command = vm.ClearReferenceCommand, Icon = MenuIcon(Phosphor(Icon.x)) });
         return menu;
     }
 
@@ -1565,6 +1598,10 @@ public partial class DiagramView : UserControl
 
         _connectorHandles.Clear();
 
+        // Reference outlines are redrawn alongside the handles so they track zoom/pan/selection too
+        // (self-contained: clears its own list, and no-ops when there's no VM or reference).
+        UpdateReferenceOutlines();
+
         if (_vm is null)
         {
             return;
@@ -1601,6 +1638,44 @@ public partial class DiagramView : UserControl
         }
 
         UpdateScrollBars();
+    }
+
+    // Marks the fixed alignment-reference shapes with a dashed amber box just outside each one — drawn on
+    // the zoom-scaled overlay like the selection handles, but in a distinct colour and shown even when the
+    // reference isn't selected. Rebuilt on every UpdateHandles() pass so it tracks zoom/pan/selection.
+    private void UpdateReferenceOutlines()
+    {
+        foreach (Rectangle outline in _referenceOutlines)
+        {
+            Overlay.Children.Remove(outline);
+        }
+
+        _referenceOutlines.Clear();
+
+        if (_vm is null)
+        {
+            return;
+        }
+
+        double inset = HandleScreenSize / Zoom / 2d;
+        double thickness = 1.5d / Zoom;
+        foreach (NodeViewModelBase node in _vm.ReferenceNodes)
+        {
+            Rect2D b = node.Model.Bounds;
+            Rectangle outline = new()
+            {
+                Width = b.Width + (inset * 2d),
+                Height = b.Height + (inset * 2d),
+                Stroke = ReferenceAccentBrush,
+                StrokeThickness = thickness,
+                StrokeDashArray = new AvaloniaList<double> { 4d, 3d },
+                IsHitTestVisible = false,
+            };
+            Canvas.SetLeft(outline, b.Left - inset);
+            Canvas.SetTop(outline, b.Top - inset);
+            Overlay.Children.Add(outline);
+            _referenceOutlines.Add(outline);
+        }
     }
 
     // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);

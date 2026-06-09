@@ -66,6 +66,46 @@ public static class ShapeArranger
     }
 
     /// <summary>
+    /// Moves the <paramref name="movers"/> as a single block so their combined bounding box lines up
+    /// with <paramref name="mode"/> against the fixed <paramref name="reference"/> box. Every mover
+    /// shifts by the same offset, so the movers keep their relative layout; the reference is never
+    /// touched. Only one axis changes — sizes are preserved — and the result is in input order so
+    /// callers can map it back by index. A no-op (returns the input unchanged) when no movers are supplied.
+    /// </summary>
+    public static IReadOnlyList<Rect2D> AlignToReference(IReadOnlyList<Rect2D> movers, Rect2D reference, AlignmentMode mode)
+    {
+        Rect2D[] result = movers.ToArray();
+        if (result.Length == 0)
+        {
+            return result;
+        }
+
+        Rect2D box = result[0];
+        for (int i = 1; i < result.Length; i++)
+        {
+            box = box.Union(result[i]);
+        }
+
+        (double dx, double dy) = mode switch
+        {
+            AlignmentMode.Left => (reference.Left - box.Left, 0d),
+            AlignmentMode.CenterHorizontal => (reference.Center.X - box.Center.X, 0d),
+            AlignmentMode.Right => (reference.Right - box.Right, 0d),
+            AlignmentMode.Top => (0d, reference.Top - box.Top),
+            AlignmentMode.CenterVertical => (0d, reference.Center.Y - box.Center.Y),
+            AlignmentMode.Bottom => (0d, reference.Bottom - box.Bottom),
+            _ => (0d, 0d),
+        };
+
+        for (int i = 0; i < result.Length; i++)
+        {
+            result[i] = result[i].Translate(dx, dy);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Evens out the edge-to-edge gaps between rectangles along <paramref name="mode"/>. The two
     /// outermost shapes stay put; the inner ones are repositioned so all gaps are equal. A no-op when
     /// fewer than three rectangles are supplied (nothing to redistribute). Gaps may be negative if the
