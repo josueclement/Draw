@@ -242,9 +242,10 @@ helpers — `CloneArranger`, `ConnectionDistributor.PlanPinning`, `ZOrderArrange
 headless tests). **3b** is now in progress — moving the VM's orchestration clusters behind
 coordinator collaborators it composes (one branch per coordinator, clean-seam first), reaching the VM
 through a shared `IDocumentEditContext` seam; `ClipboardCoordinator` (copy/cut/paste/duplicate +
-image insertion + `PlaceClones`) and `ConnectorSpacingCoordinator` (space/merge/pin) are extracted and
-the VM delegates to them. Still pending: the rest of 3b (z-order and alignment coordinators), the
-`DiagramView` decompositions (2b/2c/2d) and the remaining hardening/dedup/service items.
+image insertion + `PlaceClones`), `ConnectorSpacingCoordinator` (space/merge/pin) and `ZOrderCoordinator`
+(`ReorderSelected`) are extracted and the VM delegates to them. Still pending: the last of 3b
+(`AlignmentCoordinator`), the `DiagramView` decompositions (2b/2c/2d) and the remaining
+hardening/dedup/service items.
 The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a

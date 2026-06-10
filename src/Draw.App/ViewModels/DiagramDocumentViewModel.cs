@@ -32,6 +32,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private readonly IThemeService _theme;
     private readonly ClipboardCoordinator _clipboardCoordinator;
     private readonly ConnectorSpacingCoordinator _connectorSpacingCoordinator;
+    private readonly ZOrderCoordinator _zOrderCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
 
@@ -66,6 +67,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _theme = theme ?? throw new ArgumentNullException(nameof(theme));
         _clipboardCoordinator = new ClipboardCoordinator(this, _serializer, clipboard);
         _connectorSpacingCoordinator = new ConnectorSpacingCoordinator(this);
+        _zOrderCoordinator = new ZOrderCoordinator(this);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         _theme.ThemeChanged += OnThemeChanged;
@@ -732,67 +734,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         RaiseSelectionChanged();
     }
 
-    /// <summary>
-    /// Changes the front-to-back stacking of the selected shapes (one undo step). Nodes are kept in two
-    /// bands — system boundaries always below ordinary shapes — and each band is reordered independently,
-    /// so a boundary can be re-stacked relative to other boundaries but can never rise above a shape. The
-    /// new order is repacked into contiguous <c>ZIndex</c> values; connectors render in their own layer
-    /// above all nodes, so they stay on top regardless. A no-op (no undo) when nothing actually moves.
-    /// </summary>
-    public void ReorderSelected(ZOrderOperation operation)
-    {
-        HashSet<NodeViewModelBase> selectedSet = SelectedNodes.ToHashSet();
-        if (selectedSet.Count == 0)
-        {
-            return;
-        }
-
-        // Boundaries form a lower band that ordinary shapes can never sink below; the banded reorder
-        // (back-to-front by current ZIndex within each band) lives in the testable Diagramming layer.
-        IReadOnlyList<NodeViewModelBase> reordered = ZOrderArranger.ReorderInBands(
-            Nodes,
-            n => n.Model is SystemBoundaryNode,
-            selectedSet.Contains,
-            n => n.Model.ZIndex,
-            operation);
-
-        // The current banded order (boundaries first, each band by ZIndex) equals the reorder when nothing
-        // moves — so this detects a no-op (e.g. the selection is already at the front) and avoids dirtying.
-        IReadOnlyList<NodeViewModelBase> current = Nodes
-            .OrderByDescending(n => n.Model is SystemBoundaryNode)
-            .ThenBy(n => n.Model.ZIndex)
-            .ToList();
-        if (reordered.SequenceEqual(current))
-        {
-            return;
-        }
-
-        CaptureUndo();
-        for (int i = 0; i < reordered.Count; i++)
-        {
-            reordered[i].Model.ZIndex = i;
-        }
-
-        // Mirror the new order into the node collection so the ItemsControl restacks: render order
-        // follows collection order (and the bound ZIndex agrees with it). In-place Move keeps the
-        // existing view-model instances — and thus their selection and decoded image bitmaps — intact.
-        for (int target = 0; target < reordered.Count; target++)
-        {
-            int currentIndex = Nodes.IndexOf(reordered[target]);
-            if (currentIndex != target)
-            {
-                Nodes.Move(currentIndex, target);
-            }
-        }
-
-        // Refresh the bound ZIndex (Visual.ZIndex) too, so it stays consistent with the new order.
-        foreach (NodeViewModelBase node in Nodes)
-        {
-            node.RaiseZIndexChanged();
-        }
-
-        MarkModified();
-    }
+    /// <summary>Changes the front-to-back stacking of the selected shapes. See <see cref="ZOrderCoordinator"/>.</summary>
+    public void ReorderSelected(ZOrderOperation operation) => _zOrderCoordinator.ReorderSelected(operation);
 
     /// <summary>Force-pins selected shapes' connector ends into even spacing. See <see cref="ConnectorSpacingCoordinator"/>.</summary>
     public void SpaceSelectedConnections() => _connectorSpacingCoordinator.SpaceSelectedConnections();
