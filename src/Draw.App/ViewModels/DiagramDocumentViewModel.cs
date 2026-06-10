@@ -265,6 +265,17 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public event EventHandler? SelectionChanged;
 
+    /// <summary>
+    /// Captures a whole-document undo snapshot. Undo capture is split deliberately by altitude, and
+    /// callers must know which side they are on:
+    /// <list type="bullet">
+    /// <item><b>Command-level</b> mutations on this view model (<see cref="AddShape"/>, deletes, style
+    /// and z-order changes, …) call this themselves, once, at the start of the operation.</item>
+    /// <item><b>Gesture-level</b> continuous mutations (<see cref="MoveSelectedBy"/>,
+    /// <see cref="SnapSelectionToGrid"/>) do <b>not</b> self-capture — the view captures once per
+    /// gesture (before the per-pixel stream) so a drag yields a single undo entry, not one per pixel.</item>
+    /// </list>
+    /// </summary>
     public void CaptureUndo() => _undo.Capture(_document);
 
     public ShapeNodeViewModel AddShape(ShapeKind kind, Point2D center)
@@ -576,6 +587,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         RaiseSelectionChanged();
     }
 
+    /// <summary>
+    /// Translates every selected node by (<paramref name="dx"/>, <paramref name="dy"/>). This is a
+    /// gesture-level primitive: it deliberately does <b>not</b> capture undo — the caller (the view)
+    /// must call <see cref="CaptureUndo"/> once at the start of the gesture. Capturing here would
+    /// flood the undo stack with one entry per moved pixel. See <see cref="CaptureUndo"/> for the
+    /// split-capture contract.
+    /// </summary>
     public void MoveSelectedBy(double dx, double dy)
     {
         foreach (NodeViewModelBase vm in SelectedNodes)
@@ -587,6 +605,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         MarkModified();
     }
 
+    /// <summary>
+    /// Snaps the current selection to the grid as a single unit, preserving relative spacing. Like
+    /// <see cref="MoveSelectedBy"/> this is a gesture-level primitive and does <b>not</b> self-capture
+    /// undo; the caller owns gesture-level <see cref="CaptureUndo"/>. No-op when snapping is disabled.
+    /// </summary>
     public void SnapSelectionToGrid()
     {
         if (!SnapEnabled)

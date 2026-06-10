@@ -1,8 +1,9 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, 3a, 3b (all four VM
-coordinators extracted), and 4 (4a + 4b) done; remainder pending (2b/2c/2d, 3c, 5, 6c/6d, 7).
+**Status:** In progress — Priority 1 (test safety net), Priority 2 (2a–2d), Priority 3 (3a–3c),
+Priority 4 (4a/4b), Priority 6 (6a–6d) and Priority 7 all done. Remaining: Priority 5 (5a/5b; 5c
+intentionally left as-is) and the optional secondary-VM decomposition pass.
 **Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
@@ -80,16 +81,19 @@ by ~13 loose gesture-state fields acting as an implicit state machine.
   for the universal cleanup. Pure extraction, zero behavior change (build clean, tests green, diff
   self-reviewed). Verify gestures manually on Windows/macOS. The ~13 gesture fields + `DragMode` are
   untouched — that is 2b.
-- **2b · Effort M · Risk Med** — Collapse the ~13 gesture fields (`_mode`, `_moveLastWorld`,
-  `_marquee*`, `_edit*`, `_resize*`, nudge state) into a small **gesture-state object** (or a tagged
-  union per `DragMode`) with a `Finalize()`/reset, eliminating the scattered manual flag resets on
-  release.
-- **2c · Effort L · Risk Med (later phase)** — Extract cohesive interaction logic into testable
-  helper classes the code-behind *drives* but doesn't *own*: e.g. a `ConnectorEditController`
-  (`BeginConnectorEdit` ~`1886-1941` + endpoint/waypoint/label drag) and a scrollbar/viewport sync
-  helper (`UpdateScrollBars` ~`269-336`). Keep raw pointer/visual-tree events in the view.
-- **2d · Effort S · Risk Low** — `UpdateHandles` (~`1690-1746`) rebuilds all overlay handles on every
-  pointer move; gate rebuilds on selection/zoom change rather than per-pixel motion.
+- **2b · Effort M · Risk Med · ✅ done** — Collapsed the ~13 gesture fields (`_mode`, `_moveLastWorld`,
+  `_marquee*`, `_edit*`, `_resize*`, nudge state) into a single `CanvasGestureState`
+  (`Views/Interaction/CanvasGestureState.cs`) holding all scalar/transient gesture state; the scattered
+  manual flag resets on release now funnel through one `ResetGestureState`. (Same commit as 2c/2d.)
+- **2c · Effort L · Risk Med · ✅ done** — Extracted cohesive interaction logic into helper classes the
+  code-behind drives but doesn't own: `ConnectorEditController` (endpoint/waypoint/label drag) and
+  `ViewportScrollController` (`Views/Interaction/`), backed by testable pure-geometry helpers in
+  `Diagramming/Geometry/` — `ConnectorHandleHitTester`, `EndpointAnchorMath`, `ViewportScrollMath`
+  (with tests). Raw pointer/visual-tree events stay in the view.
+- **2d · Effort S · Risk Low · ✅ done** — Split the per-pixel `UpdateHandles` into `RebuildOverlay`
+  (full rebuild only on selection/zoom/handle-set change) and `RepositionOverlay` (lightweight in-place
+  update for an in-progress drag or zoom), gated on `_lastHandleZoom`; a missed set-change trigger
+  degrades to a full rebuild rather than mis-tracking.
 
 ### Priority 3 — `DiagramDocumentViewModel.cs` (1540 lines): decompose the God VM · phased
 ~9 responsibilities, ~40 methods, 11 commands in one class: selection, node CRUD, connector CRUD,
@@ -116,9 +120,10 @@ orchestration, style application, view (zoom/pan) coordination.
   the `_referenceIds` reference subsystem — the VM keeps command/notification ownership and calls
   `PruneStaleReferences`). The VM dropped from ~1480 to ~1050 lines and now delegates to the four
   coordinators.
-- **3c · Effort S · Risk Low** — Document in code the deliberate split-undo contract (gesture-level
-  capture in the view vs. command-level capture in the VM) so future callers of `MoveSelectedBy` don't
-  assume it self-captures. (Resolves the downgraded "undo" finding without changing behavior.)
+- **3c · Effort S · Risk Low · ✅ done** — Documented the deliberate split-undo contract in XML-doc on
+  `DiagramDocumentViewModel.CaptureUndo` / `MoveSelectedBy` / `SnapSelectionToGrid`: gesture-level
+  capture in the view (once per gesture) vs. command-level capture in the VM, so future callers of
+  `MoveSelectedBy` don't assume it self-captures. Doc-only; resolves the downgraded "undo" finding.
 - Secondary large VMs for a lighter same-pattern pass once 3a/3b land: `ConnectorViewModel` (528),
   `ShellViewModel` (437), `InspectorViewModel` (407).
 
@@ -161,24 +166,29 @@ Verified by the tests added in item 1.
 - **6b · Risk Low · ✅ done** — `ImageNode.Clone` (`ImageNode.cs`) copied the `byte[]` **by reference**.
   Fixed with `Data = (byte[])Data.Clone()`; covered by `ImageNodeTests`. (Sibling node `Clone`s already
   deep-copy their collections — ImageNode was the lone offender.)
-- **6c · Risk Low** — Centralize the fragmented epsilons in `ShapeBoundary` (`double.Epsilon` vs
-  `1e-9` vs `1e-12`, ~5 inline constants across `IntersectEllipse` / `TryIntersectSegment`) into named
-  geometry-tolerance constants; document the rationale.
-- **6d · Risk Low** — Serialization forward-proofing: `JsonDocumentSerializer` only rejects
-  `SchemaVersion > Current`, and `Clone` is a serialize→deserialize round-trip. Fine while
-  `Current == 1`, but add a tiny migration seam (a version→upgrade map) and a comment before the first
-  schema bump, so old files aren't silently mishandled later.
+- **6c · Risk Low · ✅ done** — Named the fragmented `ShapeBoundary` epsilons into documented
+  tolerance constants: `ParameterEpsilon` (1e-9 — ray/segment parameter slack) and `ParallelEpsilon`
+  (1e-12 — cross-product parallel guard), with a rationale block. The `double.Epsilon` degeneracy
+  guards (zero-length ray, degenerate quadratic) are kept as-is on purpose — they ask "exactly zero?",
+  not "within tolerance?"; widening them would change which inputs fall back to centre.
+  Behavior-preserving (routing tests green). *Optional follow-up: revisit whether the `double.Epsilon`
+  ray-length guard should be a real tolerance — out of scope here as it would change behavior.*
+- **6d · Risk Low · ✅ done** — Added a `Migrate` forward-compat seam to `JsonDocumentSerializer` (runs
+  after the `> Current` reject; stamps a `SchemaVersion < Current` document up to current and is the
+  hook for version-stepped upgrades, documented with a `<code>` template). No-op today (`Current == 1`)
+  but covered by a test asserting an older schema deserializes stamped to current.
 
-### Priority 7 — Minor polish · Effort S · Risk Low
-- `RoundedRouter` magic numbers (`20d`, `0.4`) — name / document them.
-- Extract the repeated router anchor-resolution (`ShapeBoundary` calls duplicated across
-  Straight / Orthogonal / Rounded routers) into a `RouteHelpers` method.
-- `NodeViewModelBase`: optional helper for the `Text`/`Label` inline-label property echoed in
-  `ShapeNodeViewModel` / `UseCaseNodeViewModel` / `ActorNodeViewModel` (low value — intentionally
-  explicit).
-- `KeymapService.WriteExampleIfMissing` swallows all write exceptions silently; at least log.
-- `KeymapService` doc comment says `%APPDATA%/Draw` — reword to note it's per-OS app data (the code is
-  already cross-platform).
+### Priority 7 — Minor polish · Effort S · Risk Low · ✅ done (except the optional `NodeViewModelBase` helper)
+- ✅ `RoundedRouter` magic numbers named: `MinHandleLength` (20d) / `HandleLengthFraction` (0.4d); the
+  `OrthogonalRouter` collinearity literal (`1e-6`) folded in as `CollinearEpsilon`.
+- ✅ Extracted the repeated router anchor-resolution into `RouteHelpers.ResolveSource` /
+  `ResolveTarget`, now used by Straight / Orthogonal / Rounded (their now-unused
+  `Draw.Diagramming.Geometry` usings removed). Behavior-preserving.
+- **Skipped (intentional):** `NodeViewModelBase` inline-label helper — low value, kept explicit.
+- ✅ `KeymapService.WriteExampleIfMissing` now logs the swallowed write exception via `Debug.WriteLine`
+  (matching its sibling catch blocks).
+- ✅ `KeymapService` doc comment reworded to per-OS app data (`%APPDATA%\Draw` on Windows,
+  `~/.config/Draw` on Linux and macOS — `ApplicationData` resolves via XDG on both).
 
 ## Execution sequence
 

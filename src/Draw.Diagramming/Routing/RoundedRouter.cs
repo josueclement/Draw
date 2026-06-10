@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Draw.Diagramming.Geometry;
 using Draw.Model.Connectors;
 using Draw.Model.Primitives;
 
@@ -14,6 +13,11 @@ namespace Draw.Diagramming.Routing;
 /// </summary>
 public sealed class RoundedRouter : IConnectorRouteStrategy
 {
+    // No-bend S-curve control-handle length: a fraction of the endpoint span, with a floor so short
+    // connectors still bow out visibly instead of collapsing toward a straight line.
+    private const double MinHandleLength = 20d;
+    private const double HandleLengthFraction = 0.4d;
+
     public RouteStyle Style => RouteStyle.Rounded;
 
     public ConnectorRoute Route(ConnectorRouteRequest request)
@@ -24,9 +28,9 @@ public sealed class RoundedRouter : IConnectorRouteStrategy
         // No bend points: a gentle S-curve between the two boundary points.
         if (request.BendPoints.Count == 0)
         {
-            Point2D src = ResolveSource(request, targetCenter);
-            Point2D tgt = ResolveTarget(request, sourceCenter);
-            double handle = Math.Max(20d, (tgt - src).Length * 0.4);
+            Point2D src = RouteHelpers.ResolveSource(request, targetCenter);
+            Point2D tgt = RouteHelpers.ResolveTarget(request, sourceCenter);
+            double handle = Math.Max(MinHandleLength, (tgt - src).Length * HandleLengthFraction);
             Point2D outwardSource = RouteHelpers.SafeOutward(src - sourceCenter, tgt - src);
             Point2D outwardTarget = RouteHelpers.SafeOutward(tgt - targetCenter, src - tgt);
             CubicSegment curve = new(src + (outwardSource * handle), tgt + (outwardTarget * handle), tgt);
@@ -34,8 +38,8 @@ public sealed class RoundedRouter : IConnectorRouteStrategy
         }
 
         // Attach toward the first/last bend point (like the straight/orthogonal styles).
-        Point2D source = ResolveSource(request, request.BendPoints[0]);
-        Point2D target = ResolveTarget(request, request.BendPoints[request.BendPoints.Count - 1]);
+        Point2D source = RouteHelpers.ResolveSource(request, request.BendPoints[0]);
+        Point2D target = RouteHelpers.ResolveTarget(request, request.BendPoints[request.BendPoints.Count - 1]);
 
         List<Point2D> points = new() { source };
         points.AddRange(request.BendPoints);
@@ -62,16 +66,6 @@ public sealed class RoundedRouter : IConnectorRouteStrategy
         segments.Add(ToCubic(current, pts[n - 2], pts[n - 1]));
         return ConnectorRoute.PolyCubic(pts[0], segments);
     }
-
-    private static Point2D ResolveSource(ConnectorRouteRequest request, Point2D toward)
-        => request.SourceAnchor is { } anchor
-            ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, anchor)
-            : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, toward);
-
-    private static Point2D ResolveTarget(ConnectorRouteRequest request, Point2D toward)
-        => request.TargetAnchor is { } anchor
-            ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, anchor)
-            : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, toward);
 
     // Exact quadratic (start S, control Q, end E) → cubic conversion.
     private static CubicSegment ToCubic(Point2D s, Point2D q, Point2D e)
