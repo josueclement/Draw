@@ -1,7 +1,7 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** In progress — Priority 1 (test safety net) and items 6a/6b done; remainder pending.
+**Status:** In progress — Priority 1 (test safety net), items 6a/6b, and 2a done; remainder pending.
 **Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
@@ -72,10 +72,13 @@ are untested today.
 The headline finding. It conflates pointer dispatch, hit-testing, zoom/pan, scrollbars, marquee,
 node move/resize, connector editing, the handles overlay, context menus, and arrow-key nudge, driven
 by ~13 loose gesture-state fields acting as an implicit state machine.
-- **2a · Effort M · Risk Low** — Split the mega-handlers into intention-named private methods.
-  `OnPointerPressed` (~`385-557`, 173 lines) → `BeginToolPlacement` / `BeginNodeInteraction` /
-  `BeginConnectorMode` / `BeginPan` / `BeginMarquee`. `OnPointerReleased` (~`634-724`) and
-  `OnPointerMoved` (~`559-632`) → per-`DragMode` handler methods. Pure extraction, no behavior change.
+- **2a · Effort M · Risk Low · ✅ done** — Split the mega-handlers into intention-named private methods.
+  **Done:** `OnPointerPressed` → `BeginPan`/`BeginResize`/`BeginConnectorDrag`/`TryPlaceTool`/
+  `TryBeginConnectorEdit`/`BeginConnectorPick`/`BeginNodeMove`/`BeginMarquee`; `OnPointerMoved` →
+  `Handle*` per `DragMode`; `OnPointerReleased` → `Finalize*` per `DragMode` + a `ResetGestureState`
+  for the universal cleanup. Pure extraction, zero behavior change (build clean, tests green, diff
+  self-reviewed). Verify gestures manually on Windows/macOS. The ~13 gesture fields + `DragMode` are
+  untouched — that is 2b.
 - **2b · Effort M · Risk Med** — Collapse the ~13 gesture fields (`_mode`, `_moveLastWorld`,
   `_marquee*`, `_edit*`, `_resize*`, nudge state) into a small **gesture-state object** (or a tagged
   union per `DragMode`) with a `Finalize()`/reset, eliminating the scattered manual flag resets on

@@ -407,10 +407,7 @@ public partial class DiagramView : UserControl
 
         if (point.Properties.IsMiddleButtonPressed || point.Properties.IsRightButtonPressed)
         {
-            _mode = DragMode.Pan;
-            _lastScreen = screen;
-            _panStartScreen = screen;
-            e.Pointer.Capture(Viewport);
+            BeginPan(e.Pointer, screen);
             return;
         }
 
@@ -422,11 +419,7 @@ public partial class DiagramView : UserControl
         int handle = HitTestHandle(world);
         if (handle >= 0 && _vm.SelectedNodes.Count() == 1)
         {
-            _mode = DragMode.Resize;
-            _resizeHandle = handle;
-            _resizeTarget = _vm.SelectedNodes.First();
-            _undoCaptured = false;
-            e.Pointer.Capture(Viewport);
+            BeginResize(e.Pointer, handle, _vm.SelectedNodes.First());
             return;
         }
 
@@ -435,47 +428,12 @@ public partial class DiagramView : UserControl
         // Connector mode: drag from a source node to a target node.
         if (toolbox is { IsConnectorMode: true })
         {
-            NodeViewModelBase? from = HitTestNode(world);
-            if (from is not null)
-            {
-                _connectSource = from;
-                _mode = DragMode.Connect;
-                StartConnectPreview(from, world);
-                e.Pointer.Capture(Viewport);
-            }
-
+            BeginConnectorDrag(e.Pointer, world);
             return;
         }
 
-        // Shape placement.
-        if (toolbox?.SelectedShape is { } tool)
+        if (TryPlaceTool(_vm, toolbox, world))
         {
-            _vm.AddShape(tool.Kind, new Point2D(world.X, world.Y));
-            toolbox.ActivateSelectTool();
-            return;
-        }
-
-        // Class-node placement.
-        if (toolbox?.SelectedClassNode is { } classTool)
-        {
-            _vm.AddClassNode(classTool.Kind, new Point2D(world.X, world.Y));
-            toolbox.ActivateSelectTool();
-            return;
-        }
-
-        // Use-case-node placement.
-        if (toolbox?.SelectedUseCaseNode is { } useCaseTool)
-        {
-            _vm.AddUseCaseNode(useCaseTool.Kind, new Point2D(world.X, world.Y));
-            toolbox.ActivateSelectTool();
-            return;
-        }
-
-        // ER table placement.
-        if (toolbox is { SelectedEntity: not null })
-        {
-            _vm.AddEntityNode(new Point2D(world.X, world.Y));
-            toolbox.ActivateSelectTool();
             return;
         }
 
@@ -484,15 +442,9 @@ public partial class DiagramView : UserControl
 
         // Editing the selected connector's handles takes precedence over node hit-testing, because
         // endpoint handles sit on the shape boundaries and would otherwise be stolen by the node.
-        if (_vm.SelectedConnector is { } selected)
+        if (_vm.SelectedConnector is { } selected && TryBeginConnectorEdit(e.Pointer, selected, world, alt))
         {
-            ConnectorHit hit = HitConnector(selected, world);
-            if (hit.Kind != ConnectorHitKind.None)
-            {
-                BeginConnectorEdit(selected, hit, world, alt);
-                e.Pointer.Capture(Viewport);
-                return;
-            }
+            return;
         }
 
         // Connectors win over nodes within tolerance: they always render in the layer on top of nodes,
@@ -501,59 +453,164 @@ public partial class DiagramView : UserControl
         ConnectorViewModel? connector = _vm.HitTestConnector(new Point2D(world.X, world.Y), 6d / Zoom);
         if (connector is not null)
         {
-            // Ctrl+click on a straight/orthogonal connector splits it: insert a bend point at the
-            // click and immediately drag it (one undo step covers the add + reposition).
-            if (ctrl && connector.SupportsWaypoints)
-            {
-                _vm.CaptureUndo();
-                _vm.SelectConnector(connector);
-                _editConnector = connector;
-                _editBendIndex = connector.InsertBendPointAt(new Point2D(world.X, world.Y));
-                _mode = DragMode.WaypointMove;
-                _undoCaptured = true;
-                UpdateHandles();
-                e.Pointer.Capture(Viewport);
-                return;
-            }
-
-            _vm.SelectConnector(connector);
-            e.Pointer.Capture(Viewport);
+            BeginConnectorPick(e.Pointer, _vm, connector, world, ctrl);
             return;
         }
 
         NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
         {
-            if (ctrl)
-            {
-                _vm.ToggleSelect(node);
-            }
-            else if (!node.IsSelected)
-            {
-                _vm.SelectOnly(node);
-            }
-
-            _mode = DragMode.Move;
-            _moveLastWorld = world;
-            _moveStartScreen = screen;
-            _moveThresholdPassed = false;
-            _undoCaptured = false;
+            BeginNodeMove(_vm, node, screen, world, ctrl);
         }
         else
         {
-            _mode = DragMode.Marquee;
-            _marqueeStartWorld = world;
-            _marqueeStartScreen = screen;
-            _marqueeAdditive = ctrl;
-            if (!ctrl)
-            {
-                _vm.ClearSelection();
-            }
-
-            StartMarquee(world);
+            BeginMarquee(_vm, world, screen, ctrl);
         }
 
         e.Pointer.Capture(Viewport);
+    }
+
+    // Middle/right-button drag: start panning the canvas.
+    private void BeginPan(IPointer pointer, Point screen)
+    {
+        _mode = DragMode.Pan;
+        _lastScreen = screen;
+        _panStartScreen = screen;
+        pointer.Capture(Viewport);
+    }
+
+    // Drag on a resize handle of the single selected node.
+    private void BeginResize(IPointer pointer, int handle, NodeViewModelBase target)
+    {
+        _mode = DragMode.Resize;
+        _resizeHandle = handle;
+        _resizeTarget = target;
+        _undoCaptured = false;
+        pointer.Capture(Viewport);
+    }
+
+    // Connector mode: begin dragging a new connector from the source node under the cursor (if any).
+    private void BeginConnectorDrag(IPointer pointer, Point world)
+    {
+        NodeViewModelBase? from = HitTestNode(world);
+        if (from is not null)
+        {
+            _connectSource = from;
+            _mode = DragMode.Connect;
+            StartConnectPreview(from, world);
+            pointer.Capture(Viewport);
+        }
+    }
+
+    // Places the toolbox's active shape/class/use-case/entity tool at the click and reactivates the
+    // select tool. Returns true if a tool was placed (the caller then ends the gesture).
+    private bool TryPlaceTool(DiagramDocumentViewModel vm, ToolboxViewModel? toolbox, Point world)
+    {
+        // Shape placement.
+        if (toolbox?.SelectedShape is { } tool)
+        {
+            vm.AddShape(tool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return true;
+        }
+
+        // Class-node placement.
+        if (toolbox?.SelectedClassNode is { } classTool)
+        {
+            vm.AddClassNode(classTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return true;
+        }
+
+        // Use-case-node placement.
+        if (toolbox?.SelectedUseCaseNode is { } useCaseTool)
+        {
+            vm.AddUseCaseNode(useCaseTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return true;
+        }
+
+        // ER table placement.
+        if (toolbox is { SelectedEntity: not null })
+        {
+            vm.AddEntityNode(new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return true;
+        }
+
+        return false;
+    }
+
+    // If the click lands on a handle of the already-selected connector, begin editing it. Returns true
+    // if a connector-edit gesture was started.
+    private bool TryBeginConnectorEdit(IPointer pointer, ConnectorViewModel selected, Point world, bool alt)
+    {
+        ConnectorHit hit = HitConnector(selected, world);
+        if (hit.Kind != ConnectorHitKind.None)
+        {
+            BeginConnectorEdit(selected, hit, world, alt);
+            pointer.Capture(Viewport);
+            return true;
+        }
+
+        return false;
+    }
+
+    // Click on a connector body: Ctrl+click on a waypoint-capable connector splits it and drags the new
+    // bend point (one undo step); otherwise just select the connector.
+    private void BeginConnectorPick(IPointer pointer, DiagramDocumentViewModel vm, ConnectorViewModel connector, Point world, bool ctrl)
+    {
+        // Ctrl+click on a straight/orthogonal connector splits it: insert a bend point at the
+        // click and immediately drag it (one undo step covers the add + reposition).
+        if (ctrl && connector.SupportsWaypoints)
+        {
+            vm.CaptureUndo();
+            vm.SelectConnector(connector);
+            _editConnector = connector;
+            _editBendIndex = connector.InsertBendPointAt(new Point2D(world.X, world.Y));
+            _mode = DragMode.WaypointMove;
+            _undoCaptured = true;
+            UpdateHandles();
+            pointer.Capture(Viewport);
+            return;
+        }
+
+        vm.SelectConnector(connector);
+        pointer.Capture(Viewport);
+    }
+
+    // Click on a node: update selection (toggle on Ctrl, select-only otherwise) and arm a move gesture.
+    private void BeginNodeMove(DiagramDocumentViewModel vm, NodeViewModelBase node, Point screen, Point world, bool ctrl)
+    {
+        if (ctrl)
+        {
+            vm.ToggleSelect(node);
+        }
+        else if (!node.IsSelected)
+        {
+            vm.SelectOnly(node);
+        }
+
+        _mode = DragMode.Move;
+        _moveLastWorld = world;
+        _moveStartScreen = screen;
+        _moveThresholdPassed = false;
+        _undoCaptured = false;
+    }
+
+    // Click on empty canvas: begin a marquee selection (additive on Ctrl).
+    private void BeginMarquee(DiagramDocumentViewModel vm, Point world, Point screen, bool ctrl)
+    {
+        _mode = DragMode.Marquee;
+        _marqueeStartWorld = world;
+        _marqueeStartScreen = screen;
+        _marqueeAdditive = ctrl;
+        if (!ctrl)
+        {
+            vm.ClearSelection();
+        }
+
+        StartMarquee(world);
     }
 
     private void OnPointerMoved(object? sender, PointerEventArgs e)
@@ -569,35 +626,15 @@ public partial class DiagramView : UserControl
         switch (_mode)
         {
             case DragMode.Pan:
-                _vm.PanX += screen.X - _lastScreen.X;
-                _vm.PanY += screen.Y - _lastScreen.Y;
-                _lastScreen = screen;
+                HandlePan(_vm, screen);
                 break;
 
             case DragMode.Move:
-                if (!_moveThresholdPassed)
-                {
-                    double mdx = screen.X - _moveStartScreen.X;
-                    double mdy = screen.Y - _moveStartScreen.Y;
-                    if (((mdx * mdx) + (mdy * mdy)) <= MoveDragThresholdSquared)
-                    {
-                        break; // still inside the dead-zone: a select-click, not a drag
-                    }
-
-                    _moveThresholdPassed = true;
-                    _moveLastWorld = world; // anchor here so the first applied delta is 0 (no jump)
-                }
-
-                EnsureUndoCaptured();
-                _vm.MoveSelectedBy(world.X - _moveLastWorld.X, world.Y - _moveLastWorld.Y);
-                _moveLastWorld = world;
-                UpdateHandles();
+                HandleNodeMove(_vm, screen, world);
                 break;
 
             case DragMode.Resize when _resizeTarget is not null:
-                EnsureUndoCaptured();
-                _vm.SetNodeBounds(_resizeTarget, ResizeBounds(_resizeTarget, _resizeHandle, world));
-                UpdateHandles();
+                HandleResize(_vm, _resizeTarget, world);
                 break;
 
             case DragMode.Marquee:
@@ -609,26 +646,76 @@ public partial class DiagramView : UserControl
                 break;
 
             case DragMode.EndpointMove when _editConnector is not null:
-                EnsureUndoCaptured();
-                SetEndpointAnchor(_editConnector, _editSourceEndpoint, world);
-                UpdateHandles();
+                HandleEndpointDrag(_editConnector, world);
                 break;
 
             case DragMode.WaypointMove when _editConnector is not null:
-                EnsureUndoCaptured();
-                _editConnector.MoveBendPoint(_editBendIndex, new Point2D(world.X, world.Y));
-                UpdateHandles();
+                HandleWaypointDrag(_editConnector, world);
                 break;
 
             case DragMode.LabelMove when _editConnector is not null:
-                EnsureUndoCaptured();
-                Point2D natural = _editConnector.NaturalLabelAnchor(_editLabelKind);
-                _editConnector.SetLabelOffset(
-                    _editLabelKind,
-                    new Point2D((world.X + _labelGrabDelta.X) - natural.X, (world.Y + _labelGrabDelta.Y) - natural.Y));
-                UpdateHandles();
+                HandleLabelDrag(_editConnector, world);
                 break;
         }
+    }
+
+    private void HandlePan(DiagramDocumentViewModel vm, Point screen)
+    {
+        vm.PanX += screen.X - _lastScreen.X;
+        vm.PanY += screen.Y - _lastScreen.Y;
+        _lastScreen = screen;
+    }
+
+    private void HandleNodeMove(DiagramDocumentViewModel vm, Point screen, Point world)
+    {
+        if (!_moveThresholdPassed)
+        {
+            double mdx = screen.X - _moveStartScreen.X;
+            double mdy = screen.Y - _moveStartScreen.Y;
+            if (((mdx * mdx) + (mdy * mdy)) <= MoveDragThresholdSquared)
+            {
+                return; // still inside the dead-zone: a select-click, not a drag
+            }
+
+            _moveThresholdPassed = true;
+            _moveLastWorld = world; // anchor here so the first applied delta is 0 (no jump)
+        }
+
+        EnsureUndoCaptured();
+        vm.MoveSelectedBy(world.X - _moveLastWorld.X, world.Y - _moveLastWorld.Y);
+        _moveLastWorld = world;
+        UpdateHandles();
+    }
+
+    private void HandleResize(DiagramDocumentViewModel vm, NodeViewModelBase target, Point world)
+    {
+        EnsureUndoCaptured();
+        vm.SetNodeBounds(target, ResizeBounds(target, _resizeHandle, world));
+        UpdateHandles();
+    }
+
+    private void HandleEndpointDrag(ConnectorViewModel connector, Point world)
+    {
+        EnsureUndoCaptured();
+        SetEndpointAnchor(connector, _editSourceEndpoint, world);
+        UpdateHandles();
+    }
+
+    private void HandleWaypointDrag(ConnectorViewModel connector, Point world)
+    {
+        EnsureUndoCaptured();
+        connector.MoveBendPoint(_editBendIndex, new Point2D(world.X, world.Y));
+        UpdateHandles();
+    }
+
+    private void HandleLabelDrag(ConnectorViewModel connector, Point world)
+    {
+        EnsureUndoCaptured();
+        Point2D natural = connector.NaturalLabelAnchor(_editLabelKind);
+        connector.SetLabelOffset(
+            _editLabelKind,
+            new Point2D((world.X + _labelGrabDelta.X) - natural.X, (world.Y + _labelGrabDelta.Y) - natural.Y));
+        UpdateHandles();
     }
 
     private void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -638,49 +725,19 @@ public partial class DiagramView : UserControl
             switch (_mode)
             {
                 case DragMode.Move:
-                    if (_moveThresholdPassed)
-                    {
-                        _vm.SnapSelectionToGrid();
-                    }
-
+                    FinalizeMove(_vm);
                     break;
 
                 case DragMode.Resize when _resizeTarget is not null && _vm.SnapEnabled:
-                    Rect2D snapped = _resizeTarget.Model.Bounds.EdgesSnappedToGrid(_vm.GridSize);
-                    _vm.SetNodeBounds(_resizeTarget, snapped);
+                    FinalizeResize(_vm, _resizeTarget);
                     break;
 
                 case DragMode.Marquee:
-                    Point marqueeReleaseScreen = e.GetPosition(Viewport);
-                    Point world = ScreenToWorld(marqueeReleaseScreen);
-                    Rect2D rect = Rect2D.FromPoints(
-                        new Point2D(_marqueeStartWorld.X, _marqueeStartWorld.Y),
-                        new Point2D(world.X, world.Y));
-                    _vm.SelectInRect(rect, _marqueeAdditive);
-                    EndMarquee();
-                    // A bare click on empty canvas (no drag, not additive) dismisses the alignment
-                    // reference; a marquee drag to select the movers does not.
-                    double clickDx = marqueeReleaseScreen.X - _marqueeStartScreen.X;
-                    double clickDy = marqueeReleaseScreen.Y - _marqueeStartScreen.Y;
-                    if (!_marqueeAdditive && _vm.HasReference
-                        && ((clickDx * clickDx) + (clickDy * clickDy)) <= ContextClickThresholdSquared)
-                    {
-                        _vm.ClearReference();
-                    }
-
+                    FinalizeMarquee(_vm, e);
                     break;
 
                 case DragMode.Connect:
-                    NodeViewModelBase? target = HitTestNode(ScreenToWorld(e.GetPosition(Viewport)));
-                    if (_connectSource is not null && target is not null && !ReferenceEquals(target, _connectSource))
-                    {
-                        ToolboxViewModel? toolbox = GetToolbox();
-                        RelationshipKind kind = toolbox?.SelectedConnector?.Kind ?? RelationshipKind.Association;
-                        _vm.AddConnector(_connectSource.Id, target.Id, kind);
-                        toolbox?.ActivateSelectTool();
-                    }
-
-                    EndConnectPreview();
+                    FinalizeConnect(_vm, e);
                     break;
 
                 case DragMode.EndpointMove:
@@ -688,21 +745,11 @@ public partial class DiagramView : UserControl
                     break;
 
                 case DragMode.WaypointMove when _editConnector is not null:
-                    if (_vm.SnapEnabled)
-                    {
-                        _editConnector.SnapBendPointToGrid(_editBendIndex, _vm.GridSize);
-                    }
-
-                    _vm.MarkModified();
+                    FinalizeWaypointMove(_vm, _editConnector);
                     break;
 
                 case DragMode.LabelMove when _editConnector is not null:
-                    if (_vm.SnapEnabled)
-                    {
-                        _editConnector.SnapLabelToGrid(_editLabelKind, _vm.GridSize);
-                    }
-
-                    _vm.MarkModified();
+                    FinalizeLabelMove(_vm, _editConnector);
                     break;
 
                 case DragMode.Pan:
@@ -711,6 +758,84 @@ public partial class DiagramView : UserControl
             }
         }
 
+        ResetGestureState(e.Pointer);
+    }
+
+    // Snap the moved selection to the grid once the drag actually moved (threshold passed).
+    private void FinalizeMove(DiagramDocumentViewModel vm)
+    {
+        if (_moveThresholdPassed)
+        {
+            vm.SnapSelectionToGrid();
+        }
+    }
+
+    // Snap the resized node's edges to the grid. Only invoked when snapping is enabled (switch guard).
+    private void FinalizeResize(DiagramDocumentViewModel vm, NodeViewModelBase target)
+    {
+        Rect2D snapped = target.Model.Bounds.EdgesSnappedToGrid(vm.GridSize);
+        vm.SetNodeBounds(target, snapped);
+    }
+
+    // Commit the marquee selection; a bare (non-drag, non-additive) click also dismisses the reference.
+    private void FinalizeMarquee(DiagramDocumentViewModel vm, PointerReleasedEventArgs e)
+    {
+        Point marqueeReleaseScreen = e.GetPosition(Viewport);
+        Point world = ScreenToWorld(marqueeReleaseScreen);
+        Rect2D rect = Rect2D.FromPoints(
+            new Point2D(_marqueeStartWorld.X, _marqueeStartWorld.Y),
+            new Point2D(world.X, world.Y));
+        vm.SelectInRect(rect, _marqueeAdditive);
+        EndMarquee();
+        // A bare click on empty canvas (no drag, not additive) dismisses the alignment
+        // reference; a marquee drag to select the movers does not.
+        double clickDx = marqueeReleaseScreen.X - _marqueeStartScreen.X;
+        double clickDy = marqueeReleaseScreen.Y - _marqueeStartScreen.Y;
+        if (!_marqueeAdditive && vm.HasReference
+            && ((clickDx * clickDx) + (clickDy * clickDy)) <= ContextClickThresholdSquared)
+        {
+            vm.ClearReference();
+        }
+    }
+
+    // Drop the in-progress connector onto a target node (when valid) and tear down the preview.
+    private void FinalizeConnect(DiagramDocumentViewModel vm, PointerReleasedEventArgs e)
+    {
+        NodeViewModelBase? target = HitTestNode(ScreenToWorld(e.GetPosition(Viewport)));
+        if (_connectSource is not null && target is not null && !ReferenceEquals(target, _connectSource))
+        {
+            ToolboxViewModel? toolbox = GetToolbox();
+            RelationshipKind kind = toolbox?.SelectedConnector?.Kind ?? RelationshipKind.Association;
+            vm.AddConnector(_connectSource.Id, target.Id, kind);
+            toolbox?.ActivateSelectTool();
+        }
+
+        EndConnectPreview();
+    }
+
+    private void FinalizeWaypointMove(DiagramDocumentViewModel vm, ConnectorViewModel connector)
+    {
+        if (vm.SnapEnabled)
+        {
+            connector.SnapBendPointToGrid(_editBendIndex, vm.GridSize);
+        }
+
+        vm.MarkModified();
+    }
+
+    private void FinalizeLabelMove(DiagramDocumentViewModel vm, ConnectorViewModel connector)
+    {
+        if (vm.SnapEnabled)
+        {
+            connector.SnapLabelToGrid(_editLabelKind, vm.GridSize);
+        }
+
+        vm.MarkModified();
+    }
+
+    // Universal end-of-gesture cleanup: reset the state machine, release the pointer, refresh handles.
+    private void ResetGestureState(IPointer pointer)
+    {
         _mode = DragMode.None;
         _undoCaptured = false;
         _moveThresholdPassed = false;
@@ -719,7 +844,7 @@ public partial class DiagramView : UserControl
         _connectSource = null;
         _editConnector = null;
         _editBendIndex = -1;
-        e.Pointer.Capture(null);
+        pointer.Capture(null);
         UpdateHandles();
     }
 
