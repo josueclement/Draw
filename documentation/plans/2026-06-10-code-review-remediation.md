@@ -1,7 +1,7 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** In progress — Priority 1 (test safety net), items 6a/6b, and 2a done; remainder pending.
+**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, and 3a done; remainder pending.
 **Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
@@ -94,9 +94,14 @@ by ~13 loose gesture-state fields acting as an implicit state machine.
 ~9 responsibilities, ~40 methods, 11 commands in one class: selection, node CRUD, connector CRUD,
 clipboard/duplicate, align/distribute (+ reference-align), z-order, connector spacing/merge/pin, undo
 orchestration, style application, view (zoom/pan) coordination.
-- **3a · Effort M · Risk Low** — Extract the 3 longest/most-complex methods into focused units (with
-  tests from item 1): `PlaceClones` (~`622-687`, ID-remap + clone + z-index), `ReorderSelected`
-  (~`980-1036`), `PinSelectedConnectionEnds` (~`1063-1143`, 80 lines).
+- **3a · Effort M · Risk Low · ✅ done** — Extract the 3 longest/most-complex methods into focused units
+  (with tests from item 1): `PlaceClones`, `ReorderSelected`, `PinSelectedConnectionEnds`. **Done:** the
+  pure cores moved to the testable `Draw.Diagramming.Layout` layer — new `CloneArranger.Clone`,
+  `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — leaving only VM orchestration
+  (factory, collection sync, undo, selection). Backed by new headless tests (`CloneArrangerTests`,
+  `ConnectionDistributorTests`, `ZOrderArrangerTests`, which also cover the previously-untested
+  `ClassifySide`/`FractionAlong`/`EvenAnchor`/`Reorder`). VM behavior unchanged (build clean, tests green,
+  diff self-reviewed); spot-check duplicate / z-order / space-merge connections on Windows/macOS.
 - **3b · Effort L · Risk Med (later phase)** — Move clusters behind collaborators the VM composes
   (the VM stays the façade the view binds to): an `AlignmentCoordinator` (align/distribute/reference),
   a `ConnectorSpacingCoordinator` (space/merge/pin), a `ClipboardCoordinator` (copy/cut/paste/duplicate

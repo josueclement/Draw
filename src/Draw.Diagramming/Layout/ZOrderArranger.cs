@@ -90,4 +90,31 @@ public static class ZOrderArranger
                 return items;
         }
     }
+
+    /// <summary>
+    /// Reorders <paramref name="items"/> in two independent stacking bands so a lower-band item can never
+    /// cross above an upper-band one. Items are split by <paramref name="isLowerBand"/>; each band is taken
+    /// back-to-front by <paramref name="zIndex"/>, reordered with <see cref="Reorder{T}"/>, and the lower
+    /// band is concatenated before the upper. Returns the full back-to-front order. (Used for the
+    /// "system boundaries always behind shapes" rule.)
+    /// </summary>
+    public static IReadOnlyList<T> ReorderInBands<T>(
+        IReadOnlyList<T> items,
+        Func<T, bool> isLowerBand,
+        Func<T, bool> isSelected,
+        Func<T, int> zIndex,
+        ZOrderOperation operation)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        ArgumentNullException.ThrowIfNull(isLowerBand);
+        ArgumentNullException.ThrowIfNull(zIndex);
+
+        List<T> lower = items.Where(i => isLowerBand(i)).OrderBy(zIndex).ToList();
+        List<T> upper = items.Where(i => !isLowerBand(i)).OrderBy(zIndex).ToList();
+
+        List<T> result = new(lower.Count + upper.Count);
+        result.AddRange(Reorder(lower, isSelected, operation));
+        result.AddRange(Reorder(upper, isSelected, operation));
+        return result;
+    }
 }

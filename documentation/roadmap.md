@@ -235,9 +235,12 @@ A full code-review pass (2026-06-10) produced a prioritized, impact-first refact
 **Done so far:** Priority 1 — the regression test safety net (xUnit v3 / MTP over the pure-logic
 layers); the correctness quick-wins, items **6a** (signature-parse validation via `TryParse`,
 with the edit VMs reverting invalid inline edits) and **6b** (`ImageNode.Clone` deep-copies its byte
-buffer); and **2a** (the `DiagramView.axaml.cs` pointer handlers split into intention-named
-`Begin*`/`Handle*`/`Finalize*` methods — pure extraction, no behavior change). Still pending: the
-deeper decompositions (2b/2c/2d, 3a/3b) and the remaining hardening/dedup/service items.
+buffer); **2a** (the `DiagramView.axaml.cs` pointer handlers split into intention-named
+`Begin*`/`Handle*`/`Finalize*` methods — pure extraction, no behavior change); and **3a** (the three
+longest `DiagramDocumentViewModel` methods' pure cores lifted into testable `Draw.Diagramming.Layout`
+helpers — `CloneArranger`, `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — with
+headless tests). Still pending: the deeper decompositions (2b/2c/2d, 3b) and the remaining
+hardening/dedup/service items.
 The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a

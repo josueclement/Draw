@@ -628,28 +628,14 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
         CaptureUndo();
 
-        Dictionary<Guid, Guid> idMap = new();
+        // Fresh ids, translated/snapped bounds and a restacked ZIndex are computed in the (testable)
+        // Diagramming layer; the view model owns only the document/collection wiring below.
+        CloneArranger.ClonedGraph cloned = CloneArranger.Clone(
+            sourceNodes, sourceConnectors, _document.Nodes, delta, SnapEnabled ? GridSize : null);
+
         List<NodeViewModelBase> pasted = new();
-        // Clone in ascending stacking order so a multi-node duplicate keeps its internal front/back
-        // order: each ordinary clone is assigned a successively higher ZIndex below.
-        foreach (NodeBase source in sourceNodes.OrderBy(n => n.ZIndex))
+        foreach (NodeBase clone in cloned.Nodes)
         {
-            NodeBase clone = source.Clone();
-            Guid newId = Guid.NewGuid();
-            idMap[source.Id] = newId;
-            clone.Id = newId;
-            clone.Bounds = clone.Bounds.Translate(delta.X, delta.Y);
-            if (SnapEnabled)
-            {
-                clone.Bounds = clone.Bounds.PositionSnappedToGrid(GridSize);
-            }
-
-            // Give the clone a fresh ZIndex (Clone copied the source's, which would tie with it and make
-            // hit-testing ambiguous): ordinary clones go on top (matching AddShape), boundaries stay in
-            // their reserved lower band (matching AddSystemBoundary) so they keep drawing behind the nodes
-            // they enclose. Computed before the Add so it reflects clones already placed in this batch.
-            clone.ZIndex = clone is SystemBoundaryNode ? LowestZIndex() - 1 : NextZIndex();
-
             _document.Nodes.Add(clone);
             NodeViewModelBase vm = CreateNodeViewModel(clone);
 
@@ -666,18 +652,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             pasted.Add(vm);
         }
 
-        foreach (Connector source in sourceConnectors)
+        foreach (Connector clone in cloned.Connectors)
         {
-            if (!idMap.TryGetValue(source.SourceNodeId, out Guid newSource)
-                || !idMap.TryGetValue(source.TargetNodeId, out Guid newTarget))
-            {
-                continue;
-            }
-
-            Connector clone = source.Clone();
-            clone.Id = Guid.NewGuid();
-            clone.SourceNodeId = newSource;
-            clone.TargetNodeId = newTarget;
             _document.Connectors.Add(clone);
         }
 
@@ -979,31 +955,28 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// </summary>
     public void ReorderSelected(ZOrderOperation operation)
     {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
+        HashSet<NodeViewModelBase> selectedSet = SelectedNodes.ToHashSet();
+        if (selectedSet.Count == 0)
         {
             return;
         }
 
-        HashSet<NodeViewModelBase> selectedSet = selected.ToHashSet();
+        // Boundaries form a lower band that ordinary shapes can never sink below; the banded reorder
+        // (back-to-front by current ZIndex within each band) lives in the testable Diagramming layer.
+        IReadOnlyList<NodeViewModelBase> reordered = ZOrderArranger.ReorderInBands(
+            Nodes,
+            n => n.Model is SystemBoundaryNode,
+            selectedSet.Contains,
+            n => n.Model.ZIndex,
+            operation);
 
-        // Each band is ordered back-to-front by its current ZIndex; boundaries are repacked below the
-        // ordinary nodes so the "boundaries stay behind shapes" constraint holds structurally.
-        List<NodeViewModelBase> boundaries = Nodes
-            .Where(n => n.Model is SystemBoundaryNode)
-            .OrderBy(n => n.Model.ZIndex)
+        // The current banded order (boundaries first, each band by ZIndex) equals the reorder when nothing
+        // moves — so this detects a no-op (e.g. the selection is already at the front) and avoids dirtying.
+        IReadOnlyList<NodeViewModelBase> current = Nodes
+            .OrderByDescending(n => n.Model is SystemBoundaryNode)
+            .ThenBy(n => n.Model.ZIndex)
             .ToList();
-        List<NodeViewModelBase> ordinary = Nodes
-            .Where(n => n.Model is not SystemBoundaryNode)
-            .OrderBy(n => n.Model.ZIndex)
-            .ToList();
-
-        List<NodeViewModelBase> reordered = new(boundaries.Count + ordinary.Count);
-        reordered.AddRange(ZOrderArranger.Reorder(boundaries, selectedSet.Contains, operation));
-        reordered.AddRange(ZOrderArranger.Reorder(ordinary, selectedSet.Contains, operation));
-
-        // Nothing moved (e.g. the selection is already at the front) — don't dirty the document.
-        if (reordered.SequenceEqual(boundaries.Concat(ordinary)))
+        if (reordered.SequenceEqual(current))
         {
             return;
         }
@@ -1019,10 +992,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         // existing view-model instances — and thus their selection and decoded image bitmaps — intact.
         for (int target = 0; target < reordered.Count; target++)
         {
-            int current = Nodes.IndexOf(reordered[target]);
-            if (current != target)
+            int currentIndex = Nodes.IndexOf(reordered[target]);
+            if (currentIndex != target)
             {
-                Nodes.Move(current, target);
+                Nodes.Move(currentIndex, target);
             }
         }
 
@@ -1034,9 +1007,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
         MarkModified();
     }
-
-    /// <summary>One connector endpoint that touches a shape being spaced.</summary>
-    private readonly record struct ConnectorEnd(ConnectorViewModel Connector, bool IsSource, double Fraction);
 
     /// <summary>
     /// Force-pins every connector end touching the selected shape(s) into evenly spaced positions (one
@@ -1068,78 +1038,48 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             return;
         }
 
-        Dictionary<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> groups = new();
-
-        void Collect(ConnectorViewModel connector, bool isSource, NodeViewModelBase node, Point2D point)
-        {
-            BoxSide side = ConnectionDistributor.ClassifySide(node.Bounds, point);
-            double fraction = ConnectionDistributor.FractionAlong(side, node.Bounds, point);
-            if (!groups.TryGetValue((node, side), out List<ConnectorEnd>? ends))
-            {
-                ends = new List<ConnectorEnd>();
-                groups[(node, side)] = ends;
-            }
-
-            ends.Add(new ConnectorEnd(connector, isSource, fraction));
-        }
-
+        // Snapshot every end touching a selected shape (read the current routes up front — a connector's
+        // route depends only on its own endpoints, so this is order-independent). The pure planner groups
+        // by side, keeps the current order, and returns only the ends whose anchor actually changes.
+        List<ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>> ends = new();
         foreach (ConnectorViewModel connector in Connectors)
         {
             if (selectedIds.Contains(connector.Source.Id))
             {
-                Collect(connector, isSource: true, connector.Source, connector.RouteStart);
+                ends.Add(new ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>(
+                    (connector, true), connector.Source.Id, connector.Source.Bounds, connector.RouteStart, connector.SourceAnchor));
             }
 
             if (selectedIds.Contains(connector.Target.Id))
             {
-                Collect(connector, isSource: false, connector.Target, connector.RouteEnd);
+                ends.Add(new ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>(
+                    (connector, false), connector.Target.Id, connector.Target.Bounds, connector.RouteEnd, connector.TargetAnchor));
             }
         }
 
-        // Compute every target anchor before mutating anything. A connector's route depends only on its
-        // own endpoints, so reading all current routes up front is order-independent. The ends keep their
-        // current order along each side; anchorFor decides where each lands (spread, or collapsed to centre).
-        List<(ConnectorEnd End, Point2D Anchor)> ops = new();
-        foreach (KeyValuePair<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> group in groups)
+        IReadOnlyList<((ConnectorViewModel Connector, bool IsSource) Token, Point2D Anchor)> plan =
+            ConnectionDistributor.PlanPinning(ends, anchorFor);
+
+        // An empty plan means nothing changes — add no undo entry (the no-op contract).
+        if (plan.Count == 0)
         {
-            List<ConnectorEnd> ends = group.Value;
-            ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
-            for (int i = 0; i < ends.Count; i++)
-            {
-                ops.Add((ends[i], anchorFor(group.Key.Side, i, ends.Count)));
-            }
+            return;
         }
 
-        // Apply, capturing undo once on the first real change so a no-op adds no undo entry.
-        bool captured = false;
-        foreach ((ConnectorEnd end, Point2D anchor) in ops)
+        CaptureUndo();
+        foreach (((ConnectorViewModel Connector, bool IsSource) Token, Point2D Anchor) op in plan)
         {
-            Point2D? current = end.IsSource ? end.Connector.SourceAnchor : end.Connector.TargetAnchor;
-            if (current is { } c && c == anchor)
+            if (op.Token.IsSource)
             {
-                continue;
-            }
-
-            if (!captured)
-            {
-                CaptureUndo();
-                captured = true;
-            }
-
-            if (end.IsSource)
-            {
-                end.Connector.SetSourceAnchor(anchor);
+                op.Token.Connector.SetSourceAnchor(op.Anchor);
             }
             else
             {
-                end.Connector.SetTargetAnchor(anchor);
+                op.Token.Connector.SetTargetAnchor(op.Anchor);
             }
         }
 
-        if (captured)
-        {
-            MarkModified();
-        }
+        MarkModified();
     }
 
     public void SetNodeBounds(NodeViewModelBase vm, Rect2D bounds)
