@@ -33,13 +33,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private readonly ClipboardCoordinator _clipboardCoordinator;
     private readonly ConnectorSpacingCoordinator _connectorSpacingCoordinator;
     private readonly ZOrderCoordinator _zOrderCoordinator;
+    private readonly AlignmentCoordinator _alignmentCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
-
-    // Transient (never serialized), per-tab "alignment reference": the node ids that stay put while the
-    // current selection (the "movers") is lined up against their combined bounding box. Stale ids are
-    // pruned in RaiseSelectionChanged, so the live reference always reflects existing shapes.
-    private readonly HashSet<Guid> _referenceIds = new();
 
     // Ribbon View-tab zoom step + bounds; bounds mirror the Ctrl+wheel clamp in DiagramView.
     private const double ZoomStep = 1.2d;
@@ -68,6 +64,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _clipboardCoordinator = new ClipboardCoordinator(this, _serializer, clipboard);
         _connectorSpacingCoordinator = new ConnectorSpacingCoordinator(this);
         _zOrderCoordinator = new ZOrderCoordinator(this);
+        _alignmentCoordinator = new AlignmentCoordinator(this);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         _theme.ThemeChanged += OnThemeChanged;
@@ -221,11 +218,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// <summary>True when at least one node is selected — gates Copy/Cut/Duplicate.</summary>
     public bool HasNodeSelection => Nodes.Any(n => n.IsSelected);
 
-    /// <summary>Alignment needs at least two shapes to have a common edge/center to line up on.</summary>
-    public bool CanAlignSelection => SelectedNodes.Count() >= 2;
+    /// <summary>Alignment needs at least two shapes to line up. See <see cref="AlignmentCoordinator"/>.</summary>
+    public bool CanAlignSelection => _alignmentCoordinator.CanAlignSelection;
 
-    /// <summary>Distribution needs at least three shapes (two anchors plus something to space between).</summary>
-    public bool CanDistributeSelection => SelectedNodes.Count() >= 3;
+    /// <summary>Distribution needs at least three shapes. See <see cref="AlignmentCoordinator"/>.</summary>
+    public bool CanDistributeSelection => _alignmentCoordinator.CanDistributeSelection;
 
     /// <summary>Connector spacing operates on every connector attached to the selected shape(s).</summary>
     public bool CanSpaceConnections => SelectedNodes.Any();
@@ -233,30 +230,20 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// <summary>Connector merging operates on every connector attached to the selected shape(s).</summary>
     public bool CanMergeConnections => SelectedNodes.Any();
 
-    /// <summary>The captured reference nodes that still exist in the document (stale ids are ignored).</summary>
-    public IEnumerable<NodeViewModelBase> ReferenceNodes => Nodes.Where(n => _referenceIds.Contains(n.Id));
+    /// <summary>The captured reference nodes that still exist. See <see cref="AlignmentCoordinator"/>.</summary>
+    public IEnumerable<NodeViewModelBase> ReferenceNodes => _alignmentCoordinator.ReferenceNodes;
 
-    /// <summary>True while an alignment reference is captured (at least one reference node still present).</summary>
-    public bool HasReference => ReferenceNodes.Any();
-
-    /// <summary>The selected nodes that will actually move — the selection minus any reference nodes.</summary>
-    private IEnumerable<NodeViewModelBase> MoverNodes => SelectedNodes.Where(n => !_referenceIds.Contains(n.Id));
+    /// <summary>True while an alignment reference is captured. See <see cref="AlignmentCoordinator"/>.</summary>
+    public bool HasReference => _alignmentCoordinator.HasReference;
 
     /// <summary>"Set as reference" needs at least one selected node to capture.</summary>
-    public bool CanSetReference => HasNodeSelection;
+    public bool CanSetReference => _alignmentCoordinator.CanSetReference;
 
-    /// <summary>"Align to reference" needs a captured reference and at least one mover (selected non-reference node).</summary>
-    public bool CanAlignToReference => HasReference && MoverNodes.Any();
+    /// <summary>"Align to reference" needs a captured reference and at least one mover.</summary>
+    public bool CanAlignToReference => _alignmentCoordinator.CanAlignToReference;
 
-    /// <summary>Banner text shown while a reference is active.</summary>
-    public string ReferenceStatusText
-    {
-        get
-        {
-            int count = ReferenceNodes.Count();
-            return $"Reference set: {count} {(count == 1 ? "shape" : "shapes")}. Select other shapes, then Align to reference. Esc to clear.";
-        }
-    }
+    /// <summary>Banner text shown while a reference is active. See <see cref="AlignmentCoordinator"/>.</summary>
+    public string ReferenceStatusText => _alignmentCoordinator.ReferenceStatusText;
 
     public bool HasConnectorSelection => SelectedConnector is not null;
 
@@ -634,105 +621,20 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
     }
 
-    /// <summary>
-    /// Lines the selected shapes up against the selection's bounding box (one undo step). Positions
-    /// are applied exactly — deliberately not re-snapped to the grid, so centers stay pixel-perfect.
-    /// </summary>
-    public void AlignSelected(AlignmentMode mode) => ArrangeSelected(rects => ShapeArranger.Align(rects, mode), minimum: 2);
+    /// <summary>Aligns the selected shapes against their bounding box. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void AlignSelected(AlignmentMode mode) => _alignmentCoordinator.AlignSelected(mode);
 
-    /// <summary>Evens out the gaps between the selected shapes along an axis (one undo step).</summary>
-    public void DistributeSelected(DistributionMode mode) => ArrangeSelected(rects => ShapeArranger.Distribute(rects, mode), minimum: 3);
+    /// <summary>Evens out the gaps between the selected shapes. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void DistributeSelected(DistributionMode mode) => _alignmentCoordinator.DistributeSelected(mode);
 
-    private void ArrangeSelected(Func<IReadOnlyList<Rect2D>, IReadOnlyList<Rect2D>> arrange, int minimum)
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count < minimum)
-        {
-            return;
-        }
+    /// <summary>Captures the current selection as the alignment reference. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void SetReference() => _alignmentCoordinator.SetReference();
 
-        CaptureUndo();
-        IReadOnlyList<Rect2D> result = arrange(selected.Select(n => n.Model.Bounds).ToList());
-        for (int i = 0; i < selected.Count; i++)
-        {
-            selected[i].X = result[i].X;
-            selected[i].Y = result[i].Y;
-        }
+    /// <summary>Clears the alignment reference. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void ClearReference() => _alignmentCoordinator.ClearReference();
 
-        MarkModified();
-        // Selection set is unchanged, but its geometry moved — re-raise so the view rebuilds
-        // the overlay resize handles at the new positions (they aren't data-bound).
-        RaiseSelectionChanged();
-    }
-
-    /// <summary>
-    /// Captures the current selection as the alignment reference: those shapes stay put while a later
-    /// selection is lined up against them. Clears the live selection so the next pick is the movers; the
-    /// reference keeps its own highlight independently. Transient (not serialized) and per-tab.
-    /// </summary>
-    public void SetReference()
-    {
-        HashSet<Guid> ids = SelectedNodes.Select(n => n.Id).ToHashSet();
-        if (ids.Count == 0)
-        {
-            return;
-        }
-
-        _referenceIds.Clear();
-        foreach (Guid id in ids)
-        {
-            _referenceIds.Add(id);
-        }
-
-        // Drop the live selection so the user's next pick is the movers; ClearSelection() raises the
-        // selection-changed refresh (which also notifies the reference properties + commands).
-        ClearSelection();
-    }
-
-    /// <summary>Clears the alignment reference. Transient state only — no document mutation, no undo step.</summary>
-    public void ClearReference()
-    {
-        if (_referenceIds.Count == 0)
-        {
-            return;
-        }
-
-        _referenceIds.Clear();
-        RaiseSelectionChanged();
-    }
-
-    /// <summary>
-    /// Lines the movers (the selection minus the reference) up against the reference's combined bounding
-    /// box, moving them as one block so their relative layout is preserved (one undo step). The reference
-    /// shapes never move; positions are applied exactly — deliberately not re-snapped to the grid.
-    /// </summary>
-    public void AlignSelectedToReference(AlignmentMode mode)
-    {
-        List<NodeViewModelBase> movers = MoverNodes.ToList();
-        List<NodeViewModelBase> references = ReferenceNodes.ToList();
-        if (movers.Count == 0 || references.Count == 0)
-        {
-            return;
-        }
-
-        Rect2D referenceBox = references[0].Model.Bounds;
-        for (int i = 1; i < references.Count; i++)
-        {
-            referenceBox = referenceBox.Union(references[i].Model.Bounds);
-        }
-
-        CaptureUndo();
-        IReadOnlyList<Rect2D> result = ShapeArranger.AlignToReference(
-            movers.Select(n => n.Model.Bounds).ToList(), referenceBox, mode);
-        for (int i = 0; i < movers.Count; i++)
-        {
-            movers[i].X = result[i].X;
-            movers[i].Y = result[i].Y;
-        }
-
-        MarkModified();
-        RaiseSelectionChanged();
-    }
+    /// <summary>Lines the movers up against the reference's bounding box. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void AlignSelectedToReference(AlignmentMode mode) => _alignmentCoordinator.AlignSelectedToReference(mode);
 
     /// <summary>Changes the front-to-back stacking of the selected shapes. See <see cref="ZOrderCoordinator"/>.</summary>
     public void ReorderSelected(ZOrderOperation operation) => _zOrderCoordinator.ReorderSelected(operation);
@@ -1121,11 +1023,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     {
         // Drop any reference ids whose node no longer exists (deleted, or gone after undo/redo) so the
         // reference reflects only live shapes — and so a deleted reference can't resurrect on undo.
-        if (_referenceIds.Count > 0)
-        {
-            HashSet<Guid> live = Nodes.Select(n => n.Id).ToHashSet();
-            _referenceIds.RemoveWhere(id => !live.Contains(id));
-        }
+        _alignmentCoordinator.PruneStaleReferences();
 
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(HasNodeSelection));

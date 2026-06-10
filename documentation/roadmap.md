@@ -241,11 +241,13 @@ longest `DiagramDocumentViewModel` methods' pure cores lifted into testable `Dra
 helpers — `CloneArranger`, `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — with
 headless tests). **3b** is now in progress — moving the VM's orchestration clusters behind
 coordinator collaborators it composes (one branch per coordinator, clean-seam first), reaching the VM
-through a shared `IDocumentEditContext` seam; `ClipboardCoordinator` (copy/cut/paste/duplicate +
-image insertion + `PlaceClones`), `ConnectorSpacingCoordinator` (space/merge/pin) and `ZOrderCoordinator`
-(`ReorderSelected`) are extracted and the VM delegates to them. Still pending: the last of 3b
-(`AlignmentCoordinator`), the `DiagramView` decompositions (2b/2c/2d) and the remaining
-hardening/dedup/service items.
+through a shared `IDocumentEditContext` seam: `ClipboardCoordinator` (copy/cut/paste/duplicate +
+image insertion + `PlaceClones`), `ConnectorSpacingCoordinator` (space/merge/pin), `ZOrderCoordinator`
+(`ReorderSelected`) and `AlignmentCoordinator` (align/distribute + the reference subsystem) are all
+extracted, dropping the VM from ~1480 to ~1050 lines while it stays the façade the view binds to (it
+keeps the commands and selection-changed notifications). With 3b done, still pending: the `DiagramView`
+decompositions (2b/2c/2d), de-duplication (4), service tidy-ups (5) and the remaining correctness/polish
+items (3c, 6c/6d, 7).
 The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a
