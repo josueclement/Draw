@@ -228,3 +228,18 @@ requested delta (no implicit grid snap), so the fine step stays meaningful with 
 Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bubble past the
 suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
 a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.
+
+## Code-review remediation 🚧 (cross-cutting, planned — no code changed)
+
+A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap; nothing
+is implemented yet. The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
+monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
+and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a
+regression **test safety net first** — reintroducing one focused test project for the pure-logic
+routing/parsing/serialization layers (tests were removed 2026-06-03) — then **phased** extraction of
+the two giants (split mega-handlers, lift a gesture-state object, peel interaction controllers and
+coordinator collaborators out of the VM), de-duplication (`ClassMemberViewModel`/`EntityColumnViewModel`
+edit pattern + mirrored XAML templates; actor geometry shared between canvas and SVG), dialog-mechanism
+consistency in `DialogService`, and correctness hardening (signature-parse validation, `ImageNode.Clone`
+deep copy, centralized geometry epsilons, a schema-migration seam). Each item is labelled with effort and
+risk. See `documentation/plans/2026-06-10-code-review-remediation.md`.
