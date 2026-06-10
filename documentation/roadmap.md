@@ -229,10 +229,10 @@ Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bub
 suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
 a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.
 
-## Code-review remediation 🚧 (cross-cutting, in progress)
+## Code-review remediation ✅ (cross-cutting, complete)
 
 A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap.
-**Done so far:** Priority 1 — the regression test safety net (xUnit v3 / MTP over the pure-logic
+**Done:** Priority 1 — the regression test safety net (xUnit v3 / MTP over the pure-logic
 layers); the correctness quick-wins, items **6a** (signature-parse validation via `TryParse`,
 with the edit VMs reverting invalid inline edits) and **6b** (`ImageNode.Clone` deep-copies its byte
 buffer); **2a** (the `DiagramView.axaml.cs` pointer handlers split into intention-named
@@ -249,9 +249,16 @@ keeps the commands and selection-changed notifications). **4** (de-duplication) 
 `EditableItemViewModelBase<TModel>` now owns the shared member/column edit/commit/cancel lifecycle and
 its undo-capture contract (the two mirrored class-member XAML row templates collapsed into one shared
 `ClassMemberRowTemplate` resource), and a framework-agnostic `ActorDimensions` is the single source of
-the actor stick-figure proportions shared by the canvas and SVG render paths. Still pending: the
-`DiagramView` decompositions (2b/2c/2d), service tidy-ups (5) and the remaining correctness/polish
-items (3c, 6c/6d, 7).
+the actor stick-figure proportions shared by the canvas and SVG render paths. The rest then landed:
+the `DiagramView` decompositions **2b/2c/2d** (gesture state collapsed into `CanvasGestureState`,
+interaction logic peeled into `ConnectorEditController`/`ViewportScrollController`, overlay
+rebuild/reposition split), **3c** (the split-undo contract documented on the VM), **6c/6d** (named
+`ShapeBoundary` tolerance constants + a `JsonDocumentSerializer.Migrate` forward-compat seam), **7**
+(router magic-number constants, `RouteHelpers` anchor resolution, `KeymapService` logging), and
+finally **5a/5b** — all dialogs routed through Carbon's `IContentDialogService` for one consistent
+look, and the `FileDialogService` picker prologue folded into two helpers. The effort is complete;
+only the optional secondary-VM decomposition pass (`ConnectorViewModel`, `ShellViewModel`,
+`InspectorViewModel`) remains, deferred as off the critical path. **5c** is left as-is by design.
 The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a

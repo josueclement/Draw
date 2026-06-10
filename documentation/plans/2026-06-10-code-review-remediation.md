@@ -1,9 +1,9 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** In progress — Priority 1 (test safety net), Priority 2 (2a–2d), Priority 3 (3a–3c),
-Priority 4 (4a/4b), Priority 6 (6a–6d) and Priority 7 all done. Remaining: Priority 5 (5a/5b; 5c
-intentionally left as-is) and the optional secondary-VM decomposition pass.
+**Status:** Complete — Priority 1 (test safety net), Priority 2 (2a–2d), Priority 3 (3a–3c),
+Priority 4 (4a/4b), Priority 5 (5a/5b; 5c intentionally left as-is), Priority 6 (6a–6d) and
+Priority 7 all done. Remaining: only the optional secondary-VM decomposition pass.
 **Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
@@ -142,13 +142,18 @@ orchestration, style application, view (zoom/pan) coordination.
   consumed by both render paths, with `ActorDimensionsTests` covering the proportions and the
   degenerate-size clamp.
 
-### Priority 5 — Service & DI tidy-ups · Effort S–M · Risk Low
-- **5a** — `DialogService` is **inconsistent**: `ConfirmUnsavedAsync` uses Carbon's
-  `IContentDialogService`, while `ShowErrorAsync`/`ConfirmAsync` hand-build a raw `Window` +
-  `StackPanel` + `Button` (`IDialogService.cs:66-118`). Route all three through the Carbon content
-  dialog (or one private helper) for consistent look and a single dialog mechanism.
-- **5b** — `FileDialogService` repeats the `GetStorageProvider()` lifetime-walk at ~5 call sites; fold
-  into one accessor. (Low value — cosmetic.)
+### Priority 5 — Service & DI tidy-ups · Effort S–M · Risk Low · ✅ done (5a/5b; 5c left as-is)
+- **5a · ✅ done** — `DialogService` was **inconsistent**: `ConfirmUnsavedAsync` used Carbon's
+  `IContentDialogService`, while `ShowErrorAsync`/`ConfirmAsync` hand-built a raw `Window` +
+  `StackPanel` + `Button`. **Resolution:** the private `ShowAsync` helper now routes through the same
+  Carbon `IContentDialogService` (Primary = "Yes"/"OK", Close = "No" for confirms), so all three
+  dialogs share one look and a single mechanism. The manual owner-walk and the raw-`Window` build are
+  gone (with their now-unused `Avalonia*` usings).
+- **5b · ✅ done** — `FileDialogService` repeated the `GetStorageProvider()` + null-guard + await +
+  path-extract prologue across all 5 pickers. **Resolution:** folded into two private helpers
+  `RunOpenPickerAsync(FilePickerOpenOptions)` / `RunSavePickerAsync(FilePickerSaveOptions)`; each public
+  picker is now a one-line expression body that builds its options and delegates. (Cosmetic;
+  behavior-preserving.)
 - **5c (optional / your call)** — Interface + sealed impl are co-located one-per-file in `Services/`
   (e.g. `IDialogService` + `DialogService`). Consistent and fine for small services; flag only if a
   stricter one-type-per-file convention is wanted. **Recommendation: leave as-is.**
