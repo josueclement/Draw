@@ -12,11 +12,17 @@ covers setup. This file captures only what those don't, or what is easy to get w
 ```bash
 dotnet build Draw.slnx                          # build all (solution is .slnx, not .sln)
 dotnet run --project src/Draw.App           # run the desktop app
+dotnet test --solution Draw.slnx                # run unit tests (xUnit v3 on MTP; note: --solution, not a positional arg)
 ```
 
 There is no `.editorconfig` or lint task. `dotnet format Draw.slnx` works but isn't a gate.
 Analyzers are on (`AnalysisLevel=latest`) and **nullable warnings are build errors**
 (`WarningsAsErrors=nullable`) — a `?`/null mistake fails the build, not just warns.
+
+Tests cover the pure-logic layers only (`tests/Draw.Model.Tests`, `tests/Draw.Diagramming.Tests`):
+routing, signature parsing, serialization. They have **no Avalonia dependency, so they run headless
+under WSL2** — unlike the GUI. The test runner is the Microsoft Testing Platform (xUnit v3 via the
+`xunit.v3.mtp-v2` meta-package), wired through `global.json`'s `test.runner` setting.
 
 ## Architecture (load-bearing invariants)
 
