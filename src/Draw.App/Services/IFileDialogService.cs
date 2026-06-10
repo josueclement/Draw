@@ -47,82 +47,50 @@ public sealed class FileDialogService : IFileDialogService
         Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif" },
     };
 
-    public async Task<string?> PickOpenAsync()
-    {
-        IStorageProvider? storage = GetStorageProvider();
-        if (storage is null)
-        {
-            return null;
-        }
-
-        IReadOnlyList<IStorageFile> files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+    public Task<string?> PickOpenAsync()
+        => RunOpenPickerAsync(new FilePickerOpenOptions
         {
             Title = "Open diagram",
             AllowMultiple = false,
             FileTypeFilter = new[] { DrawFileType },
-        }).ConfigureAwait(true);
+        });
 
-        return files.Count > 0 ? files[0].TryGetLocalPath() : null;
-    }
-
-    public async Task<string?> PickSaveAsync(string? suggestedFileName)
-    {
-        IStorageProvider? storage = GetStorageProvider();
-        if (storage is null)
-        {
-            return null;
-        }
-
-        IStorageFile? file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+    public Task<string?> PickSaveAsync(string? suggestedFileName)
+        => RunSavePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save diagram",
             SuggestedFileName = suggestedFileName ?? "diagram",
             DefaultExtension = "draw",
             FileTypeChoices = new[] { DrawFileType },
-        }).ConfigureAwait(true);
+        });
 
-        return file?.TryGetLocalPath();
-    }
-
-    public async Task<string?> PickSaveImageAsync(string? suggestedFileName)
-    {
-        IStorageProvider? storage = GetStorageProvider();
-        if (storage is null)
-        {
-            return null;
-        }
-
-        IStorageFile? file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+    public Task<string?> PickSaveImageAsync(string? suggestedFileName)
+        => RunSavePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export image",
             SuggestedFileName = suggestedFileName ?? "diagram",
             DefaultExtension = "png",
             FileTypeChoices = new[] { PngFileType, JpegFileType },
-        }).ConfigureAwait(true);
+        });
 
-        return file?.TryGetLocalPath();
-    }
-
-    public async Task<string?> PickSaveSvgAsync(string? suggestedFileName)
-    {
-        IStorageProvider? storage = GetStorageProvider();
-        if (storage is null)
-        {
-            return null;
-        }
-
-        IStorageFile? file = await storage.SaveFilePickerAsync(new FilePickerSaveOptions
+    public Task<string?> PickSaveSvgAsync(string? suggestedFileName)
+        => RunSavePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export SVG",
             SuggestedFileName = suggestedFileName ?? "diagram",
             DefaultExtension = "svg",
             FileTypeChoices = new[] { SvgFileType },
-        }).ConfigureAwait(true);
+        });
 
-        return file?.TryGetLocalPath();
-    }
+    public Task<string?> PickOpenImageAsync()
+        => RunOpenPickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Insert image",
+            AllowMultiple = false,
+            FileTypeFilter = new[] { ImageFileType },
+        });
 
-    public async Task<string?> PickOpenImageAsync()
+    private static async Task<string?> RunOpenPickerAsync(FilePickerOpenOptions options)
     {
         IStorageProvider? storage = GetStorageProvider();
         if (storage is null)
@@ -130,14 +98,20 @@ public sealed class FileDialogService : IFileDialogService
             return null;
         }
 
-        IReadOnlyList<IStorageFile> files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = "Insert image",
-            AllowMultiple = false,
-            FileTypeFilter = new[] { ImageFileType },
-        }).ConfigureAwait(true);
-
+        IReadOnlyList<IStorageFile> files = await storage.OpenFilePickerAsync(options).ConfigureAwait(true);
         return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+    }
+
+    private static async Task<string?> RunSavePickerAsync(FilePickerSaveOptions options)
+    {
+        IStorageProvider? storage = GetStorageProvider();
+        if (storage is null)
+        {
+            return null;
+        }
+
+        IStorageFile? file = await storage.SaveFilePickerAsync(options).ConfigureAwait(true);
+        return file?.TryGetLocalPath();
     }
 
     private static IStorageProvider? GetStorageProvider()
