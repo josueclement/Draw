@@ -14,9 +14,12 @@ public interface IKeymapService
 }
 
 /// <summary>
-/// Reads the keymap from <c>%APPDATA%/Draw/keymap.json</c> (per-OS application data, mirroring
-/// <see cref="Services.RecentFilesService"/>), merging it over the baked-in defaults. A missing or
-/// corrupt user file is non-fatal — the defaults are used. A commented example file is written on first run.
+/// Reads <c>keymap.json</c> from the per-OS application-data directory
+/// (<see cref="Environment.SpecialFolder.ApplicationData"/> + <c>/Draw</c> — e.g. <c>%APPDATA%\Draw</c>
+/// on Windows, or <c>~/.config/Draw</c> on Linux and macOS, where .NET resolves <c>ApplicationData</c>
+/// via XDG), mirroring <see cref="Services.RecentFilesService"/>, and merges it over the baked-in
+/// defaults. A missing or corrupt user file is non-fatal — the defaults are used. A commented example
+/// file is written on first run.
 /// </summary>
 public sealed class KeymapService : IKeymapService
 {
@@ -113,7 +116,8 @@ public sealed class KeymapService : IKeymapService
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Writing the example file is best-effort.
+            // Writing the example file is best-effort; log and carry on (defaults still load).
+            Debug.WriteLine($"[keymap] Failed to write example keymap. {ex.Message}");
         }
     }
 

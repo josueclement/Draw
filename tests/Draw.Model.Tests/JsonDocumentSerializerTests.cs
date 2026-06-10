@@ -229,6 +229,19 @@ public class JsonDocumentSerializerTests
         Assert.True(doc.SchemaVersion <= DocumentSchema.CurrentVersion);
     }
 
+    [Fact]
+    public void Deserialize_OlderSchema_IsStampedToCurrentVersion()
+    {
+        // The migration seam upgrades an older document to the current shape and stamps the version,
+        // so downstream code never sees a stale SchemaVersion. (No transforms exist yet, but the
+        // re-stamp is the observable contract the seam must keep once migrations are added.)
+        JsonDocumentSerializer serializer = new();
+
+        DiagramDocument doc = serializer.Deserialize("{\"schemaVersion\":0}");
+
+        Assert.Equal(DocumentSchema.CurrentVersion, doc.SchemaVersion);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

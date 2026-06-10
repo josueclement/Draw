@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Draw.Diagramming.Geometry;
 using Draw.Model.Connectors;
 using Draw.Model.Primitives;
 
@@ -12,6 +11,10 @@ namespace Draw.Diagramming.Routing;
 /// </summary>
 public sealed class OrthogonalRouter : IConnectorRouteStrategy
 {
+    // Two consecutive points are treated as already axis-aligned when within this of each other on an
+    // axis; below it the corner we would insert is sub-pixel noise, so we keep the direct segment.
+    private const double CollinearEpsilon = 1e-6;
+
     public RouteStyle Style => RouteStyle.Orthogonal;
 
     public ConnectorRoute Route(ConnectorRouteRequest request)
@@ -21,12 +24,8 @@ public sealed class OrthogonalRouter : IConnectorRouteStrategy
 
         if (request.BendPoints.Count == 0)
         {
-            Point2D source = request.SourceAnchor is { } sa0
-                ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, sa0)
-                : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, targetCenter);
-            Point2D target = request.TargetAnchor is { } ta0
-                ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, ta0)
-                : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, sourceCenter);
+            Point2D source = RouteHelpers.ResolveSource(request, targetCenter);
+            Point2D target = RouteHelpers.ResolveTarget(request, sourceCenter);
 
             // Overlapping nodes make the elbow self-cross; fall back to a direct segment.
             if (request.SourceBounds.IntersectsWith(request.TargetBounds))
@@ -37,12 +36,8 @@ public sealed class OrthogonalRouter : IConnectorRouteStrategy
             return ConnectorRoute.Polyline(RouteHelpers.Dedupe(BuildElbow(source, target, sourceCenter, targetCenter)));
         }
 
-        Point2D src = request.SourceAnchor is { } sa
-            ? ShapeBoundary.ResolveAnchor(request.SourceKind, request.SourceBounds, sa)
-            : ShapeBoundary.IntersectFromCenter(request.SourceKind, request.SourceBounds, request.BendPoints[0]);
-        Point2D tgt = request.TargetAnchor is { } ta
-            ? ShapeBoundary.ResolveAnchor(request.TargetKind, request.TargetBounds, ta)
-            : ShapeBoundary.IntersectFromCenter(request.TargetKind, request.TargetBounds, request.BendPoints[request.BendPoints.Count - 1]);
+        Point2D src = RouteHelpers.ResolveSource(request, request.BendPoints[0]);
+        Point2D tgt = RouteHelpers.ResolveTarget(request, request.BendPoints[request.BendPoints.Count - 1]);
 
         List<Point2D> sequence = new() { src };
         sequence.AddRange(request.BendPoints);
@@ -84,7 +79,7 @@ public sealed class OrthogonalRouter : IConnectorRouteStrategy
         {
             Point2D previous = result[result.Count - 1];
             Point2D current = sequence[i];
-            if (Math.Abs(previous.X - current.X) > 1e-6 && Math.Abs(previous.Y - current.Y) > 1e-6)
+            if (Math.Abs(previous.X - current.X) > CollinearEpsilon && Math.Abs(previous.Y - current.Y) > CollinearEpsilon)
             {
                 result.Add(new Point2D(current.X, previous.Y));
             }

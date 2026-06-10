@@ -8,6 +8,22 @@ namespace Draw.Diagramming.Geometry;
 /// <summary>Computes where a ray leaving a shape's center crosses its outline.</summary>
 public static class ShapeBoundary
 {
+    // Geometry tolerances. These are intentionally distinct — they guard different quantities, so
+    // collapsing them into one value would be wrong:
+    //
+    //  * ParameterEpsilon — slack on the dimensionless ray/segment parameters (t along the ray, s
+    //    along an edge). A hit at t ~= 0 (back at the origin) is rejected, and a hit a hair past a
+    //    vertex (s just outside [0,1]) is still accepted, so rounding never drops a real crossing.
+    //  * ParallelEpsilon — threshold on a cross product (an area), below which a ray and an edge are
+    //    treated as parallel. Cross products scale with their operands, so this sits well below
+    //    pixel-scale geometry yet above the floating-point noise of the products that feed it.
+    //
+    // The zero-length / degenerate guards below deliberately use double.Epsilon (the smallest
+    // positive double): they ask "is this exactly zero (or denormal)?", a different question from
+    // "is this within tolerance?" — widening them would change which inputs fall back to the centre.
+    private const double ParameterEpsilon = 1e-9;
+    private const double ParallelEpsilon = 1e-12;
+
     /// <summary>
     /// The point on the shape outline where the ray from the shape's center toward
     /// <paramref name="toward"/> exits. Falls back to the center for degenerate input.
@@ -97,7 +113,7 @@ public static class ShapeBoundary
         {
             Point2D a = polygon[i];
             Point2D b = polygon[(i + 1) % polygon.Count];
-            if (TryIntersectSegment(origin, direction, a, b, out double t, out Point2D hit) && t > 1e-9 && t < bestT)
+            if (TryIntersectSegment(origin, direction, a, b, out double t, out Point2D hit) && t > ParameterEpsilon && t < bestT)
             {
                 bestT = t;
                 best = hit;
@@ -115,7 +131,7 @@ public static class ShapeBoundary
 
         Point2D edge = b - a;
         double denominator = Cross(direction, edge);
-        if (Math.Abs(denominator) < 1e-12)
+        if (Math.Abs(denominator) < ParallelEpsilon)
         {
             return false; // parallel
         }
@@ -123,7 +139,7 @@ public static class ShapeBoundary
         Point2D diff = a - origin;
         t = Cross(diff, edge) / denominator;
         double s = Cross(diff, direction) / denominator;
-        if (t < 0 || s < -1e-9 || s > 1 + 1e-9)
+        if (t < 0 || s < -ParameterEpsilon || s > 1 + ParameterEpsilon)
         {
             return false;
         }
@@ -136,8 +152,8 @@ public static class ShapeBoundary
 
     private static double PositiveMin(double a, double b)
     {
-        bool aPos = a > 1e-9;
-        bool bPos = b > 1e-9;
+        bool aPos = a > ParameterEpsilon;
+        bool bPos = b > ParameterEpsilon;
         if (aPos && bPos)
         {
             return Math.Min(a, b);
