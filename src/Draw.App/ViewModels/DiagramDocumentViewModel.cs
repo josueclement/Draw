@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Draw.App.Configuration;
 using Draw.App.Services;
@@ -24,21 +23,19 @@ using Draw.Model.Styling;
 namespace Draw.App.ViewModels;
 
 /// <summary>Editor state and mutating operations for one open diagram (one tab).</summary>
-public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDisposable
+public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDocumentEditContext, IDisposable
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
     private readonly IDocumentSerializer _serializer;
     private readonly EditorOptions _options;
     private readonly IThemeService _theme;
-    private readonly IClipboardService _clipboard;
+    private readonly ClipboardCoordinator _clipboardCoordinator;
+    private readonly ConnectorSpacingCoordinator _connectorSpacingCoordinator;
+    private readonly ZOrderCoordinator _zOrderCoordinator;
+    private readonly AlignmentCoordinator _alignmentCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
-
-    // Transient (never serialized), per-tab "alignment reference": the node ids that stay put while the
-    // current selection (the "movers") is lined up against their combined bounding box. Stale ids are
-    // pruned in RaiseSelectionChanged, so the live reference always reflects existing shapes.
-    private readonly HashSet<Guid> _referenceIds = new();
 
     // Ribbon View-tab zoom step + bounds; bounds mirror the Ctrl+wheel clamp in DiagramView.
     private const double ZoomStep = 1.2d;
@@ -64,7 +61,10 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _theme = theme ?? throw new ArgumentNullException(nameof(theme));
-        _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
+        _clipboardCoordinator = new ClipboardCoordinator(this, _serializer, clipboard);
+        _connectorSpacingCoordinator = new ConnectorSpacingCoordinator(this);
+        _zOrderCoordinator = new ZOrderCoordinator(this);
+        _alignmentCoordinator = new AlignmentCoordinator(this);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         _theme.ThemeChanged += OnThemeChanged;
@@ -218,11 +218,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// <summary>True when at least one node is selected — gates Copy/Cut/Duplicate.</summary>
     public bool HasNodeSelection => Nodes.Any(n => n.IsSelected);
 
-    /// <summary>Alignment needs at least two shapes to have a common edge/center to line up on.</summary>
-    public bool CanAlignSelection => SelectedNodes.Count() >= 2;
+    /// <summary>Alignment needs at least two shapes to line up. See <see cref="AlignmentCoordinator"/>.</summary>
+    public bool CanAlignSelection => _alignmentCoordinator.CanAlignSelection;
 
-    /// <summary>Distribution needs at least three shapes (two anchors plus something to space between).</summary>
-    public bool CanDistributeSelection => SelectedNodes.Count() >= 3;
+    /// <summary>Distribution needs at least three shapes. See <see cref="AlignmentCoordinator"/>.</summary>
+    public bool CanDistributeSelection => _alignmentCoordinator.CanDistributeSelection;
 
     /// <summary>Connector spacing operates on every connector attached to the selected shape(s).</summary>
     public bool CanSpaceConnections => SelectedNodes.Any();
@@ -230,30 +230,20 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// <summary>Connector merging operates on every connector attached to the selected shape(s).</summary>
     public bool CanMergeConnections => SelectedNodes.Any();
 
-    /// <summary>The captured reference nodes that still exist in the document (stale ids are ignored).</summary>
-    public IEnumerable<NodeViewModelBase> ReferenceNodes => Nodes.Where(n => _referenceIds.Contains(n.Id));
+    /// <summary>The captured reference nodes that still exist. See <see cref="AlignmentCoordinator"/>.</summary>
+    public IEnumerable<NodeViewModelBase> ReferenceNodes => _alignmentCoordinator.ReferenceNodes;
 
-    /// <summary>True while an alignment reference is captured (at least one reference node still present).</summary>
-    public bool HasReference => ReferenceNodes.Any();
-
-    /// <summary>The selected nodes that will actually move — the selection minus any reference nodes.</summary>
-    private IEnumerable<NodeViewModelBase> MoverNodes => SelectedNodes.Where(n => !_referenceIds.Contains(n.Id));
+    /// <summary>True while an alignment reference is captured. See <see cref="AlignmentCoordinator"/>.</summary>
+    public bool HasReference => _alignmentCoordinator.HasReference;
 
     /// <summary>"Set as reference" needs at least one selected node to capture.</summary>
-    public bool CanSetReference => HasNodeSelection;
+    public bool CanSetReference => _alignmentCoordinator.CanSetReference;
 
-    /// <summary>"Align to reference" needs a captured reference and at least one mover (selected non-reference node).</summary>
-    public bool CanAlignToReference => HasReference && MoverNodes.Any();
+    /// <summary>"Align to reference" needs a captured reference and at least one mover.</summary>
+    public bool CanAlignToReference => _alignmentCoordinator.CanAlignToReference;
 
-    /// <summary>Banner text shown while a reference is active.</summary>
-    public string ReferenceStatusText
-    {
-        get
-        {
-            int count = ReferenceNodes.Count();
-            return $"Reference set: {count} {(count == 1 ? "shape" : "shapes")}. Select other shapes, then Align to reference. Esc to clear.";
-        }
-    }
+    /// <summary>Banner text shown while a reference is active. See <see cref="AlignmentCoordinator"/>.</summary>
+    public string ReferenceStatusText => _alignmentCoordinator.ReferenceStatusText;
 
     public bool HasConnectorSelection => SelectedConnector is not null;
 
@@ -479,223 +469,26 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         return vm;
     }
 
-    /// <summary>Copies the selected nodes (and any connector whose endpoints are both selected) to the
-    /// clipboard. A lone selected image also writes a bitmap so other apps can paste it. No-op without
-    /// a node selection; never mutates the document.</summary>
-    public async Task CopySelectionAsync()
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
-        {
-            return;
-        }
+    /// <summary>Copies the selection to the clipboard. See <see cref="ClipboardCoordinator"/>.</summary>
+    public Task CopySelectionAsync() => _clipboardCoordinator.CopySelectionAsync();
 
-        HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
-        DiagramDocument clip = DiagramDocument.CreateEmpty(_document.DiagramType);
-        foreach (NodeViewModelBase vm in selected)
-        {
-            clip.Nodes.Add(vm.Model.Clone());
-        }
+    /// <summary>Copies the selection, then deletes it. See <see cref="ClipboardCoordinator"/>.</summary>
+    public Task CutSelectionAsync() => _clipboardCoordinator.CutSelectionAsync();
 
-        foreach (Connector connector in _document.Connectors)
-        {
-            if (ids.Contains(connector.SourceNodeId) && ids.Contains(connector.TargetNodeId))
-            {
-                clip.Connectors.Add(connector.Clone());
-            }
-        }
+    /// <summary>Pastes the clipboard payload (or an external bitmap). See <see cref="ClipboardCoordinator"/>.</summary>
+    public Task PasteAsync() => _clipboardCoordinator.PasteAsync();
 
-        string json = _serializer.Serialize(clip);
-        Bitmap? bitmap = selected is [ImageNodeViewModel image] ? image.Image : null;
-        await _clipboard.SetClipAsync(json, bitmap);
-    }
+    /// <summary>Clones the selection in place with a small offset. See <see cref="ClipboardCoordinator"/>.</summary>
+    public void DuplicateSelection() => _clipboardCoordinator.DuplicateSelection();
 
-    /// <summary>Copies the selection, then deletes it (one undo step from the delete).</summary>
-    public async Task CutSelectionAsync()
-    {
-        if (!HasNodeSelection)
-        {
-            return;
-        }
-
-        await CopySelectionAsync();
-        DeleteSelected();
-    }
-
-    /// <summary>Pastes the Draw clipboard payload centred on the viewport; falling back to a bitmap on
-    /// the clipboard (e.g. an external screenshot), which becomes an image node. No-op otherwise.</summary>
-    public async Task PasteAsync()
-    {
-        string? json = await _clipboard.TryGetClipAsync();
-        if (json is not null)
-        {
-            DiagramDocument clip;
-            try
-            {
-                clip = _serializer.Deserialize(json);
-            }
-            catch (DocumentSerializationException)
-            {
-                return;
-            }
-
-            if (clip.Nodes.Count == 0)
-            {
-                return;
-            }
-
-            Rect2D bounds = UnionBounds(clip.Nodes);
-            Point2D centre = ViewportCenterWorld();
-            Point2D delta = new(centre.X - bounds.Center.X, centre.Y - bounds.Center.Y);
-            PlaceClones(clip.Nodes, clip.Connectors, delta);
-            return;
-        }
-
-        Bitmap? bitmap = await _clipboard.TryGetBitmapAsync();
-        if (bitmap is not null)
-        {
-            byte[] data = EncodePng(bitmap);
-            bitmap.Dispose();
-            AddImageNode(ViewportCenterWorld(), data, "png");
-        }
-    }
-
-    /// <summary>Clones the selection in place with a small offset (no clipboard). One undo step.</summary>
-    public void DuplicateSelection()
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
-        {
-            return;
-        }
-
-        HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
-        List<NodeBase> nodes = selected.Select(n => n.Model).ToList();
-        List<Connector> connectors = _document.Connectors
-            .Where(c => ids.Contains(c.SourceNodeId) && ids.Contains(c.TargetNodeId))
-            .ToList();
-
-        double offset = GridSize > 0 ? GridSize : 16d;
-        PlaceClones(nodes, connectors, new Point2D(offset, offset));
-    }
-
-    /// <summary>Inserts an image node centred on <paramref name="centre"/>, sized from the image's native
-    /// pixels (capped to the viewport). One undo step. Used by paste, file insert and drag-drop.</summary>
+    /// <summary>Inserts an image node centred on <paramref name="centre"/> (one undo step). Used by paste,
+    /// file insert and drag-drop. See <see cref="ClipboardCoordinator"/>.</summary>
     public ImageNodeViewModel AddImageNode(Point2D centre, byte[] data, string format)
-    {
-        CaptureUndo();
-
-        (int pixelWidth, int pixelHeight) = DecodePixelSize(data);
-        (double w, double h) = InitialImageSize(pixelWidth, pixelHeight);
-        Rect2D bounds = new(centre.X - (w / 2), centre.Y - (h / 2), w, h);
-        if (SnapEnabled)
-        {
-            bounds = bounds.PositionSnappedToGrid(GridSize);
-        }
-
-        ImageNode node = new()
-        {
-            Data = data,
-            Format = format,
-            PixelWidth = pixelWidth,
-            PixelHeight = pixelHeight,
-            Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
-            ZIndex = NextZIndex(),
-        };
-
-        _document.Nodes.Add(node);
-        ImageNodeViewModel vm = new(node, _theme);
-        Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
-        return vm;
-    }
+        => _clipboardCoordinator.AddImageNode(centre, data, format);
 
     /// <summary>Inserts an image centred on the current viewport (for the file-picker entry point).</summary>
     public ImageNodeViewModel AddImageAtViewportCenter(byte[] data, string format)
-        => AddImageNode(ViewportCenterWorld(), data, format);
-
-    // Clones the given source nodes + connectors into the document with fresh ids, translated by
-    // <paramref name="delta"/>, and makes the result the selection. One undo step. Connectors keep
-    // their endpoints (remapped to the new node ids); any connector whose endpoint is missing is skipped.
-    private void PlaceClones(IReadOnlyList<NodeBase> sourceNodes, IReadOnlyList<Connector> sourceConnectors, Point2D delta)
-    {
-        if (sourceNodes.Count == 0)
-        {
-            return;
-        }
-
-        CaptureUndo();
-
-        Dictionary<Guid, Guid> idMap = new();
-        List<NodeViewModelBase> pasted = new();
-        // Clone in ascending stacking order so a multi-node duplicate keeps its internal front/back
-        // order: each ordinary clone is assigned a successively higher ZIndex below.
-        foreach (NodeBase source in sourceNodes.OrderBy(n => n.ZIndex))
-        {
-            NodeBase clone = source.Clone();
-            Guid newId = Guid.NewGuid();
-            idMap[source.Id] = newId;
-            clone.Id = newId;
-            clone.Bounds = clone.Bounds.Translate(delta.X, delta.Y);
-            if (SnapEnabled)
-            {
-                clone.Bounds = clone.Bounds.PositionSnappedToGrid(GridSize);
-            }
-
-            // Give the clone a fresh ZIndex (Clone copied the source's, which would tie with it and make
-            // hit-testing ambiguous): ordinary clones go on top (matching AddShape), boundaries stay in
-            // their reserved lower band (matching AddSystemBoundary) so they keep drawing behind the nodes
-            // they enclose. Computed before the Add so it reflects clones already placed in this batch.
-            clone.ZIndex = clone is SystemBoundaryNode ? LowestZIndex() - 1 : NextZIndex();
-
-            _document.Nodes.Add(clone);
-            NodeViewModelBase vm = CreateNodeViewModel(clone);
-
-            // A boundary draws behind the nodes it encloses (same rule as AddUseCaseNode).
-            if (clone is SystemBoundaryNode)
-            {
-                Nodes.Insert(0, vm);
-            }
-            else
-            {
-                Nodes.Add(vm);
-            }
-
-            pasted.Add(vm);
-        }
-
-        foreach (Connector source in sourceConnectors)
-        {
-            if (!idMap.TryGetValue(source.SourceNodeId, out Guid newSource)
-                || !idMap.TryGetValue(source.TargetNodeId, out Guid newTarget))
-            {
-                continue;
-            }
-
-            Connector clone = source.Clone();
-            clone.Id = Guid.NewGuid();
-            clone.SourceNodeId = newSource;
-            clone.TargetNodeId = newTarget;
-            _document.Connectors.Add(clone);
-        }
-
-        RebuildConnectors();
-        SelectNodes(pasted);
-        MarkModified();
-    }
-
-    private static Rect2D UnionBounds(IReadOnlyList<NodeBase> nodes)
-    {
-        Rect2D union = nodes[0].Bounds;
-        for (int i = 1; i < nodes.Count; i++)
-        {
-            union = union.Union(nodes[i].Bounds);
-        }
-
-        return union;
-    }
+        => _clipboardCoordinator.AddImageAtViewportCenter(data, format);
 
     /// <summary>
     /// World-coordinate bounding box of all diagram content: every node rectangle plus each
@@ -746,48 +539,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     {
         double zoom = Zoom <= 0 ? 1d : Zoom;
         return new Point2D(((ViewportWidth / 2d) - PanX) / zoom, ((ViewportHeight / 2d) - PanY) / zoom);
-    }
-
-    private (double Width, double Height) InitialImageSize(int pixelWidth, int pixelHeight)
-    {
-        const double fallback = 200d;
-        double w = pixelWidth > 0 ? pixelWidth : fallback;
-        double h = pixelHeight > 0 ? pixelHeight : fallback;
-
-        // Cap to ~80% of the visible viewport (converted to world units) so a large image doesn't
-        // paste bigger than the canvas; preserve aspect ratio.
-        double zoom = Zoom <= 0 ? 1d : Zoom;
-        double maxW = ViewportWidth > 0 ? ViewportWidth * 0.8d / zoom : w;
-        double maxH = ViewportHeight > 0 ? ViewportHeight * 0.8d / zoom : h;
-        double scale = Math.Min(1d, Math.Min(maxW / w, maxH / h));
-        return (w * scale, h * scale);
-    }
-
-    private static (int Width, int Height) DecodePixelSize(byte[] data)
-    {
-        if (data.Length == 0)
-        {
-            return (0, 0);
-        }
-
-        // Untrusted bytes: a decode failure must not crash the insert — fall back to a default size.
-        try
-        {
-            using MemoryStream stream = new(data);
-            using Bitmap bitmap = new(stream);
-            return (bitmap.PixelSize.Width, bitmap.PixelSize.Height);
-        }
-        catch (Exception)
-        {
-            return (0, 0);
-        }
-    }
-
-    private static byte[] EncodePng(Bitmap bitmap)
-    {
-        using MemoryStream stream = new();
-        bitmap.Save(stream);
-        return stream.ToArray();
     }
 
     public void DeleteSelected()
@@ -870,277 +621,29 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
     }
 
-    /// <summary>
-    /// Lines the selected shapes up against the selection's bounding box (one undo step). Positions
-    /// are applied exactly — deliberately not re-snapped to the grid, so centers stay pixel-perfect.
-    /// </summary>
-    public void AlignSelected(AlignmentMode mode) => ArrangeSelected(rects => ShapeArranger.Align(rects, mode), minimum: 2);
+    /// <summary>Aligns the selected shapes against their bounding box. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void AlignSelected(AlignmentMode mode) => _alignmentCoordinator.AlignSelected(mode);
 
-    /// <summary>Evens out the gaps between the selected shapes along an axis (one undo step).</summary>
-    public void DistributeSelected(DistributionMode mode) => ArrangeSelected(rects => ShapeArranger.Distribute(rects, mode), minimum: 3);
+    /// <summary>Evens out the gaps between the selected shapes. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void DistributeSelected(DistributionMode mode) => _alignmentCoordinator.DistributeSelected(mode);
 
-    private void ArrangeSelected(Func<IReadOnlyList<Rect2D>, IReadOnlyList<Rect2D>> arrange, int minimum)
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count < minimum)
-        {
-            return;
-        }
+    /// <summary>Captures the current selection as the alignment reference. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void SetReference() => _alignmentCoordinator.SetReference();
 
-        CaptureUndo();
-        IReadOnlyList<Rect2D> result = arrange(selected.Select(n => n.Model.Bounds).ToList());
-        for (int i = 0; i < selected.Count; i++)
-        {
-            selected[i].X = result[i].X;
-            selected[i].Y = result[i].Y;
-        }
+    /// <summary>Clears the alignment reference. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void ClearReference() => _alignmentCoordinator.ClearReference();
 
-        MarkModified();
-        // Selection set is unchanged, but its geometry moved — re-raise so the view rebuilds
-        // the overlay resize handles at the new positions (they aren't data-bound).
-        RaiseSelectionChanged();
-    }
+    /// <summary>Lines the movers up against the reference's bounding box. See <see cref="AlignmentCoordinator"/>.</summary>
+    public void AlignSelectedToReference(AlignmentMode mode) => _alignmentCoordinator.AlignSelectedToReference(mode);
 
-    /// <summary>
-    /// Captures the current selection as the alignment reference: those shapes stay put while a later
-    /// selection is lined up against them. Clears the live selection so the next pick is the movers; the
-    /// reference keeps its own highlight independently. Transient (not serialized) and per-tab.
-    /// </summary>
-    public void SetReference()
-    {
-        HashSet<Guid> ids = SelectedNodes.Select(n => n.Id).ToHashSet();
-        if (ids.Count == 0)
-        {
-            return;
-        }
+    /// <summary>Changes the front-to-back stacking of the selected shapes. See <see cref="ZOrderCoordinator"/>.</summary>
+    public void ReorderSelected(ZOrderOperation operation) => _zOrderCoordinator.ReorderSelected(operation);
 
-        _referenceIds.Clear();
-        foreach (Guid id in ids)
-        {
-            _referenceIds.Add(id);
-        }
+    /// <summary>Force-pins selected shapes' connector ends into even spacing. See <see cref="ConnectorSpacingCoordinator"/>.</summary>
+    public void SpaceSelectedConnections() => _connectorSpacingCoordinator.SpaceSelectedConnections();
 
-        // Drop the live selection so the user's next pick is the movers; ClearSelection() raises the
-        // selection-changed refresh (which also notifies the reference properties + commands).
-        ClearSelection();
-    }
-
-    /// <summary>Clears the alignment reference. Transient state only — no document mutation, no undo step.</summary>
-    public void ClearReference()
-    {
-        if (_referenceIds.Count == 0)
-        {
-            return;
-        }
-
-        _referenceIds.Clear();
-        RaiseSelectionChanged();
-    }
-
-    /// <summary>
-    /// Lines the movers (the selection minus the reference) up against the reference's combined bounding
-    /// box, moving them as one block so their relative layout is preserved (one undo step). The reference
-    /// shapes never move; positions are applied exactly — deliberately not re-snapped to the grid.
-    /// </summary>
-    public void AlignSelectedToReference(AlignmentMode mode)
-    {
-        List<NodeViewModelBase> movers = MoverNodes.ToList();
-        List<NodeViewModelBase> references = ReferenceNodes.ToList();
-        if (movers.Count == 0 || references.Count == 0)
-        {
-            return;
-        }
-
-        Rect2D referenceBox = references[0].Model.Bounds;
-        for (int i = 1; i < references.Count; i++)
-        {
-            referenceBox = referenceBox.Union(references[i].Model.Bounds);
-        }
-
-        CaptureUndo();
-        IReadOnlyList<Rect2D> result = ShapeArranger.AlignToReference(
-            movers.Select(n => n.Model.Bounds).ToList(), referenceBox, mode);
-        for (int i = 0; i < movers.Count; i++)
-        {
-            movers[i].X = result[i].X;
-            movers[i].Y = result[i].Y;
-        }
-
-        MarkModified();
-        RaiseSelectionChanged();
-    }
-
-    /// <summary>
-    /// Changes the front-to-back stacking of the selected shapes (one undo step). Nodes are kept in two
-    /// bands — system boundaries always below ordinary shapes — and each band is reordered independently,
-    /// so a boundary can be re-stacked relative to other boundaries but can never rise above a shape. The
-    /// new order is repacked into contiguous <c>ZIndex</c> values; connectors render in their own layer
-    /// above all nodes, so they stay on top regardless. A no-op (no undo) when nothing actually moves.
-    /// </summary>
-    public void ReorderSelected(ZOrderOperation operation)
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
-        {
-            return;
-        }
-
-        HashSet<NodeViewModelBase> selectedSet = selected.ToHashSet();
-
-        // Each band is ordered back-to-front by its current ZIndex; boundaries are repacked below the
-        // ordinary nodes so the "boundaries stay behind shapes" constraint holds structurally.
-        List<NodeViewModelBase> boundaries = Nodes
-            .Where(n => n.Model is SystemBoundaryNode)
-            .OrderBy(n => n.Model.ZIndex)
-            .ToList();
-        List<NodeViewModelBase> ordinary = Nodes
-            .Where(n => n.Model is not SystemBoundaryNode)
-            .OrderBy(n => n.Model.ZIndex)
-            .ToList();
-
-        List<NodeViewModelBase> reordered = new(boundaries.Count + ordinary.Count);
-        reordered.AddRange(ZOrderArranger.Reorder(boundaries, selectedSet.Contains, operation));
-        reordered.AddRange(ZOrderArranger.Reorder(ordinary, selectedSet.Contains, operation));
-
-        // Nothing moved (e.g. the selection is already at the front) — don't dirty the document.
-        if (reordered.SequenceEqual(boundaries.Concat(ordinary)))
-        {
-            return;
-        }
-
-        CaptureUndo();
-        for (int i = 0; i < reordered.Count; i++)
-        {
-            reordered[i].Model.ZIndex = i;
-        }
-
-        // Mirror the new order into the node collection so the ItemsControl restacks: render order
-        // follows collection order (and the bound ZIndex agrees with it). In-place Move keeps the
-        // existing view-model instances — and thus their selection and decoded image bitmaps — intact.
-        for (int target = 0; target < reordered.Count; target++)
-        {
-            int current = Nodes.IndexOf(reordered[target]);
-            if (current != target)
-            {
-                Nodes.Move(current, target);
-            }
-        }
-
-        // Refresh the bound ZIndex (Visual.ZIndex) too, so it stays consistent with the new order.
-        foreach (NodeViewModelBase node in Nodes)
-        {
-            node.RaiseZIndexChanged();
-        }
-
-        MarkModified();
-    }
-
-    /// <summary>One connector endpoint that touches a shape being spaced.</summary>
-    private readonly record struct ConnectorEnd(ConnectorViewModel Connector, bool IsSource, double Fraction);
-
-    /// <summary>
-    /// Force-pins every connector end touching the selected shape(s) into evenly spaced positions (one
-    /// undo step): on each bounding-box side the ends keep their current order and are re-pinned at equal
-    /// gaps, and a side with a single end is centred on that edge.
-    /// </summary>
-    public void SpaceSelectedConnections() => PinSelectedConnectionEnds(ConnectionDistributor.EvenAnchor);
-
-    /// <summary>
-    /// Force-pins every connector end touching the selected shape(s) onto the centre of the side it lands
-    /// on (one undo step) — the inverse of <see cref="SpaceSelectedConnections"/>. Every end on a given
-    /// side collapses to that edge's midpoint (they stack, by design), so the two actions let the user fan
-    /// out and regroup a shape's connectors.
-    /// </summary>
-    public void MergeSelectedConnections()
-        => PinSelectedConnectionEnds((side, _, _) => ConnectionDistributor.EvenAnchor(side, 0, 1));
-
-    /// <summary>
-    /// Re-pins every connector end touching the selected shape(s), using <paramref name="anchorFor"/> to
-    /// choose the relative (u,v) anchor for the <c>i</c>-th of <c>count</c> ends on a bounding-box side.
-    /// Reads the current routes before mutating, so each end is classified by where it lands now; captures
-    /// one undo entry on the first real change, and a no-op (nothing actually changes) adds no undo entry.
-    /// </summary>
-    private void PinSelectedConnectionEnds(Func<BoxSide, int, int, Point2D> anchorFor)
-    {
-        HashSet<Guid> selectedIds = SelectedNodes.Select(n => n.Id).ToHashSet();
-        if (selectedIds.Count == 0)
-        {
-            return;
-        }
-
-        Dictionary<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> groups = new();
-
-        void Collect(ConnectorViewModel connector, bool isSource, NodeViewModelBase node, Point2D point)
-        {
-            BoxSide side = ConnectionDistributor.ClassifySide(node.Bounds, point);
-            double fraction = ConnectionDistributor.FractionAlong(side, node.Bounds, point);
-            if (!groups.TryGetValue((node, side), out List<ConnectorEnd>? ends))
-            {
-                ends = new List<ConnectorEnd>();
-                groups[(node, side)] = ends;
-            }
-
-            ends.Add(new ConnectorEnd(connector, isSource, fraction));
-        }
-
-        foreach (ConnectorViewModel connector in Connectors)
-        {
-            if (selectedIds.Contains(connector.Source.Id))
-            {
-                Collect(connector, isSource: true, connector.Source, connector.RouteStart);
-            }
-
-            if (selectedIds.Contains(connector.Target.Id))
-            {
-                Collect(connector, isSource: false, connector.Target, connector.RouteEnd);
-            }
-        }
-
-        // Compute every target anchor before mutating anything. A connector's route depends only on its
-        // own endpoints, so reading all current routes up front is order-independent. The ends keep their
-        // current order along each side; anchorFor decides where each lands (spread, or collapsed to centre).
-        List<(ConnectorEnd End, Point2D Anchor)> ops = new();
-        foreach (KeyValuePair<(NodeViewModelBase Node, BoxSide Side), List<ConnectorEnd>> group in groups)
-        {
-            List<ConnectorEnd> ends = group.Value;
-            ends.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
-            for (int i = 0; i < ends.Count; i++)
-            {
-                ops.Add((ends[i], anchorFor(group.Key.Side, i, ends.Count)));
-            }
-        }
-
-        // Apply, capturing undo once on the first real change so a no-op adds no undo entry.
-        bool captured = false;
-        foreach ((ConnectorEnd end, Point2D anchor) in ops)
-        {
-            Point2D? current = end.IsSource ? end.Connector.SourceAnchor : end.Connector.TargetAnchor;
-            if (current is { } c && c == anchor)
-            {
-                continue;
-            }
-
-            if (!captured)
-            {
-                CaptureUndo();
-                captured = true;
-            }
-
-            if (end.IsSource)
-            {
-                end.Connector.SetSourceAnchor(anchor);
-            }
-            else
-            {
-                end.Connector.SetTargetAnchor(anchor);
-            }
-        }
-
-        if (captured)
-        {
-            MarkModified();
-        }
-    }
+    /// <summary>Regroups selected shapes' connector ends onto their edge midpoints. See <see cref="ConnectorSpacingCoordinator"/>.</summary>
+    public void MergeSelectedConnections() => _connectorSpacingCoordinator.MergeSelectedConnections();
 
     public void SetNodeBounds(NodeViewModelBase vm, Rect2D bounds)
     {
@@ -1361,6 +864,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     void INodeEditContext.EndMemberEdit() => MarkModified();
 
+    // IDocumentEditContext seams that aren't already public — exposed to the composed coordinators
+    // (e.g. ClipboardCoordinator) without widening the view model's public surface.
+    NodeViewModelBase IDocumentEditContext.CreateNodeViewModel(NodeBase node) => CreateNodeViewModel(node);
+
+    void IDocumentEditContext.RebuildConnectors() => RebuildConnectors();
+
+    void IDocumentEditContext.RaiseSelectionChanged() => RaiseSelectionChanged();
+
+    Point2D IDocumentEditContext.ViewportCenterWorld() => ViewportCenterWorld();
+
     public IReadOnlyList<string> GetTypeSuggestions()
     {
         IEnumerable<string> classNames = _document.Nodes
@@ -1510,11 +1023,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     {
         // Drop any reference ids whose node no longer exists (deleted, or gone after undo/redo) so the
         // reference reflects only live shapes — and so a deleted reference can't resurrect on undo.
-        if (_referenceIds.Count > 0)
-        {
-            HashSet<Guid> live = Nodes.Select(n => n.Id).ToHashSet();
-            _referenceIds.RemoveWhere(id => !live.Contains(id));
-        }
+        _alignmentCoordinator.PruneStaleReferences();
 
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(HasNodeSelection));

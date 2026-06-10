@@ -1,8 +1,9 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** Planned — full review complete, **no code changed yet** (roadmap only)
-**Branch:** one feature branch per item (see *Execution sequence*); none cut yet
+**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, 3a, and 3b done (all four VM
+coordinators extracted); remainder pending (4, 2b/2c/2d, 3c, 5, 6c/6d, 7).
+**Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
 
@@ -72,10 +73,13 @@ are untested today.
 The headline finding. It conflates pointer dispatch, hit-testing, zoom/pan, scrollbars, marquee,
 node move/resize, connector editing, the handles overlay, context menus, and arrow-key nudge, driven
 by ~13 loose gesture-state fields acting as an implicit state machine.
-- **2a · Effort M · Risk Low** — Split the mega-handlers into intention-named private methods.
-  `OnPointerPressed` (~`385-557`, 173 lines) → `BeginToolPlacement` / `BeginNodeInteraction` /
-  `BeginConnectorMode` / `BeginPan` / `BeginMarquee`. `OnPointerReleased` (~`634-724`) and
-  `OnPointerMoved` (~`559-632`) → per-`DragMode` handler methods. Pure extraction, no behavior change.
+- **2a · Effort M · Risk Low · ✅ done** — Split the mega-handlers into intention-named private methods.
+  **Done:** `OnPointerPressed` → `BeginPan`/`BeginResize`/`BeginConnectorDrag`/`TryPlaceTool`/
+  `TryBeginConnectorEdit`/`BeginConnectorPick`/`BeginNodeMove`/`BeginMarquee`; `OnPointerMoved` →
+  `Handle*` per `DragMode`; `OnPointerReleased` → `Finalize*` per `DragMode` + a `ResetGestureState`
+  for the universal cleanup. Pure extraction, zero behavior change (build clean, tests green, diff
+  self-reviewed). Verify gestures manually on Windows/macOS. The ~13 gesture fields + `DragMode` are
+  untouched — that is 2b.
 - **2b · Effort M · Risk Med** — Collapse the ~13 gesture fields (`_mode`, `_moveLastWorld`,
   `_marquee*`, `_edit*`, `_resize*`, nudge state) into a small **gesture-state object** (or a tagged
   union per `DragMode`) with a `Finalize()`/reset, eliminating the scattered manual flag resets on
@@ -91,14 +95,27 @@ by ~13 loose gesture-state fields acting as an implicit state machine.
 ~9 responsibilities, ~40 methods, 11 commands in one class: selection, node CRUD, connector CRUD,
 clipboard/duplicate, align/distribute (+ reference-align), z-order, connector spacing/merge/pin, undo
 orchestration, style application, view (zoom/pan) coordination.
-- **3a · Effort M · Risk Low** — Extract the 3 longest/most-complex methods into focused units (with
-  tests from item 1): `PlaceClones` (~`622-687`, ID-remap + clone + z-index), `ReorderSelected`
-  (~`980-1036`), `PinSelectedConnectionEnds` (~`1063-1143`, 80 lines).
-- **3b · Effort L · Risk Med (later phase)** — Move clusters behind collaborators the VM composes
-  (the VM stays the façade the view binds to): an `AlignmentCoordinator` (align/distribute/reference),
-  a `ConnectorSpacingCoordinator` (space/merge/pin), a `ClipboardCoordinator` (copy/cut/paste/duplicate
-  + image decode/encode), and a z-order helper. These are mostly pure transforms over `Rect2D` / model
-  lists — good test seams.
+- **3a · Effort M · Risk Low · ✅ done** — Extract the 3 longest/most-complex methods into focused units
+  (with tests from item 1): `PlaceClones`, `ReorderSelected`, `PinSelectedConnectionEnds`. **Done:** the
+  pure cores moved to the testable `Draw.Diagramming.Layout` layer — new `CloneArranger.Clone`,
+  `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — leaving only VM orchestration
+  (factory, collection sync, undo, selection). Backed by new headless tests (`CloneArrangerTests`,
+  `ConnectionDistributorTests`, `ZOrderArrangerTests`, which also cover the previously-untested
+  `ClassifySide`/`FractionAlong`/`EvenAnchor`/`Reorder`). VM behavior unchanged (build clean, tests green,
+  diff self-reviewed); spot-check duplicate / z-order / space-merge connections on Windows/macOS.
+- **3b · Effort L · Risk Med · ✅ done** — Move clusters behind collaborators the VM composes
+  (the VM stays the façade the view binds to): a `ClipboardCoordinator` (copy/cut/paste/duplicate +
+  image decode/encode), a `ConnectorSpacingCoordinator` (space/merge/pin), a z-order helper, and an
+  `AlignmentCoordinator` (align/distribute/reference). One feature branch per coordinator, clean-seam
+  first. The pure transforms were already lifted in 3a, so 3b is the orchestration glue — these
+  coordinators live in `Draw.App` (they drive `NodeViewModelBase`/`ConnectorViewModel`), reaching the
+  VM through a shared `IDocumentEditContext` seam; structural-only, verified by manual smoke +
+  green Diagramming tests. **Done (all four):** `ClipboardCoordinator` (copy/cut/paste/duplicate +
+  image insertion + `PlaceClones`); `ConnectorSpacingCoordinator` (space/merge/pin); `ZOrderCoordinator`
+  (`ReorderSelected` restack + `RaiseZIndexChanged` fan-out); `AlignmentCoordinator` (align/distribute +
+  the `_referenceIds` reference subsystem — the VM keeps command/notification ownership and calls
+  `PruneStaleReferences`). The VM dropped from ~1480 to ~1050 lines and now delegates to the four
+  coordinators.
 - **3c · Effort S · Risk Low** — Document in code the deliberate split-undo contract (gesture-level
   capture in the view vs. command-level capture in the VM) so future callers of `MoveSelectedBy` don't
   assume it self-captures. (Resolves the downgraded "undo" finding without changing behavior.)
@@ -130,14 +147,17 @@ orchestration, style application, view (zoom/pan) coordination.
 
 ### Priority 6 — Correctness & robustness hardening · Effort S–M · Risk Low–Med
 Verified by the tests added in item 1.
-- **6a · Risk Med** — `MemberSignature.Parse` (~`29-84`) and `ColumnSignature.Parse` /
+- **6a · Risk Med · ✅ done** — `MemberSignature.Parse` (~`29-84`) and `ColumnSignature.Parse` /
   `StripTrailingFlags` (~`46-140`) parse free-text with no structural validation: unbalanced parens,
   stray colons, type names colliding with flag tokens (`pk` / `unique` / `NOT NULL` / `NULL`), and
-  `NOT NULL` vs lone `NULL` contradictions all parse silently-wrong. Add validation + define the
-  grammar; back it with the round-trip tests.
-- **6b · Risk Low** — `ImageNode.Clone` (`ImageNode.cs:27`) copies the `byte[]` **by reference**.
-  Benign today (image bytes are never mutated in place) but violates the deep-clone contract; copy
-  with `Data = (byte[])Data.Clone()`.
+  `NOT NULL` vs lone `NULL` contradictions all parse silently-wrong. **Resolution:** added a strict
+  `TryParse` (out result, out error) to each parser that enforces a defined grammar (documented in
+  XML-doc; encoded in the test suites); `Parse` stays total/lenient for the Format↔Parse round-trip.
+  The inline-edit VMs (`ClassMemberViewModel`/`EntityColumnViewModel`) now commit via `TryParse` and
+  **revert** on invalid input (model keeps its last-good value) instead of committing a degraded model.
+- **6b · Risk Low · ✅ done** — `ImageNode.Clone` (`ImageNode.cs`) copied the `byte[]` **by reference**.
+  Fixed with `Data = (byte[])Data.Clone()`; covered by `ImageNodeTests`. (Sibling node `Clone`s already
+  deep-copy their collections — ImageNode was the lone offender.)
 - **6c · Risk Low** — Centralize the fragmented epsilons in `ShapeBoundary` (`double.Epsilon` vs
   `1e-9` vs `1e-12`, ~5 inline constants across `IntersectEllipse` / `TryIntersectSegment`) into named
   geometry-tolerance constants; document the rationale.

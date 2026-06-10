@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Draw.Model.Primitives;
 
 namespace Draw.Diagramming.Layout;
@@ -70,5 +71,65 @@ public static class ConnectionDistributor
             BoxSide.Top => new Point2D(t, 0d),
             _ => new Point2D(t, 1d),
         };
+    }
+
+    /// <summary>
+    /// A connector end to be (re)pinned. <typeparamref name="TEnd"/> <paramref name="Token"/> identifies
+    /// the end to the caller; the rest is a snapshot of where it currently attaches — the shape it touches
+    /// (<paramref name="NodeId"/> + <paramref name="NodeBounds"/>), the current route point on that shape,
+    /// and its current relative anchor (<c>null</c> when the end is not pinned yet).
+    /// </summary>
+    public readonly record struct PinningEnd<TEnd>(
+        TEnd Token, Guid NodeId, Rect2D NodeBounds, Point2D RoutePoint, Point2D? CurrentAnchor);
+
+    /// <summary>
+    /// Plans (re)spaced anchors for a set of connector ends. Ends are grouped by the shape they touch and
+    /// the <see cref="BoxSide"/> they currently land on; within each group they keep their current order
+    /// (by <see cref="FractionAlong"/>) and <paramref name="anchorFor"/> chooses the relative (u,v) for the
+    /// i-th of n. Only ends whose anchor actually changes are returned (an end already at its computed
+    /// anchor is omitted), so an empty result means "nothing to do". Pure: reads the snapshot, mutates
+    /// nothing — the caller applies the plan and owns undo.
+    /// </summary>
+    public static IReadOnlyList<(TEnd Token, Point2D Anchor)> PlanPinning<TEnd>(
+        IReadOnlyList<PinningEnd<TEnd>> ends,
+        Func<BoxSide, int, int, Point2D> anchorFor)
+    {
+        ArgumentNullException.ThrowIfNull(ends);
+        ArgumentNullException.ThrowIfNull(anchorFor);
+
+        Dictionary<(Guid Node, BoxSide Side), List<(PinningEnd<TEnd> End, double Fraction)>> groups = new();
+        foreach (PinningEnd<TEnd> end in ends)
+        {
+            BoxSide side = ClassifySide(end.NodeBounds, end.RoutePoint);
+            double fraction = FractionAlong(side, end.NodeBounds, end.RoutePoint);
+            (Guid Node, BoxSide Side) key = (end.NodeId, side);
+            if (!groups.TryGetValue(key, out List<(PinningEnd<TEnd> End, double Fraction)>? list))
+            {
+                list = new List<(PinningEnd<TEnd> End, double Fraction)>();
+                groups[key] = list;
+            }
+
+            list.Add((end, fraction));
+        }
+
+        List<(TEnd Token, Point2D Anchor)> plan = new();
+        foreach (KeyValuePair<(Guid Node, BoxSide Side), List<(PinningEnd<TEnd> End, double Fraction)>> group in groups)
+        {
+            List<(PinningEnd<TEnd> End, double Fraction)> list = group.Value;
+            list.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
+            for (int i = 0; i < list.Count; i++)
+            {
+                Point2D anchor = anchorFor(group.Key.Side, i, list.Count);
+                PinningEnd<TEnd> end = list[i].End;
+                if (end.CurrentAnchor is { } current && current == anchor)
+                {
+                    continue; // already at the computed anchor — no change, no undo
+                }
+
+                plan.Add((end.Token, anchor));
+            }
+        }
+
+        return plan;
     }
 }

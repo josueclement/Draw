@@ -229,10 +229,26 @@ Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bub
 suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
 a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.
 
-## Code-review remediation 🚧 (cross-cutting, planned — no code changed)
+## Code-review remediation 🚧 (cross-cutting, in progress)
 
-A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap; nothing
-is implemented yet. The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
+A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap.
+**Done so far:** Priority 1 — the regression test safety net (xUnit v3 / MTP over the pure-logic
+layers); the correctness quick-wins, items **6a** (signature-parse validation via `TryParse`,
+with the edit VMs reverting invalid inline edits) and **6b** (`ImageNode.Clone` deep-copies its byte
+buffer); **2a** (the `DiagramView.axaml.cs` pointer handlers split into intention-named
+`Begin*`/`Handle*`/`Finalize*` methods — pure extraction, no behavior change); and **3a** (the three
+longest `DiagramDocumentViewModel` methods' pure cores lifted into testable `Draw.Diagramming.Layout`
+helpers — `CloneArranger`, `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — with
+headless tests). **3b** is now in progress — moving the VM's orchestration clusters behind
+coordinator collaborators it composes (one branch per coordinator, clean-seam first), reaching the VM
+through a shared `IDocumentEditContext` seam: `ClipboardCoordinator` (copy/cut/paste/duplicate +
+image insertion + `PlaceClones`), `ConnectorSpacingCoordinator` (space/merge/pin), `ZOrderCoordinator`
+(`ReorderSelected`) and `AlignmentCoordinator` (align/distribute + the reference subsystem) are all
+extracted, dropping the VM from ~1480 to ~1050 lines while it stays the façade the view binds to (it
+keeps the commands and selection-changed notifications). With 3b done, still pending: the `DiagramView`
+decompositions (2b/2c/2d), de-duplication (4), service tidy-ups (5) and the remaining correctness/polish
+items (3c, 6c/6d, 7).
+The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a
 regression **test safety net first** — reintroducing one focused test project for the pure-logic
