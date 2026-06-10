@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using Draw.App.Configuration;
 using Draw.App.Services;
@@ -24,14 +23,14 @@ using Draw.Model.Styling;
 namespace Draw.App.ViewModels;
 
 /// <summary>Editor state and mutating operations for one open diagram (one tab).</summary>
-public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDisposable
+public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDocumentEditContext, IDisposable
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
     private readonly IDocumentSerializer _serializer;
     private readonly EditorOptions _options;
     private readonly IThemeService _theme;
-    private readonly IClipboardService _clipboard;
+    private readonly ClipboardCoordinator _clipboardCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
 
@@ -64,7 +63,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _theme = theme ?? throw new ArgumentNullException(nameof(theme));
-        _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
+        _clipboardCoordinator = new ClipboardCoordinator(this, _serializer, clipboard);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         _theme.ThemeChanged += OnThemeChanged;
@@ -479,199 +478,26 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         return vm;
     }
 
-    /// <summary>Copies the selected nodes (and any connector whose endpoints are both selected) to the
-    /// clipboard. A lone selected image also writes a bitmap so other apps can paste it. No-op without
-    /// a node selection; never mutates the document.</summary>
-    public async Task CopySelectionAsync()
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
-        {
-            return;
-        }
+    /// <summary>Copies the selection to the clipboard. See <see cref="ClipboardCoordinator"/>.</summary>
+    public Task CopySelectionAsync() => _clipboardCoordinator.CopySelectionAsync();
 
-        HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
-        DiagramDocument clip = DiagramDocument.CreateEmpty(_document.DiagramType);
-        foreach (NodeViewModelBase vm in selected)
-        {
-            clip.Nodes.Add(vm.Model.Clone());
-        }
+    /// <summary>Copies the selection, then deletes it. See <see cref="ClipboardCoordinator"/>.</summary>
+    public Task CutSelectionAsync() => _clipboardCoordinator.CutSelectionAsync();
 
-        foreach (Connector connector in _document.Connectors)
-        {
-            if (ids.Contains(connector.SourceNodeId) && ids.Contains(connector.TargetNodeId))
-            {
-                clip.Connectors.Add(connector.Clone());
-            }
-        }
+    /// <summary>Pastes the clipboard payload (or an external bitmap). See <see cref="ClipboardCoordinator"/>.</summary>
+    public Task PasteAsync() => _clipboardCoordinator.PasteAsync();
 
-        string json = _serializer.Serialize(clip);
-        Bitmap? bitmap = selected is [ImageNodeViewModel image] ? image.Image : null;
-        await _clipboard.SetClipAsync(json, bitmap);
-    }
+    /// <summary>Clones the selection in place with a small offset. See <see cref="ClipboardCoordinator"/>.</summary>
+    public void DuplicateSelection() => _clipboardCoordinator.DuplicateSelection();
 
-    /// <summary>Copies the selection, then deletes it (one undo step from the delete).</summary>
-    public async Task CutSelectionAsync()
-    {
-        if (!HasNodeSelection)
-        {
-            return;
-        }
-
-        await CopySelectionAsync();
-        DeleteSelected();
-    }
-
-    /// <summary>Pastes the Draw clipboard payload centred on the viewport; falling back to a bitmap on
-    /// the clipboard (e.g. an external screenshot), which becomes an image node. No-op otherwise.</summary>
-    public async Task PasteAsync()
-    {
-        string? json = await _clipboard.TryGetClipAsync();
-        if (json is not null)
-        {
-            DiagramDocument clip;
-            try
-            {
-                clip = _serializer.Deserialize(json);
-            }
-            catch (DocumentSerializationException)
-            {
-                return;
-            }
-
-            if (clip.Nodes.Count == 0)
-            {
-                return;
-            }
-
-            Rect2D bounds = UnionBounds(clip.Nodes);
-            Point2D centre = ViewportCenterWorld();
-            Point2D delta = new(centre.X - bounds.Center.X, centre.Y - bounds.Center.Y);
-            PlaceClones(clip.Nodes, clip.Connectors, delta);
-            return;
-        }
-
-        Bitmap? bitmap = await _clipboard.TryGetBitmapAsync();
-        if (bitmap is not null)
-        {
-            byte[] data = EncodePng(bitmap);
-            bitmap.Dispose();
-            AddImageNode(ViewportCenterWorld(), data, "png");
-        }
-    }
-
-    /// <summary>Clones the selection in place with a small offset (no clipboard). One undo step.</summary>
-    public void DuplicateSelection()
-    {
-        List<NodeViewModelBase> selected = SelectedNodes.ToList();
-        if (selected.Count == 0)
-        {
-            return;
-        }
-
-        HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
-        List<NodeBase> nodes = selected.Select(n => n.Model).ToList();
-        List<Connector> connectors = _document.Connectors
-            .Where(c => ids.Contains(c.SourceNodeId) && ids.Contains(c.TargetNodeId))
-            .ToList();
-
-        double offset = GridSize > 0 ? GridSize : 16d;
-        PlaceClones(nodes, connectors, new Point2D(offset, offset));
-    }
-
-    /// <summary>Inserts an image node centred on <paramref name="centre"/>, sized from the image's native
-    /// pixels (capped to the viewport). One undo step. Used by paste, file insert and drag-drop.</summary>
+    /// <summary>Inserts an image node centred on <paramref name="centre"/> (one undo step). Used by paste,
+    /// file insert and drag-drop. See <see cref="ClipboardCoordinator"/>.</summary>
     public ImageNodeViewModel AddImageNode(Point2D centre, byte[] data, string format)
-    {
-        CaptureUndo();
-
-        (int pixelWidth, int pixelHeight) = DecodePixelSize(data);
-        (double w, double h) = InitialImageSize(pixelWidth, pixelHeight);
-        Rect2D bounds = new(centre.X - (w / 2), centre.Y - (h / 2), w, h);
-        if (SnapEnabled)
-        {
-            bounds = bounds.PositionSnappedToGrid(GridSize);
-        }
-
-        ImageNode node = new()
-        {
-            Data = data,
-            Format = format,
-            PixelWidth = pixelWidth,
-            PixelHeight = pixelHeight,
-            Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
-            ZIndex = NextZIndex(),
-        };
-
-        _document.Nodes.Add(node);
-        ImageNodeViewModel vm = new(node, _theme);
-        Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
-        return vm;
-    }
+        => _clipboardCoordinator.AddImageNode(centre, data, format);
 
     /// <summary>Inserts an image centred on the current viewport (for the file-picker entry point).</summary>
     public ImageNodeViewModel AddImageAtViewportCenter(byte[] data, string format)
-        => AddImageNode(ViewportCenterWorld(), data, format);
-
-    // Clones the given source nodes + connectors into the document with fresh ids, translated by
-    // <paramref name="delta"/>, and makes the result the selection. One undo step. Connectors keep
-    // their endpoints (remapped to the new node ids); any connector whose endpoint is missing is skipped.
-    private void PlaceClones(IReadOnlyList<NodeBase> sourceNodes, IReadOnlyList<Connector> sourceConnectors, Point2D delta)
-    {
-        if (sourceNodes.Count == 0)
-        {
-            return;
-        }
-
-        CaptureUndo();
-
-        // Fresh ids, translated/snapped bounds and a restacked ZIndex are computed in the (testable)
-        // Diagramming layer; the view model owns only the document/collection wiring below.
-        CloneArranger.ClonedGraph cloned = CloneArranger.Clone(
-            sourceNodes, sourceConnectors, _document.Nodes, delta, SnapEnabled ? GridSize : null);
-
-        List<NodeViewModelBase> pasted = new();
-        foreach (NodeBase clone in cloned.Nodes)
-        {
-            _document.Nodes.Add(clone);
-            NodeViewModelBase vm = CreateNodeViewModel(clone);
-
-            // A boundary draws behind the nodes it encloses (same rule as AddUseCaseNode).
-            if (clone is SystemBoundaryNode)
-            {
-                Nodes.Insert(0, vm);
-            }
-            else
-            {
-                Nodes.Add(vm);
-            }
-
-            pasted.Add(vm);
-        }
-
-        foreach (Connector clone in cloned.Connectors)
-        {
-            _document.Connectors.Add(clone);
-        }
-
-        RebuildConnectors();
-        SelectNodes(pasted);
-        MarkModified();
-    }
-
-    private static Rect2D UnionBounds(IReadOnlyList<NodeBase> nodes)
-    {
-        Rect2D union = nodes[0].Bounds;
-        for (int i = 1; i < nodes.Count; i++)
-        {
-            union = union.Union(nodes[i].Bounds);
-        }
-
-        return union;
-    }
+        => _clipboardCoordinator.AddImageAtViewportCenter(data, format);
 
     /// <summary>
     /// World-coordinate bounding box of all diagram content: every node rectangle plus each
@@ -722,48 +548,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     {
         double zoom = Zoom <= 0 ? 1d : Zoom;
         return new Point2D(((ViewportWidth / 2d) - PanX) / zoom, ((ViewportHeight / 2d) - PanY) / zoom);
-    }
-
-    private (double Width, double Height) InitialImageSize(int pixelWidth, int pixelHeight)
-    {
-        const double fallback = 200d;
-        double w = pixelWidth > 0 ? pixelWidth : fallback;
-        double h = pixelHeight > 0 ? pixelHeight : fallback;
-
-        // Cap to ~80% of the visible viewport (converted to world units) so a large image doesn't
-        // paste bigger than the canvas; preserve aspect ratio.
-        double zoom = Zoom <= 0 ? 1d : Zoom;
-        double maxW = ViewportWidth > 0 ? ViewportWidth * 0.8d / zoom : w;
-        double maxH = ViewportHeight > 0 ? ViewportHeight * 0.8d / zoom : h;
-        double scale = Math.Min(1d, Math.Min(maxW / w, maxH / h));
-        return (w * scale, h * scale);
-    }
-
-    private static (int Width, int Height) DecodePixelSize(byte[] data)
-    {
-        if (data.Length == 0)
-        {
-            return (0, 0);
-        }
-
-        // Untrusted bytes: a decode failure must not crash the insert — fall back to a default size.
-        try
-        {
-            using MemoryStream stream = new(data);
-            using Bitmap bitmap = new(stream);
-            return (bitmap.PixelSize.Width, bitmap.PixelSize.Height);
-        }
-        catch (Exception)
-        {
-            return (0, 0);
-        }
-    }
-
-    private static byte[] EncodePng(Bitmap bitmap)
-    {
-        using MemoryStream stream = new();
-        bitmap.Save(stream);
-        return stream.ToArray();
     }
 
     public void DeleteSelected()
@@ -1300,6 +1084,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     void INodeEditContext.BeginMemberEdit() => CaptureUndo();
 
     void INodeEditContext.EndMemberEdit() => MarkModified();
+
+    // IDocumentEditContext seams that aren't already public — exposed to the composed coordinators
+    // (e.g. ClipboardCoordinator) without widening the view model's public surface.
+    NodeViewModelBase IDocumentEditContext.CreateNodeViewModel(NodeBase node) => CreateNodeViewModel(node);
+
+    void IDocumentEditContext.RebuildConnectors() => RebuildConnectors();
+
+    void IDocumentEditContext.RaiseSelectionChanged() => RaiseSelectionChanged();
+
+    Point2D IDocumentEditContext.ViewportCenterWorld() => ViewportCenterWorld();
 
     public IReadOnlyList<string> GetTypeSuggestions()
     {

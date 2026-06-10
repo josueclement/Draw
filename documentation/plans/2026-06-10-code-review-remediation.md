@@ -1,7 +1,8 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, and 3a done; remainder pending.
+**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, and 3a done; 3b started
+(ClipboardCoordinator extracted); remainder pending.
 **Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
@@ -102,11 +103,15 @@ orchestration, style application, view (zoom/pan) coordination.
   `ConnectionDistributorTests`, `ZOrderArrangerTests`, which also cover the previously-untested
   `ClassifySide`/`FractionAlong`/`EvenAnchor`/`Reorder`). VM behavior unchanged (build clean, tests green,
   diff self-reviewed); spot-check duplicate / z-order / space-merge connections on Windows/macOS.
-- **3b · Effort L · Risk Med (later phase)** — Move clusters behind collaborators the VM composes
-  (the VM stays the façade the view binds to): an `AlignmentCoordinator` (align/distribute/reference),
-  a `ConnectorSpacingCoordinator` (space/merge/pin), a `ClipboardCoordinator` (copy/cut/paste/duplicate
-  + image decode/encode), and a z-order helper. These are mostly pure transforms over `Rect2D` / model
-  lists — good test seams.
+- **3b · Effort L · Risk Med · in progress** — Move clusters behind collaborators the VM composes
+  (the VM stays the façade the view binds to): a `ClipboardCoordinator` (copy/cut/paste/duplicate +
+  image decode/encode), a `ConnectorSpacingCoordinator` (space/merge/pin), a z-order helper, and an
+  `AlignmentCoordinator` (align/distribute/reference). One feature branch per coordinator, clean-seam
+  first. The pure transforms were already lifted in 3a, so 3b is the orchestration glue — these
+  coordinators live in `Draw.App` (they drive `NodeViewModelBase`/`ConnectorViewModel`), reaching the
+  VM through a shared `IDocumentEditContext` seam; structural-only, verified by manual smoke +
+  green Diagramming tests. **Done:** `ClipboardCoordinator` (copy/cut/paste/duplicate + image
+  insertion + `PlaceClones`) extracted; VM delegates. **Pending:** ConnectorSpacing, z-order, Alignment.
 - **3c · Effort S · Risk Low** — Document in code the deliberate split-undo contract (gesture-level
   capture in the view vs. command-level capture in the VM) so future callers of `MoveSelectedBy` don't
   assume it self-captures. (Resolves the downgraded "undo" finding without changing behavior.)

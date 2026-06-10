@@ -239,8 +239,12 @@ buffer); **2a** (the `DiagramView.axaml.cs` pointer handlers split into intentio
 `Begin*`/`Handle*`/`Finalize*` methods — pure extraction, no behavior change); and **3a** (the three
 longest `DiagramDocumentViewModel` methods' pure cores lifted into testable `Draw.Diagramming.Layout`
 helpers — `CloneArranger`, `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — with
-headless tests). Still pending: the deeper decompositions (2b/2c/2d, 3b) and the remaining
-hardening/dedup/service items.
+headless tests). **3b** is now in progress — moving the VM's orchestration clusters behind
+coordinator collaborators it composes (one branch per coordinator, clean-seam first), reaching the VM
+through a shared `IDocumentEditContext` seam; the first, `ClipboardCoordinator` (copy/cut/paste/
+duplicate + image insertion + `PlaceClones`), is extracted and the VM delegates to it. Still pending:
+the rest of 3b (connector-spacing, z-order, alignment coordinators), the `DiagramView` decompositions
+(2b/2c/2d) and the remaining hardening/dedup/service items.
 The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a
