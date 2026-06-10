@@ -137,8 +137,9 @@ public class ColumnSignatureTests
         Assert.Equal(text, ColumnSignature.Format(c));
     }
 
-    // --- Malformed / edge inputs: these pin the CURRENT (unvalidated) behaviour. ---
-    // Item 6a of the code-review remediation plan will add structural validation and update these.
+    // --- Parse is intentionally total: it never throws and always returns a best-effort column,
+    // even for malformed input (the cases below document that leniency). TryParse (further down) is
+    // the strict gate that rejects the same inputs so the editor can refuse a bad commit. ---
 
     [Fact]
     public void Parse_TypeCollidingWithFlagToken_IsConsumedAsFlag()
@@ -164,5 +165,44 @@ public class ColumnSignatureTests
         Assert.Equal(string.Empty, c.Name);
         Assert.Null(c.Type);
         Assert.True(c.IsNullable);
+    }
+
+    // --- TryParse: strict structural validation (code-review remediation item 6a). ---
+
+    [Theory]
+    [InlineData("id: int PK")]
+    [InlineData("email: varchar(255) UNIQUE NOT NULL")]
+    [InlineData("name: text")]
+    [InlineData("user_id: int FK")]
+    [InlineData("price: double precision")]
+    [InlineData("count: int NULL")]
+    [InlineData("id PK")]
+    public void TryParse_WellFormed_SucceedsAndMatchesParse(string text)
+    {
+        bool ok = ColumnSignature.TryParse(text, out EntityColumn? parsed, out string? error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.NotNull(parsed);
+        // The accepted result is identical to the lenient Parse for well-formed input.
+        Assert.Equal(ColumnSignature.Format(ColumnSignature.Parse(text)), ColumnSignature.Format(parsed));
+    }
+
+    [Theory]
+    [InlineData("")]                       // empty
+    [InlineData("   ")]                     // whitespace only
+    [InlineData("PK")]                      // a lone flag -> no name
+    [InlineData("a: b: c")]                 // more than one ':' separator
+    [InlineData("id:")]                     // ':' with no type
+    [InlineData("id: PK")]                  // ':' followed only by a flag -> no type left
+    [InlineData("flag: unique")]            // type word collides with a flag -> no type left
+    [InlineData("x: int NOT NULL NULL")]    // contradictory NULL / NOT NULL
+    public void TryParse_Malformed_FailsWithError(string text)
+    {
+        bool ok = ColumnSignature.TryParse(text, out EntityColumn? parsed, out string? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.False(string.IsNullOrWhiteSpace(error));
     }
 }

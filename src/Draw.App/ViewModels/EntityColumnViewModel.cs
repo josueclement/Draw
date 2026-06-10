@@ -103,14 +103,15 @@ public sealed class EntityColumnViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Parses the edited text back into the model and leaves edit mode. Undo is captured only for a
-    /// real change to an already-established column — a newly-added column was already snapshotted when
-    /// it was inserted.
+    /// Parses the edited text back into the model and leaves edit mode. Structurally invalid text is
+    /// rejected: the edit is discarded and the model keeps its previous value (the row re-renders its
+    /// last-good signature). Undo is captured only for a real change to an already-established
+    /// column — a newly-added column was already snapshotted when it was inserted.
     /// </summary>
     public void CommitEdit()
     {
         bool changed = !string.Equals(RawText, _editSeed, StringComparison.Ordinal);
-        if (changed)
+        if (changed && ColumnSignature.TryParse(RawText, out EntityColumn? parsed, out _))
         {
             bool capture = !IsNewlyAdded;
             if (capture)
@@ -118,7 +119,7 @@ public sealed class EntityColumnViewModel : ViewModelBase
                 _context.BeginMemberEdit();
             }
 
-            Apply(ColumnSignature.Parse(RawText));
+            Apply(parsed);
             _context.EndMemberEdit();
         }
 

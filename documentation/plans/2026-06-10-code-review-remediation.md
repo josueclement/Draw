@@ -1,8 +1,8 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** Planned — full review complete, **no code changed yet** (roadmap only)
-**Branch:** one feature branch per item (see *Execution sequence*); none cut yet
+**Status:** In progress — Priority 1 (test safety net) and items 6a/6b done; remainder pending.
+**Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
 
@@ -130,14 +130,17 @@ orchestration, style application, view (zoom/pan) coordination.
 
 ### Priority 6 — Correctness & robustness hardening · Effort S–M · Risk Low–Med
 Verified by the tests added in item 1.
-- **6a · Risk Med** — `MemberSignature.Parse` (~`29-84`) and `ColumnSignature.Parse` /
+- **6a · Risk Med · ✅ done** — `MemberSignature.Parse` (~`29-84`) and `ColumnSignature.Parse` /
   `StripTrailingFlags` (~`46-140`) parse free-text with no structural validation: unbalanced parens,
   stray colons, type names colliding with flag tokens (`pk` / `unique` / `NOT NULL` / `NULL`), and
-  `NOT NULL` vs lone `NULL` contradictions all parse silently-wrong. Add validation + define the
-  grammar; back it with the round-trip tests.
-- **6b · Risk Low** — `ImageNode.Clone` (`ImageNode.cs:27`) copies the `byte[]` **by reference**.
-  Benign today (image bytes are never mutated in place) but violates the deep-clone contract; copy
-  with `Data = (byte[])Data.Clone()`.
+  `NOT NULL` vs lone `NULL` contradictions all parse silently-wrong. **Resolution:** added a strict
+  `TryParse` (out result, out error) to each parser that enforces a defined grammar (documented in
+  XML-doc; encoded in the test suites); `Parse` stays total/lenient for the Format↔Parse round-trip.
+  The inline-edit VMs (`ClassMemberViewModel`/`EntityColumnViewModel`) now commit via `TryParse` and
+  **revert** on invalid input (model keeps its last-good value) instead of committing a degraded model.
+- **6b · Risk Low · ✅ done** — `ImageNode.Clone` (`ImageNode.cs`) copied the `byte[]` **by reference**.
+  Fixed with `Data = (byte[])Data.Clone()`; covered by `ImageNodeTests`. (Sibling node `Clone`s already
+  deep-copy their collections — ImageNode was the lone offender.)
 - **6c · Risk Low** — Centralize the fragmented epsilons in `ShapeBoundary` (`double.Epsilon` vs
   `1e-9` vs `1e-12`, ~5 inline constants across `IntersectEllipse` / `TryIntersectSegment`) into named
   geometry-tolerance constants; document the rationale.

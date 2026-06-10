@@ -129,8 +129,9 @@ public class MemberSignatureTests
         Assert.Equal(text, MemberSignature.Format(m));
     }
 
-    // --- Malformed / edge inputs: these pin the CURRENT (unvalidated) behaviour. ---
-    // Item 6a of the code-review remediation plan will add structural validation and update these.
+    // --- Parse is intentionally total: it never throws and always returns a best-effort member,
+    // even for malformed input (the cases below document that leniency). TryParse (further down) is
+    // the strict gate that rejects the same inputs so the editor can refuse a bad commit. ---
 
     [Fact]
     public void Parse_UnbalancedOpenParen_TreatedAsEmptyParamOperation()
@@ -177,5 +178,48 @@ public class MemberSignatureTests
         ClassMember m = MemberSignature.Parse(text, MemberKind.Field);
         Assert.Equal(MemberKind.Field, m.Kind);
         Assert.Equal(string.Empty, m.Name);
+    }
+
+    // --- TryParse: strict structural validation (code-review remediation item 6a). ---
+
+    [Theory]
+    [InlineData("- balance: decimal", MemberKind.Field)]
+    [InlineData("+ id", MemberKind.Field)]
+    [InlineData("count: int", MemberKind.Field)]
+    [InlineData("+ deposit(amount: decimal): void", MemberKind.Field)]
+    [InlineData("# close()", MemberKind.Field)]
+    [InlineData("  + name : string ", MemberKind.Field)]
+    [InlineData("ACTIVE", MemberKind.EnumLiteral)]
+    public void TryParse_WellFormed_SucceedsAndMatchesParse(string text, MemberKind context)
+    {
+        bool ok = MemberSignature.TryParse(text, context, out ClassMember? parsed, out string? error);
+
+        Assert.True(ok);
+        Assert.Null(error);
+        Assert.NotNull(parsed);
+        // The accepted result is identical to the lenient Parse for well-formed input.
+        Assert.Equal(MemberSignature.Format(MemberSignature.Parse(text, context)), MemberSignature.Format(parsed));
+    }
+
+    [Theory]
+    [InlineData("foo(", MemberKind.Field)]              // unbalanced: open without close
+    [InlineData("foo)", MemberKind.Field)]              // stray close paren
+    [InlineData("m()()", MemberKind.Field)]             // nested / second paren pair
+    [InlineData("foo() junk", MemberKind.Field)]        // text after the parameter list
+    [InlineData("m(): ", MemberKind.Field)]             // ':' with no return type
+    [InlineData("a: b: c", MemberKind.Field)]           // more than one ':' separator
+    [InlineData(": int", MemberKind.Field)]             // missing name
+    [InlineData("name:", MemberKind.Field)]             // ':' with no type
+    [InlineData("", MemberKind.Field)]                  // empty
+    [InlineData("   ", MemberKind.Field)]               // whitespace only
+    [InlineData("+", MemberKind.Field)]                 // marker only -> empty name
+    [InlineData("", MemberKind.EnumLiteral)]            // empty enum literal
+    public void TryParse_Malformed_FailsWithError(string text, MemberKind context)
+    {
+        bool ok = MemberSignature.TryParse(text, context, out ClassMember? parsed, out string? error);
+
+        Assert.False(ok);
+        Assert.Null(parsed);
+        Assert.False(string.IsNullOrWhiteSpace(error));
     }
 }

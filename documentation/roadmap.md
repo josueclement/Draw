@@ -229,10 +229,14 @@ Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bub
 suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
 a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.
 
-## Code-review remediation 🚧 (cross-cutting, planned — no code changed)
+## Code-review remediation 🚧 (cross-cutting, in progress)
 
-A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap; nothing
-is implemented yet. The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
+A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap.
+**Done so far:** Priority 1 — the regression test safety net (xUnit v3 / MTP over the pure-logic
+layers) — and the correctness quick-wins, items **6a** (signature-parse validation via `TryParse`,
+with the edit VMs reverting invalid inline edits) and **6b** (`ImageNode.Clone` deep-copies its byte
+buffer). Still pending: the two big decompositions and the remaining hardening/dedup/service items.
+The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
 and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a
 regression **test safety net first** — reintroducing one focused test project for the pure-logic

@@ -24,7 +24,9 @@ public sealed class ImageNode : NodeBase
     {
         ImageNode copy = new()
         {
-            Data = Data,
+            // Deep-copy the bytes so the clone owns an independent array (the deep-clone contract);
+            // sharing the reference would couple two nodes to one buffer.
+            Data = (byte[])Data.Clone(),
             Format = Format,
             PixelWidth = PixelWidth,
             PixelHeight = PixelHeight,
