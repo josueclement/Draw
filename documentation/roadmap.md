@@ -239,14 +239,18 @@ buffer); **2a** (the `DiagramView.axaml.cs` pointer handlers split into intentio
 `Begin*`/`Handle*`/`Finalize*` methods — pure extraction, no behavior change); and **3a** (the three
 longest `DiagramDocumentViewModel` methods' pure cores lifted into testable `Draw.Diagramming.Layout`
 helpers — `CloneArranger`, `ConnectionDistributor.PlanPinning`, `ZOrderArranger.ReorderInBands` — with
-headless tests). **3b** is now in progress — moving the VM's orchestration clusters behind
+headless tests). **3b** is done — moving the VM's orchestration clusters behind
 coordinator collaborators it composes (one branch per coordinator, clean-seam first), reaching the VM
 through a shared `IDocumentEditContext` seam: `ClipboardCoordinator` (copy/cut/paste/duplicate +
 image insertion + `PlaceClones`), `ConnectorSpacingCoordinator` (space/merge/pin), `ZOrderCoordinator`
 (`ReorderSelected`) and `AlignmentCoordinator` (align/distribute + the reference subsystem) are all
 extracted, dropping the VM from ~1480 to ~1050 lines while it stays the façade the view binds to (it
-keeps the commands and selection-changed notifications). With 3b done, still pending: the `DiagramView`
-decompositions (2b/2c/2d), de-duplication (4), service tidy-ups (5) and the remaining correctness/polish
+keeps the commands and selection-changed notifications). **4** (de-duplication) is done too — a generic
+`EditableItemViewModelBase<TModel>` now owns the shared member/column edit/commit/cancel lifecycle and
+its undo-capture contract (the two mirrored class-member XAML row templates collapsed into one shared
+`ClassMemberRowTemplate` resource), and a framework-agnostic `ActorDimensions` is the single source of
+the actor stick-figure proportions shared by the canvas and SVG render paths. Still pending: the
+`DiagramView` decompositions (2b/2c/2d), service tidy-ups (5) and the remaining correctness/polish
 items (3c, 6c/6d, 7).
 The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
 monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)

@@ -8,6 +8,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using Draw.App.ViewModels;
+using Draw.Diagramming.Geometry;
 using Draw.Model.Nodes;
 using static Draw.App.Rendering.SvgFormat;
 using ModelPoint = Draw.Model.Primitives.Point2D;
@@ -127,32 +128,21 @@ public static class DiagramSvgRenderer
         }
     }
 
-    // Stick figure mirroring ActorGeometry: head circle + body/arms/legs polylines, stroke only.
+    // Stick figure from the shared ActorDimensions: head circle + body/arms/legs polylines, stroke only.
     private static void EmitActor(StringBuilder sb, double x, double y, double width, double height, IBrush? stroke, double thickness)
     {
-        width = System.Math.Max(1d, width);
-        height = System.Math.Max(1d, height);
-
-        double labelStrip = System.Math.Min(18d, height * 0.25d);
-        double figureHeight = System.Math.Max(1d, height - labelStrip);
-        double cx = width / 2d;
-        double headRadius = System.Math.Min(width, figureHeight) * 0.18d;
-        double neckY = headRadius * 2d;
-        double hipY = figureHeight * 0.62d;
-        double shoulderY = neckY + ((hipY - neckY) * 0.25d);
-        double armHalf = width * 0.30d;
-        double legSpread = width * 0.28d;
+        ActorDimensions d = new(width, height);
 
         string strokePaint = Paint("stroke", stroke);
         string g = $"transform=\"translate({Num(x)},{Num(y)})\"";
         sb.Append("<g ").Append(g).Append(" fill=\"none\" ").Append(strokePaint)
           .Append(" stroke-width=\"").Append(Num(thickness)).Append("\">\n");
-        sb.Append("<circle cx=\"").Append(Num(cx)).Append("\" cy=\"").Append(Num(headRadius))
-          .Append("\" r=\"").Append(Num(headRadius)).Append("\"/>\n");
+        sb.Append("<circle cx=\"").Append(Num(d.CenterX)).Append("\" cy=\"").Append(Num(d.HeadRadius))
+          .Append("\" r=\"").Append(Num(d.HeadRadius)).Append("\"/>\n");
         sb.Append("<path d=\"")
-          .Append($"M{Num(cx)},{Num(neckY)} L{Num(cx)},{Num(hipY)} ")
-          .Append($"M{Num(cx - armHalf)},{Num(shoulderY)} L{Num(cx + armHalf)},{Num(shoulderY)} ")
-          .Append($"M{Num(cx - legSpread)},{Num(figureHeight)} L{Num(cx)},{Num(hipY)} L{Num(cx + legSpread)},{Num(figureHeight)}")
+          .Append($"M{Num(d.CenterX)},{Num(d.NeckY)} L{Num(d.CenterX)},{Num(d.HipY)} ")
+          .Append($"M{Num(d.CenterX - d.ArmHalf)},{Num(d.ShoulderY)} L{Num(d.CenterX + d.ArmHalf)},{Num(d.ShoulderY)} ")
+          .Append($"M{Num(d.CenterX - d.LegSpread)},{Num(d.FigureHeight)} L{Num(d.CenterX)},{Num(d.HipY)} L{Num(d.CenterX + d.LegSpread)},{Num(d.FigureHeight)}")
           .Append("\"/>\n");
         sb.Append("</g>\n");
     }

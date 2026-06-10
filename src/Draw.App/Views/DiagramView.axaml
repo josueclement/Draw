@@ -8,6 +8,43 @@
              Background="Transparent"
              Focusable="True">
 
+    <UserControl.Resources>
+        <!-- Shared inline-edit row for class members, used by both the field and operation
+             compartments. The Visibility submenu's !IsEnumLiteral guard is a no-op for operations
+             (never enum literals), so a single template serves both. -->
+        <DataTemplate x:Key="ClassMemberRowTemplate" x:DataType="vm:ClassMemberViewModel">
+            <Panel>
+                <Panel.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Insert below" Click="OnInsertBelowClick" />
+                        <MenuItem Header="Move up" Click="OnMoveMemberUpClick" />
+                        <MenuItem Header="Move down" Click="OnMoveMemberDownClick" />
+                        <Separator />
+                        <MenuItem Header="Visibility" IsVisible="{Binding !IsEnumLiteral}">
+                            <MenuItem Header="Public" Tag="{x:Static nodes:MemberVisibility.Public}" Click="OnSetVisibilityClick" />
+                            <MenuItem Header="Private" Tag="{x:Static nodes:MemberVisibility.Private}" Click="OnSetVisibilityClick" />
+                            <MenuItem Header="Protected" Tag="{x:Static nodes:MemberVisibility.Protected}" Click="OnSetVisibilityClick" />
+                            <MenuItem Header="Package" Tag="{x:Static nodes:MemberVisibility.Package}" Click="OnSetVisibilityClick" />
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Header="Delete" Click="OnRemoveMemberClick" />
+                    </ContextMenu>
+                </Panel.ContextMenu>
+                <TextBlock Text="{Binding DisplayText}" FontSize="11"
+                           Foreground="{Binding $parent[ItemsControl].((vm:ClassNodeViewModel)DataContext).Foreground}"
+                           FontStyle="{Binding RowFontStyle}"
+                           TextDecorations="{Binding RowDecorations}"
+                           IsVisible="{Binding !IsEditing}"
+                           DoubleTapped="OnMemberDoubleTapped" />
+                <TextBox Text="{Binding RawText, Mode=TwoWay}" FontSize="11"
+                         Background="Transparent" Padding="0"
+                         IsVisible="{Binding IsEditing}"
+                         KeyDown="OnMemberEditKeyDown"
+                         LostFocus="OnMemberEditCommitted" />
+            </Panel>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <!-- 2x2 grid: canvas + scrollbar gutters. The Auto row/column collapse to 0 when their
          scrollbar is hidden (content fits), so the canvas reclaims the space. Scrollbar geometry
          and visibility are driven from code-behind (UpdateScrollBars). -->
@@ -104,41 +141,8 @@
                                     <Rectangle Grid.Row="1" Height="1" Fill="{Binding Stroke}" />
                                     <Panel Grid.Row="2" Background="Transparent" Tag="primary"
                                            DoubleTapped="OnCompartmentDoubleTapped">
-                                        <ItemsControl ItemsSource="{Binding PrimaryMembers}" Margin="6,2">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:ClassMemberViewModel">
-                                                    <Panel>
-                                                        <Panel.ContextMenu>
-                                                            <ContextMenu>
-                                                                <MenuItem Header="Insert below" Click="OnInsertBelowClick" />
-                                                                <MenuItem Header="Move up" Click="OnMoveMemberUpClick" />
-                                                                <MenuItem Header="Move down" Click="OnMoveMemberDownClick" />
-                                                                <Separator />
-                                                                <MenuItem Header="Visibility" IsVisible="{Binding !IsEnumLiteral}">
-                                                                    <MenuItem Header="Public" Tag="{x:Static nodes:MemberVisibility.Public}" Click="OnSetVisibilityClick" />
-                                                                    <MenuItem Header="Private" Tag="{x:Static nodes:MemberVisibility.Private}" Click="OnSetVisibilityClick" />
-                                                                    <MenuItem Header="Protected" Tag="{x:Static nodes:MemberVisibility.Protected}" Click="OnSetVisibilityClick" />
-                                                                    <MenuItem Header="Package" Tag="{x:Static nodes:MemberVisibility.Package}" Click="OnSetVisibilityClick" />
-                                                                </MenuItem>
-                                                                <Separator />
-                                                                <MenuItem Header="Delete" Click="OnRemoveMemberClick" />
-                                                            </ContextMenu>
-                                                        </Panel.ContextMenu>
-                                                        <TextBlock Text="{Binding DisplayText}" FontSize="11"
-                                                                   Foreground="{Binding $parent[ItemsControl].((vm:ClassNodeViewModel)DataContext).Foreground}"
-                                                                   FontStyle="{Binding RowFontStyle}"
-                                                                   TextDecorations="{Binding RowDecorations}"
-                                                                   IsVisible="{Binding !IsEditing}"
-                                                                   DoubleTapped="OnMemberDoubleTapped" />
-                                                        <TextBox Text="{Binding RawText, Mode=TwoWay}" FontSize="11"
-                                                                 Background="Transparent" Padding="0"
-                                                                 IsVisible="{Binding IsEditing}"
-                                                                 KeyDown="OnMemberEditKeyDown"
-                                                                 LostFocus="OnMemberEditCommitted" />
-                                                    </Panel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <ItemsControl ItemsSource="{Binding PrimaryMembers}" Margin="6,2"
+                                                      ItemTemplate="{StaticResource ClassMemberRowTemplate}" />
                                         <Button Classes="memberAdd" Content="+" Click="OnAddFieldClick"
                                                 HorizontalAlignment="Right" VerticalAlignment="Top"
                                                 ToolTip.Tip="Add field" />
@@ -148,41 +152,8 @@
                                     <Panel Grid.Row="4" Background="Transparent" Tag="operations"
                                            IsVisible="{Binding HasOperations}"
                                            DoubleTapped="OnCompartmentDoubleTapped">
-                                        <ItemsControl ItemsSource="{Binding Operations}" Margin="6,2">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:ClassMemberViewModel">
-                                                    <Panel>
-                                                        <Panel.ContextMenu>
-                                                            <ContextMenu>
-                                                                <MenuItem Header="Insert below" Click="OnInsertBelowClick" />
-                                                                <MenuItem Header="Move up" Click="OnMoveMemberUpClick" />
-                                                                <MenuItem Header="Move down" Click="OnMoveMemberDownClick" />
-                                                                <Separator />
-                                                                <MenuItem Header="Visibility">
-                                                                    <MenuItem Header="Public" Tag="{x:Static nodes:MemberVisibility.Public}" Click="OnSetVisibilityClick" />
-                                                                    <MenuItem Header="Private" Tag="{x:Static nodes:MemberVisibility.Private}" Click="OnSetVisibilityClick" />
-                                                                    <MenuItem Header="Protected" Tag="{x:Static nodes:MemberVisibility.Protected}" Click="OnSetVisibilityClick" />
-                                                                    <MenuItem Header="Package" Tag="{x:Static nodes:MemberVisibility.Package}" Click="OnSetVisibilityClick" />
-                                                                </MenuItem>
-                                                                <Separator />
-                                                                <MenuItem Header="Delete" Click="OnRemoveMemberClick" />
-                                                            </ContextMenu>
-                                                        </Panel.ContextMenu>
-                                                        <TextBlock Text="{Binding DisplayText}" FontSize="11"
-                                                                   Foreground="{Binding $parent[ItemsControl].((vm:ClassNodeViewModel)DataContext).Foreground}"
-                                                                   FontStyle="{Binding RowFontStyle}"
-                                                                   TextDecorations="{Binding RowDecorations}"
-                                                                   IsVisible="{Binding !IsEditing}"
-                                                                   DoubleTapped="OnMemberDoubleTapped" />
-                                                        <TextBox Text="{Binding RawText, Mode=TwoWay}" FontSize="11"
-                                                                 Background="Transparent" Padding="0"
-                                                                 IsVisible="{Binding IsEditing}"
-                                                                 KeyDown="OnMemberEditKeyDown"
-                                                                 LostFocus="OnMemberEditCommitted" />
-                                                    </Panel>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
+                                        <ItemsControl ItemsSource="{Binding Operations}" Margin="6,2"
+                                                      ItemTemplate="{StaticResource ClassMemberRowTemplate}" />
                                         <Button Classes="memberAdd" Content="+" Click="OnAddOperationClick"
                                                 HorizontalAlignment="Right" VerticalAlignment="Top"
                                                 ToolTip.Tip="Add operation" />

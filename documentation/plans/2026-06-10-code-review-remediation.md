@@ -1,8 +1,8 @@
 # Code-review remediation: prioritized plan
 
 **Date:** 2026-06-10
-**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, 3a, and 3b done (all four VM
-coordinators extracted); remainder pending (4, 2b/2c/2d, 3c, 5, 6c/6d, 7).
+**Status:** In progress — Priority 1 (test safety net), items 6a/6b, 2a, 3a, 3b (all four VM
+coordinators extracted), and 4 (4a + 4b) done; remainder pending (2b/2c/2d, 3c, 5, 6c/6d, 7).
 **Branch:** one feature branch per item (see *Execution sequence*).
 
 ## Problem
@@ -123,16 +123,19 @@ orchestration, style application, view (zoom/pan) coordination.
   `ShellViewModel` (437), `InspectorViewModel` (407).
 
 ### Priority 4 — Eliminate duplication · Effort M · Risk Low
-- **4a** — `ClassMemberViewModel` (179) and `EntityColumnViewModel` (172) share ~70% of an
-  edit/commit/cancel + `IsNewlyAdded` + `RaiseAll` pattern. Extract an `EditableItemViewModelBase`
-  (template-method `RaiseAll`). Bonus: collapses the **mirrored XAML** `DataTemplate`s in
-  `DiagramView.axaml` (primary members vs. operations vs. entity columns, ~3× duplicated edit rows)
-  into a shared resource.
-- **4b** — Actor stick-figure geometry is duplicated verbatim between `ActorGeometry.cs:17-24` and
-  `DiagramSvgRenderer.cs:137-144` (identical 0.18/0.62/0.25/0.30/0.28 constants; the SVG side even
-  comments "mirroring ActorGeometry"). Extract a framework-agnostic `ActorDimensions` (in `Draw.App`,
-  no Avalonia types) consumed by both render paths — the same Describe/Build shape already used for
-  connectors.
+- **4a · ✅ done** — `ClassMemberViewModel` and `EntityColumnViewModel` shared ~70% of an
+  edit/commit/cancel + `IsNewlyAdded` + `RaiseAll` pattern. Extracted a generic
+  `EditableItemViewModelBase<TModel>` owning the lifecycle and the undo-capture contract; each VM now
+  supplies only its format/parse/apply/raise hooks. Collapsed the two **mirrored** class-member
+  `DataTemplate`s (primary members + operations) in `DiagramView.axaml` into one shared keyed
+  resource (`ClassMemberRowTemplate`). The entity-column template stays separate — it shares only the
+  outer shape; its context menu and edit handlers are genuinely different, so merging it would add
+  conditionals rather than remove duplication.
+- **4b · ✅ done** — Actor stick-figure geometry was duplicated verbatim between `ActorGeometry.cs`
+  and `DiagramSvgRenderer.EmitActor` (identical 0.18/0.62/0.25/0.30/0.28 constants and clamps).
+  Extracted a framework-agnostic `ActorDimensions` (`Draw.Diagramming/Geometry/`, no Avalonia types)
+  consumed by both render paths, with `ActorDimensionsTests` covering the proportions and the
+  degenerate-size clamp.
 
 ### Priority 5 — Service & DI tidy-ups · Effort S–M · Risk Low
 - **5a** — `DialogService` is **inconsistent**: `ConfirmUnsavedAsync` uses Carbon's
