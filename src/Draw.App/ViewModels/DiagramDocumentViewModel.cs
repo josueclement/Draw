@@ -886,23 +886,11 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             });
     }
 
-    /// <summary>Restores the theme-adaptive default look (default fill/stroke/text) and unlinks the
-    /// selection from any palette swatch. Thickness, dash and font are left untouched.</summary>
-    public void ResetStyleToDefault()
-        => ApplyStyleToSelection(
-            style =>
-            {
-                style.PaletteId = null;
-                style.Fill = ShapeStyle.DefaultFill;
-                style.Stroke.Color = StrokeStyle.DefaultColor;
-                style.Font.Color = FontSpec.DefaultColor;
-            },
-            style =>
-            {
-                style.PaletteId = null;
-                style.Stroke.Color = StrokeStyle.DefaultColor;
-                style.Font.Color = FontSpec.DefaultColor;
-            });
+    /// <summary>Resets the selection to the default style: the first ("Blue") quick-palette swatch,
+    /// which is also what newly-created shapes get. Behaves exactly like clicking that swatch — a
+    /// theme-aware fill/stroke/text linked to the palette. Stroke thickness, dash, and font family/size
+    /// are left untouched.</summary>
+    public void ResetStyleToDefault() => ApplyStyleSwatch(StylePalette.Default);
 
     /// <summary>Makes the selected nodes outline-only (transparent fill) and unlinks them from any
     /// palette swatch. Connectors have no fill, so they're unaffected.</summary>
