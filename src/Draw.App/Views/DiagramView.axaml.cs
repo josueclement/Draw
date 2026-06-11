@@ -343,10 +343,12 @@ public partial class DiagramView : UserControl
 
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         bool alt = e.KeyModifiers.HasFlag(KeyModifiers.Alt);
+        bool shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
 
         // Editing the selected connector's handles takes precedence over node hit-testing, because
-        // endpoint handles sit on the shape boundaries and would otherwise be stolen by the node.
-        if (_vm.SelectedConnector is { } selected && TryBeginConnectorEdit(e.Pointer, selected, world, alt))
+        // endpoint handles sit on the shape boundaries and would otherwise be stolen by the node. Shift
+        // is reserved for extending the selection, so it never starts a handle edit.
+        if (!shift && _vm.SelectedConnector is { } selected && TryBeginConnectorEdit(e.Pointer, selected, world, alt))
         {
             return;
         }
@@ -357,18 +359,18 @@ public partial class DiagramView : UserControl
         ConnectorViewModel? connector = _vm.HitTestConnector(new Point2D(world.X, world.Y), 6d / Zoom);
         if (connector is not null)
         {
-            BeginConnectorPick(e.Pointer, _vm, connector, world, ctrl);
+            BeginConnectorPick(e.Pointer, _vm, connector, world, ctrl, shift);
             return;
         }
 
         NodeViewModelBase? node = HitTestNode(world);
         if (node is not null)
         {
-            BeginNodeMove(_vm, node, screen, world, ctrl);
+            BeginNodeMove(_vm, node, screen, world, ctrl, shift);
         }
         else
         {
-            BeginMarquee(_vm, world, screen, ctrl);
+            BeginMarquee(_vm, world, screen, ctrl, shift);
         }
 
         e.Pointer.Capture(Viewport);
@@ -459,8 +461,9 @@ public partial class DiagramView : UserControl
     }
 
     // Click on a connector body: Ctrl+click on a waypoint-capable connector splits it and drags the new
-    // bend point (one undo step); otherwise just select the connector.
-    private void BeginConnectorPick(IPointer pointer, DiagramDocumentViewModel vm, ConnectorViewModel connector, Point world, bool ctrl)
+    // bend point (one undo step); Shift+click toggles it in/out of a multi-selection; a plain click
+    // selects only this connector.
+    private void BeginConnectorPick(IPointer pointer, DiagramDocumentViewModel vm, ConnectorViewModel connector, Point world, bool ctrl, bool shift)
     {
         // Ctrl+click on a straight/orthogonal connector splits it: insert a bend point at the
         // click and immediately drag it (one undo step covers the add + reposition).
@@ -471,14 +474,29 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        vm.SelectConnector(connector);
+        // Shift extends the selection; a plain click on an unselected connector selects only it, while a
+        // plain click on an already-selected one keeps the current (possibly multi-) selection intact.
+        if (shift)
+        {
+            vm.ToggleSelectConnector(connector);
+        }
+        else if (!connector.IsSelected)
+        {
+            vm.SelectConnector(connector);
+        }
+
         pointer.Capture(Viewport);
     }
 
-    // Click on a node: update selection (toggle on Ctrl, select-only otherwise) and arm a move gesture.
-    private void BeginNodeMove(DiagramDocumentViewModel vm, NodeViewModelBase node, Point screen, Point world, bool ctrl)
+    // Click on a node: update selection (Shift extends across shapes and connectors, Ctrl toggles within
+    // shapes only, a plain click selects just this node) and arm a move gesture.
+    private void BeginNodeMove(DiagramDocumentViewModel vm, NodeViewModelBase node, Point screen, Point world, bool ctrl, bool shift)
     {
-        if (ctrl)
+        if (shift)
+        {
+            vm.ToggleSelectUnified(node);
+        }
+        else if (ctrl)
         {
             vm.ToggleSelect(node);
         }
@@ -494,14 +512,15 @@ public partial class DiagramView : UserControl
         _gesture.UndoCaptured = false;
     }
 
-    // Click on empty canvas: begin a marquee selection (additive on Ctrl).
-    private void BeginMarquee(DiagramDocumentViewModel vm, Point world, Point screen, bool ctrl)
+    // Click on empty canvas: begin a marquee selection (additive on Ctrl or Shift).
+    private void BeginMarquee(DiagramDocumentViewModel vm, Point world, Point screen, bool ctrl, bool shift)
     {
+        bool additive = ctrl || shift;
         _gesture.Mode = DragMode.Marquee;
         _gesture.MarqueeStartWorld = world;
         _gesture.MarqueeStartScreen = screen;
-        _gesture.MarqueeAdditive = ctrl;
-        if (!ctrl)
+        _gesture.MarqueeAdditive = additive;
+        if (!additive)
         {
             vm.ClearSelection();
         }

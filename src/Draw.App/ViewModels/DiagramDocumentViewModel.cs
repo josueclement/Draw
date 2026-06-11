@@ -213,7 +213,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public bool CanRedo => _undo.CanRedo;
 
-    public bool HasSelection => Nodes.Any(n => n.IsSelected) || SelectedConnector is not null;
+    public bool HasSelection => Nodes.Any(n => n.IsSelected) || Connectors.Any(c => c.IsSelected);
 
     /// <summary>True when at least one node is selected — gates Copy/Cut/Duplicate.</summary>
     public bool HasNodeSelection => Nodes.Any(n => n.IsSelected);
@@ -245,19 +245,47 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// <summary>Banner text shown while a reference is active. See <see cref="AlignmentCoordinator"/>.</summary>
     public string ReferenceStatusText => _alignmentCoordinator.ReferenceStatusText;
 
-    public bool HasConnectorSelection => SelectedConnector is not null;
+    public bool HasConnectorSelection => Connectors.Any(c => c.IsSelected);
 
+    /// <summary>
+    /// The single connector to edit and inspect on its own — non-null <b>only</b> when exactly one
+    /// connector is selected and no node is. Multi-connector and mixed shape+connector selections return
+    /// null, so the single-connector machinery (endpoint/waypoint/label handles, snapping, the
+    /// per-connector inspector fields) engages only when a lone connector is the focus. Computed from the
+    /// per-connector <see cref="ConnectorViewModel.IsSelected"/> flags; change notifications are raised
+    /// from <see cref="RaiseSelectionChanged"/>.
+    /// </summary>
     public ConnectorViewModel? SelectedConnector
     {
-        get;
-        private set
+        get
         {
-            if (SetProperty(ref field, value))
+            if (Nodes.Any(n => n.IsSelected))
             {
-                OnPropertyChanged(nameof(HasConnectorSelection));
+                return null;
             }
+
+            ConnectorViewModel? only = null;
+            foreach (ConnectorViewModel c in Connectors)
+            {
+                if (!c.IsSelected)
+                {
+                    continue;
+                }
+
+                if (only is not null)
+                {
+                    return null;
+                }
+
+                only = c;
+            }
+
+            return only;
         }
     }
+
+    /// <summary>Every currently-selected connector. Bulk styling and delete operate on this set.</summary>
+    public IEnumerable<ConnectorViewModel> SelectedConnectors => Connectors.Where(c => c.IsSelected);
 
     public IEnumerable<NodeViewModelBase> SelectedNodes => Nodes.Where(n => n.IsSelected);
 
@@ -555,13 +583,21 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public void DeleteSelected()
     {
         List<NodeViewModelBase> selectedNodes = SelectedNodes.ToList();
-        ConnectorViewModel? selectedConnector = SelectedConnector;
-        if (selectedNodes.Count == 0 && selectedConnector is null)
+        List<ConnectorViewModel> selectedConnectors = SelectedConnectors.ToList();
+        if (selectedNodes.Count == 0 && selectedConnectors.Count == 0)
         {
             return;
         }
 
         CaptureUndo();
+
+        // Prune the model: explicitly-selected connectors first, then any connector orphaned by a removed
+        // node. RebuildConnectors then resyncs the view models from the pruned model in one pass (it
+        // detaches the old connector VMs), so both selected nodes and selected connectors go in one undo step.
+        foreach (ConnectorViewModel c in selectedConnectors)
+        {
+            _document.Connectors.Remove(c.Model);
+        }
 
         if (selectedNodes.Count > 0)
         {
@@ -573,16 +609,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             }
 
             _document.Connectors.RemoveAll(c => removedIds.Contains(c.SourceNodeId) || removedIds.Contains(c.TargetNodeId));
-            RebuildConnectors();
-        }
-        else if (selectedConnector is not null)
-        {
-            _document.Connectors.Remove(selectedConnector.Model);
-            selectedConnector.Detach();
-            Connectors.Remove(selectedConnector);
-            SelectedConnector = null;
         }
 
+        RebuildConnectors();
         MarkModified();
         RaiseSelectionChanged();
     }
@@ -721,7 +750,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public void SelectInRect(Rect2D rect, bool additive)
     {
-        ClearConnectorSelection();
         foreach (NodeViewModelBase n in Nodes)
         {
             if (!additive)
@@ -735,9 +763,25 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             }
         }
 
+        // A connector is grabbed when the marquee overlaps any part of its line (consistent with shapes,
+        // which select on overlap). Its flattened route handles curves and bend points.
+        foreach (ConnectorViewModel c in Connectors)
+        {
+            if (!additive)
+            {
+                c.IsSelected = false;
+            }
+
+            if (MarqueeGeometry.IntersectsPolyline(rect, c.GetFlattenedPoints()))
+            {
+                c.IsSelected = true;
+            }
+        }
+
         RaiseSelectionChanged();
     }
 
+    /// <summary>Selects exactly one connector, clearing every other node and connector (plain click).</summary>
     public void SelectConnector(ConnectorViewModel connector)
     {
         foreach (NodeViewModelBase n in Nodes)
@@ -750,7 +794,22 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             c.IsSelected = ReferenceEquals(c, connector);
         }
 
-        SelectedConnector = connector;
+        RaiseSelectionChanged();
+    }
+
+    /// <summary>Adds or removes one connector from the selection without disturbing other selected
+    /// connectors or nodes (Shift+click). Enables mixed shape+connector selections.</summary>
+    public void ToggleSelectConnector(ConnectorViewModel connector)
+    {
+        connector.IsSelected = !connector.IsSelected;
+        RaiseSelectionChanged();
+    }
+
+    /// <summary>Adds or removes one node from the selection while leaving any selected connectors intact
+    /// (Shift+click). Unlike <see cref="ToggleSelect"/>, it does not clear the connector selection.</summary>
+    public void ToggleSelectUnified(NodeViewModelBase node)
+    {
+        node.IsSelected = !node.IsSelected;
         RaiseSelectionChanged();
     }
 
@@ -861,8 +920,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private void ApplyStyleToSelection(Action<ShapeStyle> mutateNode, Action<ConnectorStyle>? mutateConnector)
     {
         List<NodeViewModelBase> nodes = SelectedNodes.ToList();
-        ConnectorViewModel? connector = SelectedConnector;
-        if (nodes.Count == 0 && connector is null)
+        List<ConnectorViewModel> connectors = SelectedConnectors.ToList();
+        if (nodes.Count == 0 && connectors.Count == 0)
         {
             return;
         }
@@ -874,10 +933,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             node.RaiseStyleChanged();
         }
 
-        if (connector is not null && mutateConnector is not null)
+        if (mutateConnector is not null)
         {
-            mutateConnector(connector.Model.Style);
-            connector.RaiseStyleChanged();
+            foreach (ConnectorViewModel connector in connectors)
+            {
+                mutateConnector(connector.Model.Style);
+                connector.RaiseStyleChanged();
+            }
         }
 
         MarkModified();
@@ -922,8 +984,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         {
             c.IsSelected = false;
         }
-
-        SelectedConnector = null;
     }
 
     private int NextZIndex() => _document.Nodes.Count == 0 ? 0 : _document.Nodes.Max(n => n.ZIndex) + 1;
@@ -992,7 +1052,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         Connectors.Clear();
-        SelectedConnector = null;
 
         // Non-destructive: build view models only for connectors whose endpoints resolve to
         // current node view models. Connectors are NOT removed from the model here — genuine
@@ -1050,6 +1109,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(HasNodeSelection));
+        OnPropertyChanged(nameof(HasConnectorSelection));
+        OnPropertyChanged(nameof(SelectedConnector));
         OnPropertyChanged(nameof(CanAlignSelection));
         OnPropertyChanged(nameof(CanDistributeSelection));
         OnPropertyChanged(nameof(CanSpaceConnections));

@@ -720,7 +720,8 @@
                         </StackPanel>
                         </StackPanel>
 
-                        <!-- Connector properties -->
+                        <!-- Connector properties. Shared editors (kind, route, stroke, dash) apply to every
+                             selected connector; the per-connector group below is shown only for a lone selection. -->
                         <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsConnectorSelected}">
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Relationship" Opacity="0.7" />
@@ -737,35 +738,6 @@
                             </StackPanel>
 
                             <StackPanel Spacing="3">
-                                <TextBlock Text="Source cardinality" Opacity="0.7" />
-                                <ComboBox HorizontalAlignment="Stretch"
-                                          ItemsSource="{x:Static vm:InspectorViewModel.CardinalityOptions}"
-                                          SelectedItem="{Binding Inspector.SourceCardinality, Mode=TwoWay}" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="Target cardinality" Opacity="0.7" />
-                                <ComboBox HorizontalAlignment="Stretch"
-                                          ItemsSource="{x:Static vm:InspectorViewModel.CardinalityOptions}"
-                                          SelectedItem="{Binding Inspector.TargetCardinality, Mode=TwoWay}" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="Source label" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.SourceLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="Center label" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.CenterLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="Target label" Opacity="0.7" />
-                                <TextBox Text="{Binding Inspector.TargetLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke (#AARRGGBB)" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.ConnectorStrokeHex, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
                             </StackPanel>
@@ -773,6 +745,45 @@
                             <StackPanel Spacing="3">
                                 <TextBlock Text="Stroke thickness" Opacity="0.7" />
                                 <TextBox Text="{Binding Inspector.ConnectorThickness, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Dash" Opacity="0.7" />
+                                <ComboBox HorizontalAlignment="Stretch"
+                                          ItemsSource="{x:Static vm:InspectorViewModel.DashStyleOptions}"
+                                          SelectedItem="{Binding Inspector.ConnectorDash, Mode=TwoWay}" />
+                            </StackPanel>
+
+                            <!-- Per-connector details: meaningful only for a single selected connector. -->
+                            <StackPanel Spacing="10" IsVisible="{Binding Inspector.IsSingleConnectorSelected}">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="Source cardinality" Opacity="0.7" />
+                                    <ComboBox HorizontalAlignment="Stretch"
+                                              ItemsSource="{x:Static vm:InspectorViewModel.CardinalityOptions}"
+                                              SelectedItem="{Binding Inspector.SourceCardinality, Mode=TwoWay}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="Target cardinality" Opacity="0.7" />
+                                    <ComboBox HorizontalAlignment="Stretch"
+                                              ItemsSource="{x:Static vm:InspectorViewModel.CardinalityOptions}"
+                                              SelectedItem="{Binding Inspector.TargetCardinality, Mode=TwoWay}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="Source label" Opacity="0.7" />
+                                    <TextBox Text="{Binding Inspector.SourceLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="Center label" Opacity="0.7" />
+                                    <TextBox Text="{Binding Inspector.CenterLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="Target label" Opacity="0.7" />
+                                    <TextBox Text="{Binding Inspector.TargetLabel, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>

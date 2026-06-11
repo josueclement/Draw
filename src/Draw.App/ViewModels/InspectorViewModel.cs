@@ -29,6 +29,9 @@ public sealed class InspectorViewModel : ViewModelBase
     public static IReadOnlyList<Cardinality> CardinalityOptions { get; } =
         Enum.GetValues<Cardinality>();
 
+    public static IReadOnlyList<ModelStyle.DashStyle> DashStyleOptions { get; } =
+        Enum.GetValues<ModelStyle.DashStyle>();
+
     public bool IsShapeSelected
     {
         get;
@@ -46,6 +49,14 @@ public sealed class InspectorViewModel : ViewModelBase
     {
         get;
         private set { if (SetProperty(ref field, value)) OnPropertyChanged(nameof(HasNoSelection)); }
+    }
+
+    /// <summary>True only when exactly one connector is selected — gates the per-connector fields
+    /// (cardinality, labels) that have no meaningful shared value across a multi-connector selection.</summary>
+    public bool IsSingleConnectorSelected
+    {
+        get;
+        private set => SetProperty(ref field, value);
     }
 
     public bool IsClassNodeSelected
@@ -191,6 +202,12 @@ public sealed class InspectorViewModel : ViewModelBase
         set { if (SetProperty(ref field, value)) ApplyConnector(c => c.Style.Stroke.Thickness = ConnectorThickness); }
     } = 1.5d;
 
+    public ModelStyle.DashStyle ConnectorDash
+    {
+        get;
+        set { if (SetProperty(ref field, value)) ApplyConnector(c => c.Style.Stroke.Dash = ConnectorDash); }
+    }
+
     public string SourceLabel
     {
         get;
@@ -269,13 +286,18 @@ public sealed class InspectorViewModel : ViewModelBase
         _loading = true;
         try
         {
-            ConnectorViewModel? connector = _target?.SelectedConnector;
+            // Connector-priority: when any connector is selected the inspector shows the connector panel
+            // (representative = the first selected connector). Per-connector fields are gated separately
+            // on a single-connector selection. Node styling in a mixed grab is done via the palette.
+            List<ConnectorViewModel> connectors = _target?.SelectedConnectors.ToList() ?? new List<ConnectorViewModel>();
+            ConnectorViewModel? connector = connectors.Count > 0 ? connectors[0] : null;
             NodeViewModelBase? node = connector is null ? _target?.SelectedNodes.FirstOrDefault() : null;
             ShapeNodeViewModel? shape = node as ShapeNodeViewModel;
             ClassNodeViewModel? klass = node as ClassNodeViewModel;
             EntityNodeViewModel? entity = node as EntityNodeViewModel;
 
             IsConnectorSelected = connector is not null;
+            IsSingleConnectorSelected = _target?.SelectedConnector is not null;
             IsShapeSelected = shape is not null;
             IsClassNodeSelected = klass is not null;
             IsEntityNodeSelected = entity is not null;
@@ -292,6 +314,7 @@ public sealed class InspectorViewModel : ViewModelBase
                 TargetCardinality = model.TargetCardinality;
                 ConnectorStrokeHex = model.Style.Stroke.Color.ToHex();
                 ConnectorThickness = model.Style.Stroke.Thickness;
+                ConnectorDash = model.Style.Stroke.Dash;
                 SourceLabel = model.SourceLabel ?? string.Empty;
                 CenterLabel = model.CenterLabel ?? string.Empty;
                 TargetLabel = model.TargetLabel ?? string.Empty;
@@ -392,14 +415,24 @@ public sealed class InspectorViewModel : ViewModelBase
 
     private void ApplyConnector(Action<Connector> mutate)
     {
-        if (_loading || _target?.SelectedConnector is not { } connector)
+        if (_loading || _target is null)
+        {
+            return;
+        }
+
+        List<ConnectorViewModel> connectors = _target.SelectedConnectors.ToList();
+        if (connectors.Count == 0)
         {
             return;
         }
 
         _target.NotifyStyleEditStarting();
-        mutate(connector.Model);
-        connector.RaiseStyleChanged();
+        foreach (ConnectorViewModel connector in connectors)
+        {
+            mutate(connector.Model);
+            connector.RaiseStyleChanged();
+        }
+
         _target.MarkModified();
     }
 
