@@ -44,6 +44,7 @@ public static class ServiceCollectionExtensions
 
         // Keyboard shortcuts (JSON-configured keymap + chord dispatcher).
         services.AddSingleton<KeymapStatusViewModel>();
+        services.AddSingleton<ShortcutHintsViewModel>();
         services.AddSingleton<IKeymapService, KeymapService>();
         services.AddSingleton<KeymapActionRegistry>();
         services.AddSingleton<ChordInputDispatcher>();
