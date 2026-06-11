@@ -36,7 +36,8 @@ public sealed class ShellViewModel : ViewModelBase
         ToolboxViewModel toolbox,
         InspectorViewModel inspector,
         StylePaletteViewModel stylePalette,
-        KeymapStatusViewModel keymapStatus)
+        KeymapStatusViewModel keymapStatus,
+        ShortcutHintsViewModel shortcutHints)
     {
         _factory = factory;
         _files = files;
@@ -49,6 +50,10 @@ public sealed class ShellViewModel : ViewModelBase
         Inspector = inspector;
         StylePalette = stylePalette;
         KeymapStatus = keymapStatus;
+        ShortcutHints = shortcutHints;
+
+        // The armed-tool state lives on the toolbox; refresh the context hints when it changes.
+        Toolbox.PropertyChanged += OnToolboxPropertyChanged;
 
         NewCommand = new RelayCommand(OnNew);
         OpenCommand = new AsyncRelayCommand(OnOpenAsync);
@@ -94,6 +99,9 @@ public sealed class ShellViewModel : ViewModelBase
 
     /// <summary>Status-bar feedback for the keyboard-shortcut dispatcher (pending chord / messages).</summary>
     public KeymapStatusViewModel KeymapStatus { get; }
+
+    /// <summary>Status-bar list of shortcuts relevant to the current selection / armed tool.</summary>
+    public ShortcutHintsViewModel ShortcutHints { get; }
 
     public RelayCommand NewCommand { get; }
     public AsyncRelayCommand OpenCommand { get; }
@@ -186,6 +194,7 @@ public sealed class ShellViewModel : ViewModelBase
 
                 Inspector.SetTarget(field);
                 StylePalette.SetActiveDocument(field);
+                ShortcutHints.Refresh(field, Toolbox);
                 OnPropertyChanged(nameof(HasActiveDocument));
                 OnPropertyChanged(nameof(Title));
                 NotifyDocumentCommands();
@@ -399,6 +408,16 @@ public sealed class ShellViewModel : ViewModelBase
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         DuplicateCommand.NotifyCanExecuteChanged();
+        ShortcutHints.Refresh(ActiveDocument, Toolbox);
+    }
+
+    private void OnToolboxPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // RaiseModes() raises ActiveToolHint whenever a tool is armed or disarmed.
+        if (e.PropertyName == nameof(ToolboxViewModel.ActiveToolHint))
+        {
+            ShortcutHints.Refresh(ActiveDocument, Toolbox);
+        }
     }
 
     private void OnActiveDocumentPropertyChanged(object? sender, PropertyChangedEventArgs e)

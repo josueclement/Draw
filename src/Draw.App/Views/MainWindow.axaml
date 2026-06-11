@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Draw.App.ViewModels"
+        xmlns:input="using:Draw.App.Input"
         xmlns:v="using:Draw.App.Views"
         xmlns:ribbon="using:Carbon.Avalonia.Desktop.Controls.Ribbon"
         xmlns:dialog="using:Carbon.Avalonia.Desktop.Controls.ContentDialog"
@@ -418,6 +419,27 @@
                 <TextBlock Text="{Binding Toolbox.ActiveToolHint}" FontWeight="SemiBold" />
                 <!-- Keyboard chord feedback: the pending key sequence or a transient message. -->
                 <TextBlock Text="{Binding KeymapStatus.Display}" FontWeight="SemiBold" Opacity="0.8" />
+                <!-- Context-sensitive shortcut hints: a separator, then "gesture action" entries joined by
+                     middots. The set changes with the selection / armed tool (see ShortcutHintsViewModel). -->
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShortcutHints.HasHints}">
+                    <Border Width="1" Background="{DynamicResource CarbonBorderBrush}" Margin="0,1" />
+                    <ItemsControl ItemsSource="{Binding ShortcutHints.Hints}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="input:ShortcutHint">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="·" Opacity="0.5" IsVisible="{Binding ShowSeparator}" />
+                                    <TextBlock Text="{Binding Gesture}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Label}" Opacity="0.8" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
         </Border>
 
