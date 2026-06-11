@@ -14,6 +14,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
@@ -772,6 +773,12 @@ public partial class DiagramView : UserControl
         order.Items.Add(ArrangeItem("Send to back", vm.OrderCommand, ZOrderOperation.SendToBack, ToolGeometry("ToolIcon.SendToBack")));
 
         ContextMenu menu = new();
+        // Dim icons of disabled items so they read as disabled: Fluent grays the item's text but
+        // leaves the icon presenter's PathIcon at full colour. Opacity (not Foreground) because the
+        // icon's Foreground is theme-driven, whereas Opacity is unopposed by any local value.
+        Style disabledIcon = new(selector => selector.OfType<PathIcon>().Class(":disabled"));
+        disabledIcon.Setters.Add(new Setter(Visual.OpacityProperty, 0.4));
+        menu.Styles.Add(disabledIcon);
         menu.Items.Add(align);
         menu.Items.Add(order);
         menu.Items.Add(new Separator());
