@@ -229,6 +229,21 @@ Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bub
 suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
 a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.
 
+## Connector marquee selection + multi-select & bulk styling 🚧 (cross-cutting, pending visual verification)
+
+Connectors are now first-class for selection. The **marquee** grabs connectors whose line the box overlaps
+(`MarqueeGeometry.IntersectsPolyline`, a Liang–Barsky segment/AABB test over the connector's flattened route),
+alongside shapes. Selection is **unified**: **Shift+click** toggles any item (shape or connector) in/out and
+**Shift+drag** is an additive marquee, so shapes and connectors can be co-selected; **Ctrl** is unchanged
+(toggles shapes, still splits a connector on click). Connector selection moved from a single `SelectedConnector`
+to the per-connector `IsSelected` flag plus `SelectedConnectors`; `SelectedConnector` is now a computed
+"active connector" (the lone selected connector when no node is selected) that keeps the single-connector edit
+handles/snap engaging only for a focused connector. The Inspector shows **shared editors** (kind, route, stroke
+colour, thickness, and a new **dash** dropdown) for any connector selection and applies them to all selected,
+with per-connector fields (cardinality, labels) shown only for a lone selection; the Quick-Style palette and
+`DeleteSelected` likewise act on every selected connector in one undo step. See
+`documentation/plans/2026-06-11-connector-marquee-and-multiselect.md`.
+
 ## Code-review remediation ✅ (cross-cutting, complete)
 
 A full code-review pass (2026-06-10) produced a prioritized, impact-first refactor roadmap.
