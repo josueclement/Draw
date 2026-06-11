@@ -98,13 +98,18 @@ public sealed class ShortcutHintsViewModel : ViewModelBase
             ];
         }
 
-        // Idle: a document is open, the select tool is active, nothing is selected.
+        // Idle: a document is open, the select tool is active, nothing is selected. Surface the
+        // shape/connector menus (Shift+S/Shift+C) first, then the quick-add tool chords. (Wheel
+        // zoom/pan still works, just unshown.)
         return
         [
-            HintSpec.Keymap("menu.shapes", "Shape"),
-            HintSpec.Keymap("menu.connectors", "Connector"),
-            HintSpec.Mouse("Ctrl+Wheel", "Zoom"),
-            HintSpec.Mouse("Wheel", "Pan"),
+            HintSpec.Keymap("menu.shapes", "Shapes"),
+            HintSpec.Keymap("menu.connectors", "Connectors"),
+            HintSpec.Keymap("tool.shape.rectangle", "Rectangle"),
+            HintSpec.Keymap("tool.connector.association", "Association"),
+            HintSpec.Keymap("tool.classNode.class", "Class"),
+            HintSpec.Keymap("tool.classNode.interface", "Interface"),
+            HintSpec.Keymap("tool.entity", "Table"),
         ];
     }
 

@@ -44,6 +44,12 @@ public static class DefaultKeymap
         { "keys": "Shift+S", "action": "menu.shapes" },
         { "keys": "Shift+C", "action": "menu.connectors" },
 
+        { "keys": "a r", "action": "tool.shape.rectangle" },
+        { "keys": "a a", "action": "tool.connector.association" },
+        { "keys": "a c", "action": "tool.classNode.class" },
+        { "keys": "a i", "action": "tool.classNode.interface" },
+        { "keys": "a t", "action": "tool.entity" },
+
         { "keys": "z i", "action": "view.zoomIn" },
         { "keys": "z o", "action": "view.zoomOut" },
         { "keys": "z r", "action": "view.zoomReset" },
@@ -68,7 +74,7 @@ public static class DefaultKeymap
     //
     // "keys" is either
     //   * a single gesture with optional modifiers, e.g. "Ctrl+Shift+S", "Delete", "F2"; or
-    //   * a multi-key chord: space-separated keystrokes, e.g. "a s r" (press a, then s, then r).
+    //   * a multi-key chord: space-separated keystrokes, e.g. "d r" (press d, then r).
     // Modifiers: Ctrl/Control, Shift, Alt, Meta (Cmd/Win). Bare letters/digits are case-insensitive and
     // ignore Shift. Key names follow Avalonia's Key enum (A..Z, D0..D9, Oem*, Delete, Escape, F1..F12, ...).
     //
