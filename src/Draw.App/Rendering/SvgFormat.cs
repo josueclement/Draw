@@ -1,5 +1,5 @@
-using System.Globalization;
 using Avalonia.Media;
+using Draw.Diagramming.Formatting;
 
 namespace Draw.App.Rendering;
 
@@ -7,16 +7,10 @@ namespace Draw.App.Rendering;
 public static class SvgFormat
 {
     /// <summary>Formats a coordinate/length with invariant culture and at most three decimals.</summary>
-    public static string Num(double value)
-        => System.Math.Round(value, 3).ToString("0.###", CultureInfo.InvariantCulture);
+    public static string Num(double value) => SvgText.Num(value);
 
     /// <summary>Escapes text for use as SVG element content or an attribute value.</summary>
-    public static string Escape(string text) => text
-        .Replace("&", "&amp;")
-        .Replace("<", "&lt;")
-        .Replace(">", "&gt;")
-        .Replace("\"", "&quot;")
-        .Replace("'", "&apos;");
+    public static string Escape(string text) => SvgText.Escape(text);
 
     /// <summary>The solid colour of a brush, or null for a non-solid/absent brush.</summary>
     public static Color? ColorOf(IBrush? brush) => brush is ISolidColorBrush solid ? solid.Color : null;

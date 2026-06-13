@@ -65,8 +65,8 @@ public partial class MainWindow : Window
         shell.ExportSvgRequested += OnExportSvgRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
         WireToolDropdowns(shell.Toolbox);
-        WireAlignDropdown();
-        WireAlignToReferenceDropdown();
+        WireAlignmentDropdown(AlignDropDown, m => _shell?.ActiveDocument?.AlignSelected(m));
+        WireAlignmentDropdown(AlignToReferenceDropDown, m => _shell?.ActiveDocument?.AlignSelectedToReference(m));
         WireToolMenus(shell.Toolbox);
         shell.ToolMenuRequested += OnToolMenuRequested;
         shell.PropertyChanged += OnShellPropertyChanged;
@@ -210,45 +210,25 @@ public partial class MainWindow : Window
         }
     }
 
-    // The Align dropdown is one-shot (not an armed tool), so its shared command resolves the active
-    // document at click time — that way it follows tab switches without re-wiring. Each item's
+    // The Align dropdowns are one-shot (not armed tools), so their shared command resolves the active
+    // document at click time — that way they follow tab switches without re-wiring. Each item's
     // AlignmentMode arrives via the XAML CommandParameter; enable/disable is handled by the button's
     // IsEnabled binding to ActiveDocument.CanAlignSelection.
-    private void WireAlignDropdown()
+    private static void WireAlignmentDropdown(RibbonDropDownButton dropDown, Action<AlignmentMode> apply)
     {
-        RelayCommand<AlignmentMode> align = new(mode =>
+        RelayCommand<AlignmentMode> command = new(mode =>
         {
             if (mode is { } m)
             {
-                _shell?.ActiveDocument?.AlignSelected(m);
+                apply(m);
             }
 
-            AlignDropDown.IsDropDownOpen = false;
+            dropDown.IsDropDownOpen = false;
         });
 
-        foreach (RibbonMenuItem item in AlignDropDown.Items)
+        foreach (RibbonMenuItem item in dropDown.Items)
         {
-            item.Command = align;
-        }
-    }
-
-    // Mirrors WireAlignDropdown for the "Align to reference" dropdown: one shared command resolves the
-    // active document at click time; each item's AlignmentMode arrives via the XAML CommandParameter.
-    private void WireAlignToReferenceDropdown()
-    {
-        RelayCommand<AlignmentMode> alignToRef = new(mode =>
-        {
-            if (mode is { } m)
-            {
-                _shell?.ActiveDocument?.AlignSelectedToReference(m);
-            }
-
-            AlignToReferenceDropDown.IsDropDownOpen = false;
-        });
-
-        foreach (RibbonMenuItem item in AlignToReferenceDropDown.Items)
-        {
-            item.Command = alignToRef;
+            item.Command = command;
         }
     }
 
@@ -333,17 +313,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
-        {
-            await _exporter.SaveAsync(bitmap, path, FormatFromPath(path));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            if (_dialogs is not null)
-            {
-                await _dialogs.ShowErrorAsync("Export failed", ex.Message);
-            }
-        }
+        await RunWithErrorDialogAsync("Export failed", () => _exporter.SaveAsync(bitmap, path, FormatFromPath(path)));
     }
 
     private async void OnExportSvgRequested(object? sender, EventArgs e)
@@ -371,17 +341,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        try
-        {
-            await File.WriteAllTextAsync(path, svg);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            if (_dialogs is not null)
-            {
-                await _dialogs.ShowErrorAsync("Export failed", ex.Message);
-            }
-        }
+        await RunWithErrorDialogAsync("Export failed", () => File.WriteAllTextAsync(path, svg));
     }
 
     private async void OnCopyImageRequested(object? sender, EventArgs e)
@@ -403,15 +363,24 @@ public partial class MainWindow : Window
             return;
         }
 
+        await RunWithErrorDialogAsync("Copy failed", () => _exporter.CopyToClipboardAsync(bitmap));
+    }
+
+    // Shared tail for the export/copy actions: run the I/O and surface any expected failure in an error
+    // dialog. The filter is the union of what the individual actions can throw (file I/O plus the
+    // clipboard's invalid-operation/not-supported cases); unexpected exceptions still propagate.
+    private async Task RunWithErrorDialogAsync(string errorTitle, Func<Task> action)
+    {
         try
         {
-            await _exporter.CopyToClipboardAsync(bitmap);
+            await action();
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+            or InvalidOperationException or NotSupportedException)
         {
             if (_dialogs is not null)
             {
-                await _dialogs.ShowErrorAsync("Copy failed", ex.Message);
+                await _dialogs.ShowErrorAsync(errorTitle, ex.Message);
             }
         }
     }

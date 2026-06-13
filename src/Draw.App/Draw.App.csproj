@@ -27,6 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Shipped defaults; Host.CreateApplicationBuilder loads it from the app's working directory. -->
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Draw.Model\Draw.Model.csproj" />
     <ProjectReference Include="..\Draw.Diagramming\Draw.Diagramming.csproj" />
   </ItemGroup>
