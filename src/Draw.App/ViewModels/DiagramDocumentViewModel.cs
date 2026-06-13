@@ -23,7 +23,7 @@ using Draw.Model.Styling;
 namespace Draw.App.ViewModels;
 
 /// <summary>Editor state and mutating operations for one open diagram (one tab).</summary>
-public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDocumentEditContext, IDisposable
+public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDocumentEditContext, IViewportHost, IDisposable
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
@@ -36,15 +36,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private readonly ZOrderCoordinator _zOrderCoordinator;
     private readonly AlignmentCoordinator _alignmentCoordinator;
     private readonly SelectionCoordinator _selectionCoordinator;
+    private readonly ViewportCoordinator _viewportCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
-
-    // Ribbon View-tab zoom step. Zoom bounds live in EditorOptions (the single source) and are surfaced
-    // via MinZoom/MaxZoom below so the Ctrl+wheel clamp in DiagramView reads the same values.
-    private const double ZoomStep = 1.2d;
-
-    // Padding (world units) kept around content when fitting it to the viewport.
-    private const double FitMargin = 40d;
 
     public DiagramDocumentViewModel(
         DiagramDocument document,
@@ -69,6 +63,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _zOrderCoordinator = new ZOrderCoordinator(this);
         _alignmentCoordinator = new AlignmentCoordinator(this);
         _selectionCoordinator = new SelectionCoordinator(this);
+        _viewportCoordinator = new ViewportCoordinator(this);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
         _theme.ThemeChanged += OnThemeChanged;
@@ -87,7 +82,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             _ => HasNodeSelection);
         // Also selection-gated (CanExecute depends on node count) and notified in
         // RaiseSelectionChanged, so it likewise must exist before RebuildNodes().
-        FitToContentCommand = new RelayCommand(FitToContent, () => Nodes.Count > 0);
+        FitToContentCommand = new RelayCommand(_viewportCoordinator.FitToContent, () => Nodes.Count > 0);
         // Relative-alignment commands; selection-gated and notified in RaiseSelectionChanged, so they
         // must exist before RebuildNodes() too.
         SetReferenceCommand = new RelayCommand(SetReference, () => CanSetReference);
@@ -100,14 +95,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         RebuildConnectors();
         _cleanSnapshot = _serializer.Serialize(_document);
 
-        ZoomInCommand = new RelayCommand(() => Zoom = Math.Clamp(Zoom * ZoomStep, MinZoom, MaxZoom));
-        ZoomOutCommand = new RelayCommand(() => Zoom = Math.Clamp(Zoom / ZoomStep, MinZoom, MaxZoom));
-        ZoomResetCommand = new RelayCommand(() =>
-        {
-            Zoom = 1d;
-            PanX = 0d;
-            PanY = 0d;
-        });
+        ZoomInCommand = new RelayCommand(_viewportCoordinator.ZoomIn);
+        ZoomOutCommand = new RelayCommand(_viewportCoordinator.ZoomOut);
+        ZoomResetCommand = new RelayCommand(_viewportCoordinator.ZoomReset);
     }
 
     public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
@@ -491,28 +481,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         return bounds;
     }
 
-    /// <summary>Zooms/pans so all content fits centred in the viewport, never enlarging past 100%.</summary>
-    private void FitToContent()
-    {
-        if (GetContentBounds() is not { } content || ViewportWidth <= 0 || ViewportHeight <= 0)
-        {
-            return;
-        }
-
-        Rect2D b = content.Inflate(FitMargin);
-        double fit = Math.Min(ViewportWidth / b.Width, ViewportHeight / b.Height);
-        double zoom = Math.Clamp(Math.Min(fit, 1d), MinZoom, MaxZoom);
-        Zoom = zoom;
-        PanX = (ViewportWidth / 2d) - (b.Center.X * zoom);
-        PanY = (ViewportHeight / 2d) - (b.Center.Y * zoom);
-    }
-
-    private Point2D ViewportCenterWorld()
-    {
-        double zoom = Zoom <= 0 ? 1d : Zoom;
-        return new Point2D(((ViewportWidth / 2d) - PanX) / zoom, ((ViewportHeight / 2d) - PanY) / zoom);
-    }
-
     public void DeleteSelected()
     {
         List<NodeViewModelBase> selectedNodes = SelectedNodes.ToList();
@@ -828,7 +796,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     void IDocumentEditContext.RaiseSelectionChanged() => RaiseSelectionChanged();
 
-    Point2D IDocumentEditContext.ViewportCenterWorld() => ViewportCenterWorld();
+    Point2D IDocumentEditContext.ViewportCenterWorld() => _viewportCoordinator.ViewportCenterWorld();
 
     public IReadOnlyList<string> GetTypeSuggestions()
     {

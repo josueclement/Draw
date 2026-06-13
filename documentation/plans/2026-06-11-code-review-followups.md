@@ -36,9 +36,9 @@ pass should look.
 
 ## 2. Remaining findings backlog (carried over; all Low/Nit unless noted)
 
-**Status (2026-06-13): D6, D7, P3, S1, B4, B5 are done** (unstaged on the same branch alongside the
-Tier-C work; build is 0-warning in Debug + Release, tests 299 → **314** green). **S3 remains open**
-(optional). Resolution notes below.
+**Status (2026-06-13): all of §2 is done** — D6, D7, P3, S1, B4, B5 **and S3** (unstaged on the same
+branch alongside the Tier-C work; build is 0-warning in Debug + Release, tests 299 → **321** green).
+Resolution notes below.
 
 | # | Finding | Sev | Status | Resolution |
 |---|---|---|---|---|
@@ -48,7 +48,7 @@ Tier-C work; build is 0-warning in Debug + Release, tests 299 → **314** green)
 | 4 | **S1** some service files hold multiple top-level types vs one-type-per-file in Model/Diagramming | Nit | ✅ done | Split every `App/Services/I*.cs` to one-type-per-file (interface, impl, and enums in their own files), matching the `Undo/IUndoService.cs`+`MementoUndoService.cs` precedent. |
 | 5 | **B4** `WarningsAsErrors=nullable` only — analyzer (CAxxxx) warnings don't fail the build | Low | ✅ done | `Directory.Build.props` now `TreatWarningsAsErrors=true`. Verified clean in Debug + Release; **no `WarningsNotAsErrors` exemptions needed**. |
 | 6 | **B5** `IConfiguration`/`IOptions` wired but no `appsettings.json` ships | Nit | ✅ done | Shipped `src/Draw.App/appsettings.json` mirroring the in-code defaults (`Editor`/`RecentFiles`/`Keymap`/`Undo`), copied to output via `Content … PreserveNewest`. Defaults unchanged, so behaviour is identical. |
-| 7 | **S3** `MainWindow.axaml` is large (~860 lines, declarative ribbon/menu) | Nit | ⬜ open | Optional; the two static tool menus are the verbose part. Left for a future pass. |
+| 7 | **S3** `MainWindow.axaml` is large (~860 lines, declarative ribbon/menu) | Nit | ✅ done | Moved the two static tool menus (~95 lines) into `Resources/ToolMenus.axaml`, merged into `Window.Resources`; resource keys + code-behind `FindResource` wiring unchanged. **Build-only verified — confirm the Shift+S/Shift+C menus still open with correct icons in the GUI pass (§1).** |
 
 ---
 
@@ -56,10 +56,20 @@ Tier-C work; build is 0-warning in Debug + Release, tests 299 → **314** green)
 
 A1 (god `DiagramDocumentViewModel`) was *advanced*, not finished: the node-creation factory
 (`PlaceNode`), connector hit-test geometry (`SegmentGeometry`) and a `SelectionCoordinator` were
-extracted. **Still in the VM** and candidate for a future pass: viewport/zoom/pan/fit, undo
-orchestration, style application, theme handling, and the full-collection rebuild. The review framed
-A1 as "keep peeling, not rewrite" — pursue only if the VM's churn/size warrants it; each extraction is
-view/VM (no headless test net), so it needs the same manual-GUI discipline as Phases 4–5.
+extracted.
+
+**2026-06-13 — viewport/zoom/pan/fit peeled out.** The pure arithmetic moved to a headless-tested
+`Draw.Diagramming/Geometry/ViewportMath` (`FitToContent` + `CenterToWorld`, neighbour to the existing
+`ViewportScrollMath`; `ViewportMathTests` covers it), and the zoom/pan/fit *operations* moved to a
+`ViewportCoordinator` over a new `IViewportHost` seam — mirroring `SelectionCoordinator`. The VM keeps
+the bound `Zoom`/`PanX`/`PanY`/`ViewportWidth/Height` properties (so the `DiagramView` binding contract
+is untouched) and its zoom commands now forward to the coordinator. **Build-only verified — fit-to-
+content, zoom in/out/reset, Ctrl+wheel zoom and paste-centring need the §1 GUI pass.**
+
+**Still in the VM** and candidate for a future pass: undo orchestration, style application, theme
+handling, and the full-collection rebuild. The review framed A1 as "keep peeling, not rewrite" —
+pursue only if the VM's churn/size warrants it; each remaining extraction is view/VM (no headless test
+net), so it needs the same manual-GUI discipline as Phases 4–5.
 
 ---
 
