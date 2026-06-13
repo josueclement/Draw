@@ -1,7 +1,10 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Draw.Model.Connectors;
 using Draw.Model.Documents;
+using Draw.Model.Nodes;
+using Draw.Model.Styling;
 
 namespace Draw.Model.Serialization;
 
@@ -67,16 +70,8 @@ public sealed class JsonDocumentSerializer : IDocumentSerializer
     /// <summary>
     /// Forward-compatibility seam: brings a document written by an older schema up to the current
     /// shape before it reaches the rest of the app, then stamps it to <see cref="DocumentSchema.CurrentVersion"/>.
-    /// No transforms are registered yet (nothing predates version 1), so today this only re-stamps the
-    /// version. Before the first schema bump, add the upgrades here — walk one version at a time, e.g.:
-    /// <code>
-    /// switch (document.SchemaVersion)
-    /// {
-    ///     case 1: UpgradeV1ToV2(document); goto case 2;
-    ///     case 2: UpgradeV2ToV3(document); goto case 3;
-    /// }
-    /// </code>
-    /// so an old file is migrated rather than silently mishandled.
+    /// Upgrades run one version at a time, so a multi-version-old file steps through each transform; add
+    /// the next as <c>if (document.SchemaVersion &lt;= N) UpgradeVNToVN1(document);</c> below the last.
     /// </summary>
     private static void Migrate(DiagramDocument document)
     {
@@ -85,8 +80,43 @@ public sealed class JsonDocumentSerializer : IDocumentSerializer
             return;
         }
 
-        // No migrations registered yet (CurrentVersion == 1). Register version-stepped upgrades above
-        // this line as the schema evolves; the final step always stamps to the current version.
+        if (document.SchemaVersion <= 1)
+        {
+            UpgradeV1ToV2(document);
+        }
+
+        // The final step always stamps to the current version.
         document.SchemaVersion = DocumentSchema.CurrentVersion;
+    }
+
+    /// <summary>
+    /// v1 → v2: v1 stored the theme-following default fill/text as their literal colour values (the old
+    /// value-equality sentinel); v2 represents "follow the theme" as a null colour. Null any colour that
+    /// exactly equals a legacy default so a migrated document keeps following the theme rather than pinning
+    /// that colour. (A v1 user who deliberately picked exactly the default colour as a custom value can't
+    /// be distinguished — but v1 couldn't represent that distinctly either; this is the ambiguity v2 removes.)
+    /// </summary>
+    private static void UpgradeV1ToV2(DiagramDocument document)
+    {
+        foreach (NodeBase node in document.Nodes)
+        {
+            if (node.Style.Fill == ShapeStyle.DefaultFill)
+            {
+                node.Style.Fill = null;
+            }
+
+            if (node.Style.Font.Color == FontSpec.DefaultColor)
+            {
+                node.Style.Font.Color = null;
+            }
+        }
+
+        foreach (Connector connector in document.Connectors)
+        {
+            if (connector.Style.Font.Color == FontSpec.DefaultColor)
+            {
+                connector.Style.Font.Color = null;
+            }
+        }
     }
 }

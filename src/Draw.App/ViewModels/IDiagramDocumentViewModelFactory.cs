@@ -25,6 +25,7 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
     private readonly IOptions<UndoOptions> _undoOptions;
     private readonly IThemeService _theme;
     private readonly IClipboardService _clipboard;
+    private readonly NodeKindRegistry _nodeKinds;
 
     public DiagramDocumentViewModelFactory(
         IDocumentSerializer serializer,
@@ -32,7 +33,8 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
         IOptions<EditorOptions> editorOptions,
         IOptions<UndoOptions> undoOptions,
         IThemeService theme,
-        IClipboardService clipboard)
+        IClipboardService clipboard,
+        NodeKindRegistry nodeKinds)
     {
         _serializer = serializer;
         _router = router;
@@ -40,6 +42,7 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
         _undoOptions = undoOptions;
         _theme = theme;
         _clipboard = clipboard;
+        _nodeKinds = nodeKinds;
     }
 
     public DiagramDocumentViewModel Create(DiagramDocument document, string? filePath)
@@ -51,6 +54,7 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
             _editorOptions.Value,
             _theme,
             _clipboard,
+            _nodeKinds,
             filePath);
 
     public DiagramDocumentViewModel CreateNew(DiagramType type)

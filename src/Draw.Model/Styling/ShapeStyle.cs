@@ -3,11 +3,13 @@ namespace Draw.Model.Styling;
 /// <summary>Fill, stroke, font and text alignment for a shape node.</summary>
 public sealed class ShapeStyle
 {
-    // Default fill: Carbon light-theme "surface" tone (#EBEDF0). Doubles as the sentinel the App
-    // layer uses to detect an un-customised fill and swap in the theme-aware brush (dark: #2B2D30).
+    // Default fill: Carbon light-theme "surface" tone (#EBEDF0). The concrete fallback used when Fill is
+    // null and no theme brush is available (e.g. export). Since v2, "follow the theme default" is
+    // represented explicitly by a null Fill — not by value-equality on this constant.
     public static readonly ArgbColor DefaultFill = new(0xFF, 0xEB, 0xED, 0xF0);
 
-    public ArgbColor Fill { get; set; } = DefaultFill;
+    /// <summary>The fill colour, or <c>null</c> to follow the active theme's default node fill.</summary>
+    public ArgbColor? Fill { get; set; }
 
     public StrokeStyle Stroke { get; set; } = new();
 

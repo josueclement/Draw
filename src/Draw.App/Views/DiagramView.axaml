@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Draw.App.ViewModels"
              xmlns:nodes="using:Draw.Model.Nodes"
+             xmlns:views="using:Draw.App.Views"
              xmlns:pia="using:PhosphorIconsAvalonia.Markup"
              x:Class="Draw.App.Views.DiagramView"
              x:DataType="vm:DiagramDocumentViewModel"
@@ -79,6 +80,9 @@
                         <Setter Property="ZIndex" Value="{ReflectionBinding ZIndex}" />
                     </Style>
                 </ItemsControl.Styles>
+                <!-- One DataTemplate per NodeViewModelBase subtype. This is the one node-kind site the
+                     compiler can't enforce (a missing template renders a fallback string at runtime, not a
+                     build error) — keep it in sync with NodeKindRegistry when adding a kind. -->
                 <ItemsControl.DataTemplates>
                     <DataTemplate DataType="vm:ShapeNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
@@ -325,7 +329,7 @@
                     <DataTemplate DataType="vm:ConnectorViewModel">
                         <Canvas>
                             <Path Data="{Binding Geometry}" Stretch="None"
-                                  Stroke="#663D7EFF" StrokeThickness="6"
+                                  Stroke="{x:Static views:DiagramView.SelectionHaloBrush}" StrokeThickness="6"
                                   IsVisible="{Binding IsSelected}" />
                             <Path Data="{Binding Geometry}" Stretch="None"
                                   Stroke="{Binding Stroke}"
@@ -369,7 +373,7 @@
                 BorderBrush="{DynamicResource CarbonBorderBrush}"
                 BorderThickness="0,0,0,1" Padding="8,4">
             <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                <Ellipse Width="8" Height="8" Fill="#F2A93B" VerticalAlignment="Center" />
+                <Ellipse Width="8" Height="8" Fill="{x:Static views:DiagramView.ReferenceAccentBrush}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding ReferenceStatusText}" VerticalAlignment="Center" />
                 <Button Content="Clear reference" Command="{Binding ClearReferenceCommand}" Padding="8,2" />
             </StackPanel>

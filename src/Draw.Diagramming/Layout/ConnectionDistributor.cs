@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Draw.Diagramming.Geometry;
 using Draw.Model.Primitives;
 
 namespace Draw.Diagramming.Layout;
@@ -121,7 +122,7 @@ public static class ConnectionDistributor
             {
                 Point2D anchor = anchorFor(group.Key.Side, i, list.Count);
                 PinningEnd<TEnd> end = list[i].End;
-                if (end.CurrentAnchor is { } current && current == anchor)
+                if (end.CurrentAnchor is { } current && current.ApproximatelyEquals(anchor, GeometryTolerance.Distance))
                 {
                     continue; // already at the computed anchor — no change, no undo
                 }

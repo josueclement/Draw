@@ -59,6 +59,12 @@ public interface IDocumentEditContext
     /// <summary>Marks the document dirty.</summary>
     void MarkModified();
 
+    /// <summary>The z-index one above the current top of the ordinary band (0 for an empty document).</summary>
+    int NextZIndex();
+
+    /// <summary>The z-index one below the current bottom — the boundary (background) band.</summary>
+    int NextBackgroundZIndex();
+
     /// <summary>Re-raises the selection-changed notifications (command CanExecute + bound state).</summary>
     void RaiseSelectionChanged();
 

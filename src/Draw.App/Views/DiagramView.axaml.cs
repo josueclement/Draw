@@ -33,12 +33,19 @@ public partial class DiagramView : UserControl
 {
     private const double HandleScreenSize = 10d;
 
-    // Selection accent shared by the resize handles, marquee and connect-preview.
-    private static readonly Color SelectionAccentColor = Color.Parse("#3D7EFF");
-    private static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
+    // Selection accent shared by the resize handles, marquee and connect-preview. These are the single
+    // source of truth for the accent colours; DiagramView.axaml references the brushes via x:Static so
+    // the hex values aren't duplicated in markup. public so the compiled XAML's x:Static can resolve them.
+    public static readonly Color SelectionAccentColor = Color.FromRgb(0x3D, 0x7E, 0xFF);
+    public static readonly SolidColorBrush SelectionAccentBrush = new(SelectionAccentColor);
+
+    // Same accent at reduced alpha: the selected-connector halo (0x66) and the marquee fill (40).
+    public static readonly SolidColorBrush SelectionHaloBrush = new(Color.FromArgb(0x66, 0x3D, 0x7E, 0xFF));
+    public static readonly SolidColorBrush MarqueeFillBrush = new(Color.FromArgb(40, 0x3D, 0x7E, 0xFF));
 
     // Reference accent (amber) — distinguishes the fixed alignment reference from the blue selection.
-    private static readonly SolidColorBrush ReferenceAccentBrush = new(Color.Parse("#F2A93B"));
+    public static readonly Color ReferenceAccentColor = Color.FromRgb(0xF2, 0xA9, 0x3B);
+    public static readonly SolidColorBrush ReferenceAccentBrush = new(ReferenceAccentColor);
 
     // A right-button press that travels less than this (screen px, squared) before release is treated as
     // a click that opens the arrange context menu rather than a pan drag.
@@ -49,23 +56,23 @@ public partial class DiagramView : UserControl
     // Screen-space, so the feel is consistent at any zoom.
     private const double MoveDragThresholdSquared = 16d; // 4px
 
-    private readonly List<Rectangle> _handles = new();
-    private readonly List<Control> _connectorHandles = new();
-    private readonly List<Rectangle> _referenceOutlines = new();
-
-    // The zoom the overlay handles were last built/repositioned for. Lets UpdateTransform skip handle
-    // work on a pan (they ride the world transform) and resize+reposition only when zoom changes.
-    private double _lastHandleZoom = 1d;
     private DiagramDocumentViewModel? _vm;
 
     // All scalar + transient state for the in-progress pointer gesture (see CanvasGestureState).
     private readonly CanvasGestureState _gesture = new();
     private ToolboxViewModel? _toolbox;
 
-    // Connector-edit gestures (endpoint/waypoint/label drags) and scrollbar sync live in these helpers;
-    // both are created in the constructor, once the named controls exist.
+    // Connector-edit gestures (endpoint/waypoint/label drags), the selection overlay (handles + reference
+    // outlines), and scrollbar sync live in these helpers; all are created in the constructor, once the
+    // named controls exist.
     private readonly ConnectorEditController _connectorEdit;
+    private readonly OverlayController _overlayController;
     private readonly ViewportScrollController _scroll;
+
+    // Inline row editing (double-tap a row → edit; Enter adds next; Tab navigates; Alt+↑/↓ reorders),
+    // shared by class members and entity columns through one generic controller per row kind.
+    private readonly InlineRowEditController<ClassMemberViewModel> _memberEditor;
+    private readonly InlineRowEditController<EntityColumnViewModel> _columnEditor;
 
     // Arrow-key nudge coalescing: one undo entry per contiguous run of nudges on the same selection.
     private bool _arrowNudgeUndoCaptured;
@@ -75,8 +82,20 @@ public partial class DiagramView : UserControl
     {
         InitializeComponent();
 
+        // Construct the overlay controller before the connector-edit controller: the latter is wired with
+        // the RepositionOverlay/RebuildOverlay callbacks, which delegate to the overlay controller.
+        _overlayController = new OverlayController(Overlay, HandleScreenSize, () => Zoom, SelectionAccentBrush, ReferenceAccentBrush);
         _connectorEdit = new ConnectorEditController(_gesture, EnsureUndoCaptured, RepositionOverlay, RebuildOverlay);
         _scroll = new ViewportScrollController(HScroll, VScroll, FitCorner);
+
+        _memberEditor = new InlineRowEditController<ClassMemberViewModel>(
+            member => OwningNode(member) is { } node ? new ClassMemberRowOwner(node) : null,
+            (row, selectAll) => FocusEditorFor(row, selectAll),
+            () => Focus());
+        _columnEditor = new InlineRowEditController<EntityColumnViewModel>(
+            column => OwningEntity(column) is { } node ? new EntityColumnRowOwner(node) : null,
+            (row, selectAll) => FocusEditorFor(row, selectAll),
+            () => Focus());
 
         Viewport.PointerPressed += OnPointerPressed;
         Viewport.PointerMoved += OnPointerMoved;
@@ -188,7 +207,7 @@ public partial class DiagramView : UserControl
 
         // Pan rides the world transform for free, so only a zoom change needs the overlay handles
         // resized/repositioned; the scrollbars track pan either way.
-        if (zoom != _lastHandleZoom)
+        if (zoom != _overlayController.LastZoom)
         {
             RepositionOverlay();
         }
@@ -836,7 +855,7 @@ public partial class DiagramView : UserControl
         {
             Point worldBefore = ScreenToWorld(screen);
             double factor = e.Delta.Y > 0 ? 1.15 : 1d / 1.15;
-            double newZoom = Math.Clamp(_vm.Zoom * factor, 0.1, 8d);
+            double newZoom = Math.Clamp(_vm.Zoom * factor, _vm.MinZoom, _vm.MaxZoom);
             _vm.Zoom = newZoom;
             _vm.PanX = screen.X - (worldBefore.X * newZoom);
             _vm.PanY = screen.Y - (worldBefore.Y * newZoom);
@@ -1090,74 +1109,28 @@ public partial class DiagramView : UserControl
 
     private void OnMemberDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (_vm is null || (sender as Control)?.DataContext is not ClassMemberViewModel member)
+        if (_vm is not null && (sender as Control)?.DataContext is ClassMemberViewModel member)
         {
-            return;
+            _memberEditor.BeginEdit(member);
+            e.Handled = true;
         }
-
-        // Undo is captured lazily on commit (only if the text actually changed).
-        member.BeginEdit();
-        e.Handled = true;
-        TryFocusMemberEditor(member, selectAll: true);
     }
 
     private void OnMemberEditCommitted(object? sender, RoutedEventArgs e)
     {
-        if (_vm is null || (sender as Control)?.DataContext is not ClassMemberViewModel member)
+        if (_vm is not null && (sender as Control)?.DataContext is ClassMemberViewModel member)
         {
-            return;
-        }
-
-        if (member.IsEditing)
-        {
-            member.CommitEdit();
-        }
-
-        // After focus settles, drop an abandoned blank — unless focus moved to another member
-        // editor of the same node (the Enter-adds-next / Tab flow keeps the session alive).
-        if (OwningNode(member) is { } node)
-        {
-            Dispatcher.UIThread.Post(
-                () =>
-                {
-                    if (!IsEditingMemberOf(node))
-                    {
-                        node.DiscardEmptyNewMembers();
-                    }
-                },
-                DispatcherPriority.Background);
+            _memberEditor.CommitOnLostFocus(member);
         }
     }
 
     private void OnMemberEditKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_vm is null
-            || sender is not TextBox { DataContext: ClassMemberViewModel member }
-            || OwningNode(member) is not { } node)
+        if (_vm is not null
+            && sender is TextBox { DataContext: ClassMemberViewModel member }
+            && _memberEditor.HandleKey(member, e.Key, e.KeyModifiers))
         {
-            return;
-        }
-
-        switch (e.Key)
-        {
-            case Key.Enter:
-                CommitAndAddNext(node, member);
-                e.Handled = true;
-                break;
-            case Key.Tab:
-                NavigateMember(node, member, e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : +1);
-                e.Handled = true;
-                break;
-            case Key.Up when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
-                node.MoveMember(member, -1);
-                TryFocusMemberEditor(member, selectAll: false);
-                e.Handled = true;
-                break;
-            case Key.Down when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
-                node.MoveMember(member, +1);
-                TryFocusMemberEditor(member, selectAll: false);
-                e.Handled = true;
-                break;
+            e.Handled = true;
         }
     }
 
@@ -1245,51 +1218,6 @@ public partial class DiagramView : UserControl
         }
     }
 
-    private void CommitAndAddNext(ClassNodeViewModel node, ClassMemberViewModel member)
-    {
-        member.CommitEdit();
-        if (string.IsNullOrWhiteSpace(member.Name))
-        {
-            // Enter on an empty row finishes entry rather than spawning another blank.
-            node.DiscardEmptyNewMembers();
-            Focus();
-            return;
-        }
-
-        (_, int index) = node.Locate(member);
-        AddMemberAndEdit(node, member.Model.Kind, index + 1);
-    }
-
-    private void NavigateMember(ClassNodeViewModel node, ClassMemberViewModel member, int delta)
-    {
-        member.CommitEdit();
-        if (string.IsNullOrWhiteSpace(member.Name))
-        {
-            node.DiscardEmptyNewMembers();
-            Focus();
-            return;
-        }
-
-        (System.Collections.ObjectModel.ObservableCollection<ClassMemberViewModel> list, int index) = node.Locate(member);
-        int next = index + delta;
-        if (index < 0 || next < 0)
-        {
-            Focus();
-            return;
-        }
-
-        if (next >= list.Count)
-        {
-            // Past the end → behave like Enter and add a fresh member of the same kind.
-            AddMemberAndEdit(node, member.Model.Kind, index: -1);
-            return;
-        }
-
-        ClassMemberViewModel target = list[next];
-        target.BeginEdit();
-        TryFocusMemberEditor(target, selectAll: true);
-    }
-
     private void AddMemberAndEdit(ClassNodeViewModel node, MemberKind kind, int index)
     {
         ClassMemberViewModel vm = node.InsertNewMember(kind, index);
@@ -1336,78 +1264,32 @@ public partial class DiagramView : UserControl
 
     private static ClassMemberViewModel? MemberOf(object? sender) => (sender as Control)?.DataContext as ClassMemberViewModel;
 
-    private static bool IsEditingMemberOf(ClassNodeViewModel node) =>
-        node.PrimaryMembers.Concat(node.Operations).Any(m => m.IsEditing);
-
-    // --- Entity (ER table) column inline editing — mirrors the class-member handlers above. ---
+    // --- Entity (ER table) column inline editing — uses the same InlineRowEditController as members. ---
 
     private void OnColumnDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (_vm is null || (sender as Control)?.DataContext is not EntityColumnViewModel column)
+        if (_vm is not null && (sender as Control)?.DataContext is EntityColumnViewModel column)
         {
-            return;
+            _columnEditor.BeginEdit(column);
+            e.Handled = true;
         }
-
-        column.BeginEdit();
-        e.Handled = true;
-        TryFocusColumnEditor(column, selectAll: true);
     }
 
     private void OnColumnEditCommitted(object? sender, RoutedEventArgs e)
     {
-        if (_vm is null || (sender as Control)?.DataContext is not EntityColumnViewModel column)
+        if (_vm is not null && (sender as Control)?.DataContext is EntityColumnViewModel column)
         {
-            return;
-        }
-
-        if (column.IsEditing)
-        {
-            column.CommitEdit();
-        }
-
-        if (OwningEntity(column) is { } node)
-        {
-            Dispatcher.UIThread.Post(
-                () =>
-                {
-                    if (!IsEditingColumnOf(node))
-                    {
-                        node.DiscardEmptyNewColumns();
-                    }
-                },
-                DispatcherPriority.Background);
+            _columnEditor.CommitOnLostFocus(column);
         }
     }
 
     private void OnColumnEditKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_vm is null
-            || sender is not TextBox { DataContext: EntityColumnViewModel column }
-            || OwningEntity(column) is not { } node)
+        if (_vm is not null
+            && sender is TextBox { DataContext: EntityColumnViewModel column }
+            && _columnEditor.HandleKey(column, e.Key, e.KeyModifiers))
         {
-            return;
-        }
-
-        switch (e.Key)
-        {
-            case Key.Enter:
-                CommitAndAddNextColumn(node, column);
-                e.Handled = true;
-                break;
-            case Key.Tab:
-                NavigateColumn(node, column, e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -1 : +1);
-                e.Handled = true;
-                break;
-            case Key.Up when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
-                node.MoveColumn(column, -1);
-                TryFocusColumnEditor(column, selectAll: false);
-                e.Handled = true;
-                break;
-            case Key.Down when e.KeyModifiers.HasFlag(KeyModifiers.Alt):
-                node.MoveColumn(column, +1);
-                TryFocusColumnEditor(column, selectAll: false);
-                e.Handled = true;
-                break;
+            e.Handled = true;
         }
     }
 
@@ -1464,49 +1346,6 @@ public partial class DiagramView : UserControl
         }
     }
 
-    private void CommitAndAddNextColumn(EntityNodeViewModel node, EntityColumnViewModel column)
-    {
-        column.CommitEdit();
-        if (string.IsNullOrWhiteSpace(column.Name))
-        {
-            node.DiscardEmptyNewColumns();
-            Focus();
-            return;
-        }
-
-        (_, int index) = node.Locate(column);
-        AddColumnAndEdit(node, index + 1);
-    }
-
-    private void NavigateColumn(EntityNodeViewModel node, EntityColumnViewModel column, int delta)
-    {
-        column.CommitEdit();
-        if (string.IsNullOrWhiteSpace(column.Name))
-        {
-            node.DiscardEmptyNewColumns();
-            Focus();
-            return;
-        }
-
-        (System.Collections.ObjectModel.ObservableCollection<EntityColumnViewModel> list, int index) = node.Locate(column);
-        int next = index + delta;
-        if (index < 0 || next < 0)
-        {
-            Focus();
-            return;
-        }
-
-        if (next >= list.Count)
-        {
-            AddColumnAndEdit(node, index: -1);
-            return;
-        }
-
-        EntityColumnViewModel target = list[next];
-        target.BeginEdit();
-        TryFocusColumnEditor(target, selectAll: true);
-    }
-
     private void AddColumnAndEdit(EntityNodeViewModel node, int index)
     {
         EntityColumnViewModel vm = node.InsertNewColumn(index);
@@ -1519,8 +1358,6 @@ public partial class DiagramView : UserControl
     private static EntityNodeViewModel? EntityNodeOf(object? sender) => (sender as Control)?.DataContext as EntityNodeViewModel;
 
     private static EntityColumnViewModel? ColumnOf(object? sender) => (sender as Control)?.DataContext as EntityColumnViewModel;
-
-    private static bool IsEditingColumnOf(EntityNodeViewModel node) => node.Columns.Any(c => c.IsEditing);
 
     private void EndEditing()
     {
@@ -1573,107 +1410,13 @@ public partial class DiagramView : UserControl
             return -1;
         }
 
-        double tolerance = HandleScreenSize / Zoom;
-        Point[] positions = HandlePositions(_vm.SelectedNodes.First());
-        for (int i = 0; i < positions.Length; i++)
-        {
-            if (Math.Abs(world.X - positions[i].X) <= tolerance && Math.Abs(world.Y - positions[i].Y) <= tolerance)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static Point[] HandlePositions(NodeViewModelBase node)
-    {
-        Rect2D b = node.Model.Bounds;
-        double cx = b.X + (b.Width / 2);
-        double cy = b.Y + (b.Height / 2);
-        return new[]
-        {
-            new Point(b.Left, b.Top),    // 0 NW
-            new Point(cx, b.Top),        // 1 N
-            new Point(b.Right, b.Top),   // 2 NE
-            new Point(b.Right, cy),      // 3 E
-            new Point(b.Right, b.Bottom),// 4 SE
-            new Point(cx, b.Bottom),     // 5 S
-            new Point(b.Left, b.Bottom), // 6 SW
-            new Point(b.Left, cy),       // 7 W
-        };
+        return NodeHandleGeometry.HitTest(
+            _vm.SelectedNodes.First().Model.Bounds, new Point2D(world.X, world.Y), HandleScreenSize / Zoom);
     }
 
     private static Rect2D ResizeBounds(NodeViewModelBase node, int handle, Point world)
-    {
-        Rect2D b = node.Model.Bounds;
-        double l = b.Left;
-        double t = b.Top;
-        double r = b.Right;
-        double bottom = b.Bottom;
-
-        switch (handle)
-        {
-            case 0: l = world.X; t = world.Y; break;
-            case 1: t = world.Y; break;
-            case 2: r = world.X; t = world.Y; break;
-            case 3: r = world.X; break;
-            case 4: r = world.X; bottom = world.Y; break;
-            case 5: bottom = world.Y; break;
-            case 6: l = world.X; bottom = world.Y; break;
-            case 7: l = world.X; break;
-        }
-
-        double left = Math.Min(l, r);
-        double top = Math.Min(t, bottom);
-        double width = Math.Max(node.MinWidth, Math.Abs(r - l));
-        double height = Math.Max(node.MinHeight, Math.Abs(bottom - t));
-        Rect2D result = new(left, top, width, height);
-
-        if (node.LocksAspectRatio && b.Width > 0 && b.Height > 0)
-        {
-            result = LockAspect(handle, b, result, node.MinWidth, node.MinHeight);
-        }
-
-        return result;
-    }
-
-    // Re-proportions an unconstrained resize so the node keeps its original aspect ratio, anchored at the
-    // fixed corner/edge of the dragged handle. Corner handles scale from the opposite corner; edge handles
-    // scale (driven by the moved axis) and re-centre on the fixed edge.
-    private static Rect2D LockAspect(int handle, Rect2D original, Rect2D raw, double minWidth, double minHeight)
-    {
-        double ratio = original.Width / original.Height;
-
-        double scale = handle switch
-        {
-            1 or 5 => raw.Height / original.Height,                                   // N / S: height-driven
-            3 or 7 => raw.Width / original.Width,                                     // E / W: width-driven
-            _ => Math.Max(raw.Width / original.Width, raw.Height / original.Height),  // corners: dominant axis
-        };
-
-        // Don't let either dimension fall below its minimum.
-        scale = Math.Max(scale, Math.Max(minWidth / original.Width, minHeight / original.Height));
-
-        double newWidth = original.Width * scale;
-        double newHeight = newWidth / ratio;
-
-        double cx = original.Center.X;
-        double cy = original.Center.Y;
-        (double newLeft, double newTop) = handle switch
-        {
-            0 => (original.Right - newWidth, original.Bottom - newHeight),  // NW: fix SE corner
-            2 => (original.Left, original.Bottom - newHeight),              // NE: fix SW corner
-            4 => (original.Left, original.Top),                             // SE: fix NW corner
-            6 => (original.Right - newWidth, original.Top),                 // SW: fix NE corner
-            1 => (cx - (newWidth / 2), original.Bottom - newHeight),        // N: fix bottom edge
-            5 => (cx - (newWidth / 2), original.Top),                       // S: fix top edge
-            3 => (original.Left, cy - (newHeight / 2)),                     // E: fix left edge
-            _ => (original.Right - newWidth, cy - (newHeight / 2)),         // W (7): fix right edge
-        };
-
-        return new Rect2D(newLeft, newTop, newWidth, newHeight);
-    }
+        => NodeHandleGeometry.Resize(
+            node.Model.Bounds, handle, new Point2D(world.X, world.Y), node.MinWidth, node.MinHeight, node.LocksAspectRatio);
 
     private void EnsureUndoCaptured()
     {
@@ -1684,283 +1427,26 @@ public partial class DiagramView : UserControl
         }
     }
 
-    // Full overlay rebuild: tear down and recreate every selection/connector handle and reference
-    // outline. Used when the SET of handles changes (selection, selected connector, reference set,
-    // data context) or at the end of a gesture; an in-progress drag uses RepositionOverlay instead.
+    // Thin wrappers over the overlay controller, which owns the handle/outline controls. The view keeps
+    // scrollbar sync, so both wrappers call UpdateScrollBars after the controller updates the overlay.
+    // These two method-group names are also the callbacks wired into the connector-edit controller.
     private void RebuildOverlay()
     {
-        _lastHandleZoom = Zoom;
-
-        foreach (Rectangle handle in _handles)
-        {
-            Overlay.Children.Remove(handle);
-        }
-
-        _handles.Clear();
-
-        foreach (Control handle in _connectorHandles)
-        {
-            Overlay.Children.Remove(handle);
-        }
-
-        _connectorHandles.Clear();
-
-        // Reference outlines are rebuilt alongside the handles so they track zoom/selection too
-        // (self-contained: clears its own list, and no-ops when there's no VM or reference).
-        RebuildReferenceOutlines();
-
-        if (_vm is null)
-        {
-            return;
-        }
-
-        // Resize handles trace the bounding box of every selected node — this is what marks the
-        // selection (single or multi), so each selected shape is outlined regardless of its kind.
-        // Dragging a handle to resize is still gated to a single selection (see HitTestHandle); with
-        // 2+ selected the handles are purely a visual cue. The node's own border is thickened
-        // separately by the view model as a reinforcing cue.
-        double size = HandleScreenSize / Zoom;
-        foreach (NodeViewModelBase node in _vm.SelectedNodes)
-        {
-            foreach (Point position in HandlePositions(node))
-            {
-                Rectangle handle = new()
-                {
-                    Width = size,
-                    Height = size,
-                    Fill = Brushes.White,
-                    Stroke = SelectionAccentBrush,
-                    StrokeThickness = 1d / Zoom,
-                };
-                Canvas.SetLeft(handle, position.X - (size / 2));
-                Canvas.SetTop(handle, position.Y - (size / 2));
-                Overlay.Children.Add(handle);
-                _handles.Add(handle);
-            }
-        }
-
-        if (_vm.SelectedConnector is { } connector)
-        {
-            DrawConnectorHandles(connector);
-        }
-
+        _overlayController.Rebuild(_vm);
         UpdateScrollBars();
     }
 
-    // Lightweight overlay update for an in-progress drag or a zoom change: reposition (and resize) the
-    // existing handle controls in place rather than recreating them. The control order here matches how
-    // RebuildOverlay created them. If the handle set no longer matches the selection — a set change
-    // should have routed through RebuildOverlay — this falls back to a full rebuild, so a missed trigger
-    // degrades to the old (correct, slower) behaviour instead of mis-tracking.
     private void RepositionOverlay()
     {
-        _lastHandleZoom = Zoom;
-
-        if (_vm is null)
-        {
-            return;
-        }
-
-        double size = HandleScreenSize / Zoom;
-        double stroke = 1d / Zoom;
-
-        // Node resize handles: selected nodes × 8 positions, in creation order.
-        int index = 0;
-        foreach (NodeViewModelBase node in _vm.SelectedNodes)
-        {
-            foreach (Point position in HandlePositions(node))
-            {
-                if (index >= _handles.Count)
-                {
-                    RebuildOverlay();
-                    return;
-                }
-
-                PlaceCenteredHandle(_handles[index], position.X, position.Y, size, stroke);
-                index++;
-            }
-        }
-
-        if (index != _handles.Count)
-        {
-            RebuildOverlay();
-            return;
-        }
-
-        // Connector handles: [source endpoint, target endpoint, bend point 0, 1, …].
-        if (_vm.SelectedConnector is { } connector)
-        {
-            IReadOnlyList<Point2D> waypoints = connector.Waypoints;
-            if (_connectorHandles.Count != waypoints.Count + 2)
-            {
-                RebuildOverlay();
-                return;
-            }
-
-            PlaceEndpointHandle(_connectorHandles[0], connector.RouteStart, connector.SourceAnchored, size, stroke);
-            PlaceEndpointHandle(_connectorHandles[1], connector.RouteEnd, connector.TargetAnchored, size, stroke);
-            for (int i = 0; i < waypoints.Count; i++)
-            {
-                PlaceCenteredHandle(_connectorHandles[i + 2], waypoints[i].X, waypoints[i].Y, size, stroke);
-            }
-        }
-        else if (_connectorHandles.Count != 0)
-        {
-            RebuildOverlay();
-            return;
-        }
-
-        if (!TryRepositionReferenceOutlines(size))
-        {
-            RebuildOverlay();
-            return;
-        }
-
+        _overlayController.Reposition(_vm);
         UpdateScrollBars();
-    }
-
-    // Centres a square handle (node resize handle or bend point) on a world point and rescales it.
-    private static void PlaceCenteredHandle(Control handle, double centerX, double centerY, double size, double stroke)
-    {
-        handle.Width = size;
-        handle.Height = size;
-        if (handle is Shape shape)
-        {
-            shape.StrokeThickness = stroke;
-        }
-
-        Canvas.SetLeft(handle, centerX - (size / 2));
-        Canvas.SetTop(handle, centerY - (size / 2));
-    }
-
-    // Centres an endpoint handle and refreshes its filled/hollow state (anchored vs automatic).
-    private static void PlaceEndpointHandle(Control handle, Point2D position, bool filled, double size, double stroke)
-    {
-        PlaceCenteredHandle(handle, position.X, position.Y, size, stroke);
-        if (handle is Shape shape)
-        {
-            shape.Fill = filled ? SelectionAccentBrush : Brushes.White;
-        }
-    }
-
-    // Marks the fixed alignment-reference shapes with a dashed amber box just outside each one — drawn on
-    // the zoom-scaled overlay like the selection handles, but in a distinct colour and shown even when the
-    // reference isn't selected. Rebuilt on every RebuildOverlay() pass so it tracks zoom/selection.
-    private void RebuildReferenceOutlines()
-    {
-        foreach (Rectangle outline in _referenceOutlines)
-        {
-            Overlay.Children.Remove(outline);
-        }
-
-        _referenceOutlines.Clear();
-
-        if (_vm is null)
-        {
-            return;
-        }
-
-        double inset = HandleScreenSize / Zoom / 2d;
-        double thickness = 1.5d / Zoom;
-        foreach (NodeViewModelBase node in _vm.ReferenceNodes)
-        {
-            Rect2D b = node.Model.Bounds;
-            Rectangle outline = new()
-            {
-                Width = b.Width + (inset * 2d),
-                Height = b.Height + (inset * 2d),
-                Stroke = ReferenceAccentBrush,
-                StrokeThickness = thickness,
-                StrokeDashArray = new AvaloniaList<double> { 4d, 3d },
-                IsHitTestVisible = false,
-            };
-            Canvas.SetLeft(outline, b.Left - inset);
-            Canvas.SetTop(outline, b.Top - inset);
-            Overlay.Children.Add(outline);
-            _referenceOutlines.Add(outline);
-        }
-    }
-
-    // Repositions/resizes the existing reference outlines in place; returns false (→ caller rebuilds)
-    // when the reference set no longer matches the outline controls.
-    private bool TryRepositionReferenceOutlines(double size)
-    {
-        if (_vm is null)
-        {
-            return true;
-        }
-
-        double inset = size / 2d;
-        double thickness = 1.5d / Zoom;
-        int index = 0;
-        foreach (NodeViewModelBase node in _vm.ReferenceNodes)
-        {
-            if (index >= _referenceOutlines.Count)
-            {
-                return false;
-            }
-
-            Rectangle outline = _referenceOutlines[index];
-            Rect2D b = node.Model.Bounds;
-            outline.Width = b.Width + (inset * 2d);
-            outline.Height = b.Height + (inset * 2d);
-            outline.StrokeThickness = thickness;
-            Canvas.SetLeft(outline, b.Left - inset);
-            Canvas.SetTop(outline, b.Top - inset);
-            index++;
-        }
-
-        return index == _referenceOutlines.Count;
-    }
-
-    // Endpoint handles are circles (filled when pinned to a forced anchor, hollow when automatic);
-    // bend-point handles are squares — drawn on the zoom-scaled overlay like node handles.
-    private void DrawConnectorHandles(ConnectorViewModel connector)
-    {
-        double size = HandleScreenSize / Zoom;
-        IBrush stroke = SelectionAccentBrush;
-
-        AddEndpointHandle(connector.RouteStart, connector.SourceAnchored, size, stroke);
-        AddEndpointHandle(connector.RouteEnd, connector.TargetAnchored, size, stroke);
-
-        foreach (Point2D waypoint in connector.Waypoints)
-        {
-            Rectangle handle = new()
-            {
-                Width = size,
-                Height = size,
-                Fill = Brushes.White,
-                Stroke = stroke,
-                StrokeThickness = 1d / Zoom,
-            };
-            Canvas.SetLeft(handle, waypoint.X - (size / 2));
-            Canvas.SetTop(handle, waypoint.Y - (size / 2));
-            Overlay.Children.Add(handle);
-            _connectorHandles.Add(handle);
-        }
-    }
-
-    private void AddEndpointHandle(Point2D position, bool filled, double size, IBrush stroke)
-    {
-        Ellipse handle = new()
-        {
-            Width = size,
-            Height = size,
-            Fill = filled ? stroke : Brushes.White,
-            Stroke = stroke,
-            StrokeThickness = 1d / Zoom,
-        };
-        Canvas.SetLeft(handle, position.X - (size / 2));
-        Canvas.SetTop(handle, position.Y - (size / 2));
-        Overlay.Children.Add(handle);
-        _connectorHandles.Add(handle);
     }
 
     private void StartMarquee(Point world)
     {
         _gesture.Marquee = new Rectangle
         {
-            Fill = new SolidColorBrush(Color.FromArgb(40, 61, 126, 255)),
+            Fill = MarqueeFillBrush,
             Stroke = SelectionAccentBrush,
             StrokeThickness = 1d / Zoom,
         };

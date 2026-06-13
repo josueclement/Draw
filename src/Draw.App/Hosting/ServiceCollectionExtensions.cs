@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IContentDialogService, ContentDialogService>();
         services.AddSingleton<IDialogService, DialogService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<NodeKindRegistry>();
         services.AddSingleton<IDiagramDocumentViewModelFactory, DiagramDocumentViewModelFactory>();
 
         // Keyboard shortcuts (JSON-configured keymap + chord dispatcher).

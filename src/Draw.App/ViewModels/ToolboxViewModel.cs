@@ -6,24 +6,29 @@ using Draw.Model.Nodes;
 
 namespace Draw.App.ViewModels;
 
+/// <summary>Base for a selectable toolbox tool — the armed-tool discriminated union.</summary>
+public abstract record ToolItem(string Name);
+
 /// <summary>A selectable shape entry in the toolbox palette.</summary>
-public sealed record ShapeToolItem(string Name, ShapeKind Kind);
+public sealed record ShapeToolItem(string Name, ShapeKind Kind) : ToolItem(Name);
 
 /// <summary>A selectable connector (relationship) entry in the toolbox palette.</summary>
-public sealed record ConnectorToolItem(string Name, RelationshipKind Kind);
+public sealed record ConnectorToolItem(string Name, RelationshipKind Kind) : ToolItem(Name);
 
 /// <summary>A selectable class-diagram node entry in the toolbox palette.</summary>
-public sealed record ClassNodeToolItem(string Name, ClassNodeKind Kind);
+public sealed record ClassNodeToolItem(string Name, ClassNodeKind Kind) : ToolItem(Name);
 
 /// <summary>A selectable use-case-diagram node entry in the toolbox palette.</summary>
-public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind);
+public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind) : ToolItem(Name);
 
 /// <summary>The ER table tool. There is a single entity kind, so it carries only a display name.</summary>
-public sealed record EntityToolItem(string Name);
+public sealed record EntityToolItem(string Name) : ToolItem(Name);
 
 /// <summary>
-/// Tracks the active drawing tool: the select tool (both null), a shape to place
-/// (<see cref="SelectedShape"/>), or a connector to draw (<see cref="SelectedConnector"/>).
+/// Tracks the active drawing tool as a single <see cref="ArmedTool"/> (null = the select tool). The
+/// per-category <c>Selected*</c> properties are typed projections over it, so mutual exclusion is
+/// automatic: arming any tool replaces <see cref="ArmedTool"/> and every projection reflects the one
+/// source of truth. The mode flags and dropdown headers are computed from it too.
 /// </summary>
 public sealed class ToolboxViewModel : ViewModelBase
 {
@@ -74,7 +79,7 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public ToolboxViewModel()
     {
-        // Each ribbon dropdown item arms a tool by its kind; reuse the mutually-exclusive Selected* setters.
+        // Each ribbon dropdown item arms a tool by its kind via the typed projection setters.
         SelectShapeToolCommand = new RelayCommand<ShapeKind>(kind => SelectedShape = Shapes.First(s => s.Kind == kind));
         SelectConnectorToolCommand = new RelayCommand<RelationshipKind>(kind => SelectedConnector = Connectors.First(c => c.Kind == kind));
         SelectClassNodeToolCommand = new RelayCommand<ClassNodeKind>(kind => SelectedClassNode = ClassNodes.First(c => c.Kind == kind));
@@ -92,185 +97,119 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public RelayCommand SelectEntityToolCommand { get; }
 
-    public ShapeToolItem? SelectedShape
+    /// <summary>The single armed tool, or null for the select tool. Arming a tool replaces it; the
+    /// projections and mode flags below all derive from it, so adding a category needs no edits here.</summary>
+    public ToolItem? ArmedTool
     {
         get;
-        set
+        private set
         {
             if (SetProperty(ref field, value))
             {
-                if (value is not null)
-                {
-                    SelectedConnector = null;
-                    SelectedClassNode = null;
-                    SelectedUseCaseNode = null;
-                    SelectedEntity = null;
-                }
-
                 RaiseModes();
             }
         }
+    }
+
+    // Typed projections over ArmedTool. Setting one to non-null arms it (replacing any other tool);
+    // setting it to null disarms only when it currently owns ArmedTool. No manual cross-nulling needed.
+    public ShapeToolItem? SelectedShape
+    {
+        get => ArmedTool as ShapeToolItem;
+        set => Arm(value, () => ArmedTool is ShapeToolItem);
     }
 
     public ConnectorToolItem? SelectedConnector
     {
-        get;
-        set
-        {
-            if (SetProperty(ref field, value))
-            {
-                if (value is not null)
-                {
-                    SelectedShape = null;
-                    SelectedClassNode = null;
-                    SelectedUseCaseNode = null;
-                    SelectedEntity = null;
-                }
-
-                RaiseModes();
-            }
-        }
+        get => ArmedTool as ConnectorToolItem;
+        set => Arm(value, () => ArmedTool is ConnectorToolItem);
     }
 
     public ClassNodeToolItem? SelectedClassNode
     {
-        get;
-        set
-        {
-            if (SetProperty(ref field, value))
-            {
-                if (value is not null)
-                {
-                    SelectedShape = null;
-                    SelectedConnector = null;
-                    SelectedUseCaseNode = null;
-                    SelectedEntity = null;
-                }
-
-                RaiseModes();
-            }
-        }
+        get => ArmedTool as ClassNodeToolItem;
+        set => Arm(value, () => ArmedTool is ClassNodeToolItem);
     }
 
     public UseCaseToolItem? SelectedUseCaseNode
     {
-        get;
-        set
-        {
-            if (SetProperty(ref field, value))
-            {
-                if (value is not null)
-                {
-                    SelectedShape = null;
-                    SelectedConnector = null;
-                    SelectedClassNode = null;
-                    SelectedEntity = null;
-                }
-
-                RaiseModes();
-            }
-        }
+        get => ArmedTool as UseCaseToolItem;
+        set => Arm(value, () => ArmedTool is UseCaseToolItem);
     }
 
     public EntityToolItem? SelectedEntity
     {
-        get;
-        set
-        {
-            if (SetProperty(ref field, value))
-            {
-                if (value is not null)
-                {
-                    SelectedShape = null;
-                    SelectedConnector = null;
-                    SelectedClassNode = null;
-                    SelectedUseCaseNode = null;
-                }
-
-                RaiseModes();
-            }
-        }
+        get => ArmedTool as EntityToolItem;
+        set => Arm(value, () => ArmedTool is EntityToolItem);
     }
 
-    public bool IsSelectTool => SelectedShape is null && SelectedConnector is null
-        && SelectedClassNode is null && SelectedUseCaseNode is null && SelectedEntity is null;
+    public bool IsSelectTool => ArmedTool is null;
 
-    public bool IsConnectorMode => SelectedConnector is not null;
+    public bool IsConnectorMode => ArmedTool is ConnectorToolItem;
 
-    public bool IsClassNodeMode => SelectedClassNode is not null;
+    public bool IsClassNodeMode => ArmedTool is ClassNodeToolItem;
 
-    public bool IsUseCaseNodeMode => SelectedUseCaseNode is not null;
+    public bool IsUseCaseNodeMode => ArmedTool is UseCaseToolItem;
 
-    public bool IsEntityNodeMode => SelectedEntity is not null;
+    public bool IsEntityNodeMode => ArmedTool is EntityToolItem;
 
-    public bool IsShapeMode => SelectedShape is not null;
+    public bool IsShapeMode => ArmedTool is ShapeToolItem;
 
     /// <summary>Dropdown-button captions: the active pick's name, or the category label when nothing is armed.</summary>
-    public string ShapesHeader => SelectedShape?.Name ?? "Shapes";
+    public string ShapesHeader => (ArmedTool as ShapeToolItem)?.Name ?? "Shapes";
 
     // One armed connector feeds two dropdowns; each shows the pick only when it owns that kind,
     // else its category label. ER "Relationship" lives in the ER group, so neither claims it.
     public string CommonConnectorsHeader =>
-        SelectedConnector is { } c && IsCommonConnector(c.Kind) ? c.Name : "Connector";
+        ArmedTool is ConnectorToolItem c && IsCommonConnector(c.Kind) ? c.Name : "Connector";
 
     public string UmlConnectorsHeader =>
-        SelectedConnector is { } c && !IsCommonConnector(c.Kind) && c.Kind != RelationshipKind.Relationship
+        ArmedTool is ConnectorToolItem c && !IsCommonConnector(c.Kind) && c.Kind != RelationshipKind.Relationship
             ? c.Name : "Relationship";
 
     private static bool IsCommonConnector(RelationshipKind kind) =>
         kind is RelationshipKind.Association or RelationshipKind.DirectedAssociation;
 
-    public string ClassHeader => SelectedClassNode?.Name ?? "Class diagram";
+    public string ClassHeader => (ArmedTool as ClassNodeToolItem)?.Name ?? "Class diagram";
 
-    public string UseCaseHeader => SelectedUseCaseNode?.Name ?? "Use case";
+    public string UseCaseHeader => (ArmedTool as UseCaseToolItem)?.Name ?? "Use case";
 
     /// <summary>
     /// Status-bar hint describing how to use the armed tool; <c>null</c> when the select tool is active.
     /// </summary>
-    public string? ActiveToolHint
+    public string? ActiveToolHint => ArmedTool switch
     {
-        get
+        ShapeToolItem shape => $"Click on the canvas to place {shape.Name}.",
+        ClassNodeToolItem classNode => $"Click on the canvas to place {classNode.Name}.",
+        UseCaseToolItem useCaseNode => $"Click on the canvas to place {useCaseNode.Name}.",
+        EntityToolItem entity => $"Click on the canvas to place {entity.Name}.",
+        ConnectorToolItem connector => $"Drag from one node to another to draw {connector.Name}.",
+        _ => null,
+    };
+
+    public void ActivateSelectTool() => ArmedTool = null;
+
+    // Arms the given tool, or — when disarming (null) — clears ArmedTool only if the caller's category
+    // currently owns it, so disarming one projection never wipes a different armed tool.
+    private void Arm(ToolItem? tool, System.Func<bool> ownsArmedTool)
+    {
+        if (tool is not null)
         {
-            if (SelectedShape is { } shape)
-            {
-                return $"Click on the canvas to place {shape.Name}.";
-            }
-
-            if (SelectedClassNode is { } classNode)
-            {
-                return $"Click on the canvas to place {classNode.Name}.";
-            }
-
-            if (SelectedUseCaseNode is { } useCaseNode)
-            {
-                return $"Click on the canvas to place {useCaseNode.Name}.";
-            }
-
-            if (SelectedEntity is { } entity)
-            {
-                return $"Click on the canvas to place {entity.Name}.";
-            }
-
-            if (SelectedConnector is { } connector)
-            {
-                return $"Drag from one node to another to draw {connector.Name}.";
-            }
-
-            return null;
+            ArmedTool = tool;
         }
-    }
-
-    public void ActivateSelectTool()
-    {
-        SelectedShape = null;
-        SelectedConnector = null;
-        SelectedClassNode = null;
-        SelectedUseCaseNode = null;
-        SelectedEntity = null;
+        else if (ownsArmedTool())
+        {
+            ArmedTool = null;
+        }
     }
 
     private void RaiseModes()
     {
+        OnPropertyChanged(nameof(SelectedShape));
+        OnPropertyChanged(nameof(SelectedConnector));
+        OnPropertyChanged(nameof(SelectedClassNode));
+        OnPropertyChanged(nameof(SelectedUseCaseNode));
+        OnPropertyChanged(nameof(SelectedEntity));
         OnPropertyChanged(nameof(IsSelectTool));
         OnPropertyChanged(nameof(IsShapeMode));
         OnPropertyChanged(nameof(IsConnectorMode));
