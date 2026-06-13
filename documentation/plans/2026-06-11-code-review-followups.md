@@ -66,10 +66,19 @@ the bound `Zoom`/`PanX`/`PanY`/`ViewportWidth/Height` properties (so the `Diagra
 is untouched) and its zoom commands now forward to the coordinator. **Build-only verified — fit-to-
 content, zoom in/out/reset, Ctrl+wheel zoom and paste-centring need the §1 GUI pass.**
 
-**Still in the VM** and candidate for a future pass: undo orchestration, style application, theme
-handling, and the full-collection rebuild. The review framed A1 as "keep peeling, not rewrite" —
-pursue only if the VM's churn/size warrants it; each remaining extraction is view/VM (no headless test
-net), so it needs the same manual-GUI discipline as Phases 4–5.
+**2026-06-13 — style application + theme refresh peeled out.** A `StyleCoordinator` (over
+`IDocumentEditContext` + `IThemeService`) now owns `ApplyStyleSwatch`/`ResetStyleToDefault`/`ApplyNoFill`
++ the shared apply-to-selection body, and the on-theme-change brush refresh. It subscribes to
+`IThemeService.ThemeChanged` for its lifetime and is `IDisposable` (the VM disposes it on tab close).
+The VM keeps thin public forwarders (so the inspector/`StylePaletteViewModel` bindings are unchanged)
+and `NotifyStyleEditStarting` (an undo seam); `IDocumentEditContext` gained `SelectedConnectors`.
+**Build-only verified — swatch apply, reset-to-default, no-fill, and the light/dark theme-toggle
+recolour need the §1 GUI pass.**
+
+**Still in the VM** and candidate for a future pass: undo orchestration (`Undo`/`Redo`/`RaiseUndoState`)
+and the full-collection rebuild (`RebuildNodes`/`RebuildConnectors`). The review framed A1 as "keep
+peeling, not rewrite" — pursue only if the VM's churn/size warrants it; each remaining extraction is
+view/VM (no headless test net), so it needs the same manual-GUI discipline as Phases 4–5.
 
 ---
 

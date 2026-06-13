@@ -37,6 +37,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     private readonly AlignmentCoordinator _alignmentCoordinator;
     private readonly SelectionCoordinator _selectionCoordinator;
     private readonly ViewportCoordinator _viewportCoordinator;
+    private readonly StyleCoordinator _styleCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
 
@@ -64,9 +65,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _alignmentCoordinator = new AlignmentCoordinator(this);
         _selectionCoordinator = new SelectionCoordinator(this);
         _viewportCoordinator = new ViewportCoordinator(this);
+        _styleCoordinator = new StyleCoordinator(this, _theme);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
-        _theme.ThemeChanged += OnThemeChanged;
         // Construct the selection-gated commands before RebuildNodes(): it raises a selection-changed
         // notification that calls NotifyCanExecuteChanged() on both, so they must already exist.
         AlignCommand = new RelayCommand<AlignmentMode>(
@@ -714,75 +715,14 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public void NotifyStyleEditStarting() => CaptureUndo();
 
-    /// <summary>Applies a quick-palette swatch to the whole selection: a coordinated fill + stroke +
-    /// text on every selected node, and stroke + label colour on a selected connector. Stores the
-    /// swatch id so the colours follow the active theme, and bakes the current theme's variant into the
-    /// raw colour fields as a fallback. One undo step; a no-op (and no undo) when nothing is selected.</summary>
-    public void ApplyStyleSwatch(StyleSwatch swatch)
-    {
-        SwatchVariant v = swatch.Variant(_theme.IsDark);
-        ApplyStyleToSelection(
-            style =>
-            {
-                style.PaletteId = swatch.Id;
-                style.Fill = v.Fill;
-                style.Stroke.Color = v.Stroke;
-                style.Font.Color = v.Text;
-            },
-            style =>
-            {
-                style.PaletteId = swatch.Id;
-                style.Stroke.Color = v.Stroke;
-                style.Font.Color = v.Text;
-            });
-    }
+    /// <summary>Applies a quick-palette swatch to the whole selection (see <see cref="StyleCoordinator"/>).</summary>
+    public void ApplyStyleSwatch(StyleSwatch swatch) => _styleCoordinator.ApplyStyleSwatch(swatch);
 
-    /// <summary>Resets the selection to the default style: the first ("Blue") quick-palette swatch,
-    /// which is also what newly-created shapes get. Behaves exactly like clicking that swatch — a
-    /// theme-aware fill/stroke/text linked to the palette. Stroke thickness, dash, and font family/size
-    /// are left untouched.</summary>
-    public void ResetStyleToDefault() => ApplyStyleSwatch(StylePalette.Default);
+    /// <summary>Resets the selection to the default ("Blue") swatch — the style new shapes get.</summary>
+    public void ResetStyleToDefault() => _styleCoordinator.ResetStyleToDefault();
 
-    /// <summary>Makes the selected nodes outline-only (transparent fill) and unlinks them from any
-    /// palette swatch. Connectors have no fill, so they're unaffected.</summary>
-    public void ApplyNoFill()
-        => ApplyStyleToSelection(
-            style =>
-            {
-                style.PaletteId = null;
-                style.Fill = ArgbColor.Transparent;
-            },
-            mutateConnector: null);
-
-    // Shared body for the palette actions: one undo snapshot, mutate every selected node + a selected
-    // connector, refresh bindings, mark dirty. No-op (no undo) when the selection is empty.
-    private void ApplyStyleToSelection(Action<ShapeStyle> mutateNode, Action<ConnectorStyle>? mutateConnector)
-    {
-        List<NodeViewModelBase> nodes = SelectedNodes.ToList();
-        List<ConnectorViewModel> connectors = SelectedConnectors.ToList();
-        if (nodes.Count == 0 && connectors.Count == 0)
-        {
-            return;
-        }
-
-        NotifyStyleEditStarting();
-        foreach (NodeViewModelBase node in nodes)
-        {
-            mutateNode(node.Model.Style);
-            node.RaiseStyleChanged();
-        }
-
-        if (mutateConnector is not null)
-        {
-            foreach (ConnectorViewModel connector in connectors)
-            {
-                mutateConnector(connector.Model.Style);
-                connector.RaiseStyleChanged();
-            }
-        }
-
-        MarkModified();
-    }
+    /// <summary>Makes the selected nodes outline-only (transparent fill), unlinked from any swatch.</summary>
+    public void ApplyNoFill() => _styleCoordinator.ApplyNoFill();
 
     void INodeEditContext.BeginMemberEdit() => CaptureUndo();
 
@@ -842,27 +782,12 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     // which replaces the former runtime-throwing type switch; coverage is guarded at registry construction.
     private NodeViewModelBase CreateNodeViewModel(NodeBase node) => _nodeKinds.CreateViewModel(node, this, _theme);
 
-    // On theme change, re-raise style-derived brushes so default-styled nodes adopt the new theme's
-    // fill/text colours (user-customised colours are unaffected — see NodeViewModelBase.UsesDefault*).
-    private void OnThemeChanged(object? sender, EventArgs e)
-    {
-        foreach (NodeViewModelBase node in Nodes)
-        {
-            node.RaiseStyleChanged();
-        }
-
-        // Palette-linked connectors resolve their stroke/label colour from the active theme too.
-        foreach (ConnectorViewModel connector in Connectors)
-        {
-            connector.RaiseStyleChanged();
-        }
-    }
-
-    /// <summary>Detaches from the shared theme service when the tab closes, so this VM can be collected,
-    /// and disposes any resource-holding node view models (e.g. decoded image bitmaps).</summary>
+    /// <summary>Detaches the style coordinator from the shared theme service when the tab closes, so this
+    /// VM can be collected, and disposes any resource-holding node view models (e.g. decoded image
+    /// bitmaps).</summary>
     public void Dispose()
     {
-        _theme.ThemeChanged -= OnThemeChanged;
+        _styleCoordinator.Dispose();
         foreach (NodeViewModelBase node in Nodes)
         {
             (node as IDisposable)?.Dispose();

@@ -28,6 +28,8 @@ public interface IDocumentEditContext
 
     IEnumerable<NodeViewModelBase> SelectedNodes { get; }
 
+    IEnumerable<ConnectorViewModel> SelectedConnectors { get; }
+
     double Zoom { get; }
 
     double ViewportWidth { get; }
