@@ -28,8 +28,122 @@ public static class ShapeGeometryBuilder
             ShapeKind.Circle => Circle(width, height),
             ShapeKind.Note => NoteGeometry(width, height),
             ShapeKind.Cloud => CloudGeometry(width, height),
+            // A stadium is a rounded rectangle whose corner radius spans the short side.
+            ShapeKind.Terminator => RoundedRectangle(width, height, Math.Min(width, height) / 2d),
+            ShapeKind.Cylinder => CylinderGeometry(width, height),
+            ShapeKind.Document => DocumentGeometry(width, height),
+            ShapeKind.PredefinedProcess => PredefinedProcessGeometry(width, height),
+            ShapeKind.Display => DisplayGeometry(width, height),
+            ShapeKind.Delay => DelayGeometry(width, height),
             _ => Polygon(ShapeOutline.GetPolygon(kind, new ModelRect(0, 0, width, height))),
         };
+    }
+
+    private static Geometry CylinderGeometry(double width, double height)
+    {
+        double ry = Math.Min(height * 0.18d, height / 2d);
+        Size cap = new(width / 2d, ry);
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            // Body silhouette: back rim (top, bulging up) + sides + front bottom arc (bulging down).
+            ctx.BeginFigure(new Point(0, ry), isFilled: true);
+            ctx.ArcTo(new Point(width, ry), cap, 0, false, SweepDirection.Clockwise);
+            ctx.LineTo(new Point(width, height - ry));
+            ctx.ArcTo(new Point(0, height - ry), cap, 0, false, SweepDirection.Clockwise);
+            ctx.EndFigure(true);
+
+            // Front rim of the top lid (bulging down) — stroke only, completes the visible ellipse.
+            ctx.BeginFigure(new Point(0, ry), isFilled: false);
+            ctx.ArcTo(new Point(width, ry), cap, 0, false, SweepDirection.CounterClockwise);
+            ctx.EndFigure(false);
+        }
+
+        return geometry;
+    }
+
+    private static Geometry DocumentGeometry(double width, double height)
+    {
+        double d = Math.Min(height * 0.14d, height / 2d);
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(0, 0), isFilled: true);
+            ctx.LineTo(new Point(width, 0));
+            ctx.LineTo(new Point(width, height - d));
+            // Wavy bottom edge, right to left: dip then rise (an S-curve).
+            ctx.CubicBezierTo(
+                new Point(width * 0.66d, height),
+                new Point(width * 0.33d, height - (2d * d)),
+                new Point(0, height - d));
+            ctx.EndFigure(true);
+        }
+
+        return geometry;
+    }
+
+    private static Geometry PredefinedProcessGeometry(double width, double height)
+    {
+        double bar = Math.Min(width * 0.12d, width / 2d);
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(0, 0), isFilled: true);
+            ctx.LineTo(new Point(width, 0));
+            ctx.LineTo(new Point(width, height));
+            ctx.LineTo(new Point(0, height));
+            ctx.EndFigure(true);
+
+            // The two inner bars — stroke only.
+            ctx.BeginFigure(new Point(bar, 0), isFilled: false);
+            ctx.LineTo(new Point(bar, height));
+            ctx.EndFigure(false);
+
+            ctx.BeginFigure(new Point(width - bar, 0), isFilled: false);
+            ctx.LineTo(new Point(width - bar, height));
+            ctx.EndFigure(false);
+        }
+
+        return geometry;
+    }
+
+    private static Geometry DisplayGeometry(double width, double height)
+    {
+        Size cap = new(width * 0.2d, height / 2d);
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(width * 0.2d, 0), isFilled: true);
+            ctx.LineTo(new Point(width * 0.8d, 0));
+            ctx.ArcTo(new Point(width * 0.8d, height), cap, 0, false, SweepDirection.Clockwise);
+            ctx.LineTo(new Point(width * 0.2d, height));
+            ctx.QuadraticBezierTo(new Point(0, height / 2d), new Point(width * 0.2d, 0));
+            ctx.EndFigure(true);
+        }
+
+        return geometry;
+    }
+
+    private static Geometry DelayGeometry(double width, double height)
+    {
+        double rx = Math.Min(height / 2d, width);
+        Size cap = new(rx, height / 2d);
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(0, 0), isFilled: true);
+            ctx.LineTo(new Point(width - rx, 0));
+            ctx.ArcTo(new Point(width - rx, height), cap, 0, false, SweepDirection.Clockwise);
+            ctx.LineTo(new Point(0, height));
+            ctx.EndFigure(true);
+        }
+
+        return geometry;
     }
 
     private static Geometry CloudGeometry(double width, double height)

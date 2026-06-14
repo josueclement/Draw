@@ -89,6 +89,38 @@ public class ShapeBoundaryTests
         => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Cloud, Unit, new Point2D(500, 50)));
 
     [Fact]
+    public void Terminator_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Terminator, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Cylinder_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Cylinder, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Document_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Document, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void PredefinedProcess_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.PredefinedProcess, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Display_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Display, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Delay_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Delay, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void ManualInput_ExitsBottomEdge_ForDownwardRay()
+        => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.ManualInput, Unit, new Point2D(50, 500)));
+
+    [Fact]
+    public void OffPageConnector_ExitsBottomPoint_ForDownwardRay()
+        => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.OffPageConnector, Unit, new Point2D(50, 500)));
+
+    [Fact]
     public void DegenerateDirection_ReturnsCenter()
         => AssertPoint(50, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Rectangle, Unit, new Point2D(50, 50)));
 

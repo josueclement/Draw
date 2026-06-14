@@ -47,7 +47,24 @@ public static class ShapeOutline
             case ShapeKind.RoundedRectangle:
             // Connectors attach to the full rectangle; the small dog-ear is ignored for routing.
             case ShapeKind.Note:
+            // Curved flowchart shapes attach to their bounding rectangle (a good approximation: each
+            // touches all four edges at its mid-points). Their lobed/capped silhouettes are drawn by
+            // the geometry builders.
+            case ShapeKind.Terminator:
+            case ShapeKind.Cylinder:
+            case ShapeKind.Document:
+            case ShapeKind.PredefinedProcess:
+            case ShapeKind.Display:
+            case ShapeKind.Delay:
                 return new[] { P(0, 0), P(w, 0), P(w, h), P(0, h) };
+
+            // Manual input: a quadrilateral whose top edge slopes up from left to right.
+            case ShapeKind.ManualInput:
+                return new[] { P(0, h * 0.25), P(w, 0), P(w, h), P(0, h) };
+
+            // Off-page connector: a rectangle tapering to a point at the bottom centre.
+            case ShapeKind.OffPageConnector:
+                return new[] { P(0, 0), P(w, 0), P(w, h * 0.6), P(w / 2, h), P(0, h * 0.6) };
 
             case ShapeKind.Diamond:
                 return new[] { P(w / 2, 0), P(w, h / 2), P(w / 2, h), P(0, h / 2) };

@@ -40,4 +40,30 @@ public enum ShapeKind
 
     /// <summary>A rounded speech callout with a tail; routing uses an approximate polygon.</summary>
     Callout = 15,
+
+    // Flowchart shapes (Phase 2 of the shape-library expansion).
+
+    /// <summary>A terminator (stadium/pill): a rectangle with fully semicircular left/right ends.</summary>
+    Terminator = 16,
+
+    /// <summary>A database cylinder; routing uses the bounding rectangle.</summary>
+    Cylinder = 17,
+
+    /// <summary>A document: a rectangle with a wavy bottom edge; routing uses the bounding rectangle.</summary>
+    Document = 18,
+
+    /// <summary>A predefined process (subroutine): a rectangle with double vertical bars.</summary>
+    PredefinedProcess = 19,
+
+    /// <summary>A manual-input symbol: a quadrilateral with a slanted top edge.</summary>
+    ManualInput = 20,
+
+    /// <summary>An off-page connector: a rectangle tapering to a point at the bottom (home-plate).</summary>
+    OffPageConnector = 21,
+
+    /// <summary>A display symbol; routing uses the bounding rectangle.</summary>
+    Display = 22,
+
+    /// <summary>A delay symbol: a rectangle with a semicircular right end; routing uses the bounding rectangle.</summary>
+    Delay = 23,
 }

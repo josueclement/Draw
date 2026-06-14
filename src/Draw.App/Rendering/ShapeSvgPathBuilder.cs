@@ -33,8 +33,56 @@ public static class ShapeSvgPathBuilder
             ShapeKind.Circle => new SvgShape(Circle(width, height), null),
             ShapeKind.Note => Note(width, height),
             ShapeKind.Cloud => new SvgShape(Cloud(width, height), null),
+            ShapeKind.Terminator => new SvgShape(RoundedRectangle(width, height, Math.Min(width, height) / 2d), null),
+            ShapeKind.Cylinder => Cylinder(width, height),
+            ShapeKind.Document => new SvgShape(Document(width, height), null),
+            ShapeKind.PredefinedProcess => PredefinedProcess(width, height),
+            ShapeKind.Display => new SvgShape(Display(width, height), null),
+            ShapeKind.Delay => new SvgShape(Delay(width, height), null),
             _ => new SvgShape(Polygon(ShapeOutline.GetPolygon(kind, new ModelRect(0d, 0d, width, height))), null),
         };
+    }
+
+    // SVG sweep flag 1 == SweepDirection.Clockwise, 0 == CounterClockwise (mirrors ShapeGeometryBuilder).
+    private static SvgShape Cylinder(double w, double h)
+    {
+        double ry = Math.Min(h * 0.18d, h / 2d);
+        double rx = w / 2d;
+
+        string body =
+            $"M0,{Num(ry)} A{Num(rx)},{Num(ry)} 0 0 1 {Num(w)},{Num(ry)} " +
+            $"L{Num(w)},{Num(h - ry)} A{Num(rx)},{Num(ry)} 0 0 1 0,{Num(h - ry)} Z";
+        string frontRim = $"M0,{Num(ry)} A{Num(rx)},{Num(ry)} 0 0 0 {Num(w)},{Num(ry)}";
+        return new SvgShape(body, frontRim);
+    }
+
+    private static string Document(double w, double h)
+    {
+        double d = Math.Min(h * 0.14d, h / 2d);
+        return $"M0,0 L{Num(w)},0 L{Num(w)},{Num(h - d)} " +
+               $"C{Num(w * 0.66d)},{Num(h)} {Num(w * 0.33d)},{Num(h - (2d * d))} 0,{Num(h - d)} Z";
+    }
+
+    private static SvgShape PredefinedProcess(double w, double h)
+    {
+        double bar = Math.Min(w * 0.12d, w / 2d);
+        string bars = $"M{Num(bar)},0 L{Num(bar)},{Num(h)} M{Num(w - bar)},0 L{Num(w - bar)},{Num(h)}";
+        return new SvgShape(Rectangle(w, h), bars);
+    }
+
+    private static string Display(double w, double h)
+    {
+        double rx = w * 0.2d;
+        double ry = h / 2d;
+        return $"M{Num(rx)},0 L{Num(w * 0.8d)},0 A{Num(rx)},{Num(ry)} 0 0 1 {Num(w * 0.8d)},{Num(h)} " +
+               $"L{Num(rx)},{Num(h)} Q0,{Num(ry)} {Num(rx)},0 Z";
+    }
+
+    private static string Delay(double w, double h)
+    {
+        double rx = Math.Min(h / 2d, w);
+        double ry = h / 2d;
+        return $"M0,0 L{Num(w - rx)},0 A{Num(rx)},{Num(ry)} 0 0 1 {Num(w - rx)},{Num(h)} L0,{Num(h)} Z";
     }
 
     private static string Cloud(double w, double h)

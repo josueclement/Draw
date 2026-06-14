@@ -58,6 +58,32 @@
                 <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Callout}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
         </MenuItem>
+        <MenuItem Header="_Flowchart">
+            <MenuItem Header="_Terminator" CommandParameter="{x:Static nodes:ShapeKind.Terminator}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Terminator}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Cylinder" CommandParameter="{x:Static nodes:ShapeKind.Cylinder}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Cylinder}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Document" CommandParameter="{x:Static nodes:ShapeKind.Document}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Document}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Predefined process" CommandParameter="{x:Static nodes:ShapeKind.PredefinedProcess}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.PredefinedProcess}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Manual input" CommandParameter="{x:Static nodes:ShapeKind.ManualInput}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ManualInput}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Off-page connector" CommandParameter="{x:Static nodes:ShapeKind.OffPageConnector}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.OffPageConnector}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="D_isplay" CommandParameter="{x:Static nodes:ShapeKind.Display}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Display}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Dela_y" CommandParameter="{x:Static nodes:ShapeKind.Delay}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Delay}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
         <MenuItem Header="_UML">
             <MenuItem Header="_Note" CommandParameter="{x:Static nodes:ShapeKind.Note}">
                 <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Note}" Width="16" Height="16" /></MenuItem.Icon>

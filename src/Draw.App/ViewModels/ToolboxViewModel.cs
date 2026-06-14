@@ -49,6 +49,14 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ShapeToolItem("Cross", ShapeKind.Cross),
         new ShapeToolItem("Cloud", ShapeKind.Cloud),
         new ShapeToolItem("Callout", ShapeKind.Callout),
+        new ShapeToolItem("Terminator", ShapeKind.Terminator),
+        new ShapeToolItem("Cylinder", ShapeKind.Cylinder),
+        new ShapeToolItem("Document", ShapeKind.Document),
+        new ShapeToolItem("Predefined process", ShapeKind.PredefinedProcess),
+        new ShapeToolItem("Manual input", ShapeKind.ManualInput),
+        new ShapeToolItem("Off-page connector", ShapeKind.OffPageConnector),
+        new ShapeToolItem("Display", ShapeKind.Display),
+        new ShapeToolItem("Delay", ShapeKind.Delay),
         // Armed by the standalone UML-group "Note" button; intentionally absent from the Shapes dropdown.
         new ShapeToolItem("Note", ShapeKind.Note),
     };
@@ -162,8 +170,32 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public bool IsShapeMode => ArmedTool is ShapeToolItem;
 
+    // One armed shape feeds several dropdowns (Shapes/Flowchart/Arrows); each shows the pick only when the
+    // armed kind belongs to its category, else its own label. Note has its own button, so no header claims it.
+    private enum ShapeCategory
+    {
+        Basic,
+        Flowchart,
+        Arrow,
+        Other,
+    }
+
+    private static ShapeCategory CategoryOf(ShapeKind kind) => kind switch
+    {
+        ShapeKind.Terminator or ShapeKind.Cylinder or ShapeKind.Document or ShapeKind.PredefinedProcess
+            or ShapeKind.ManualInput or ShapeKind.OffPageConnector or ShapeKind.Display or ShapeKind.Delay
+            => ShapeCategory.Flowchart,
+        ShapeKind.Note => ShapeCategory.Other,
+        _ => ShapeCategory.Basic,
+    };
+
+    private string HeaderFor(ShapeCategory category, string label) =>
+        ArmedTool is ShapeToolItem shape && CategoryOf(shape.Kind) == category ? shape.Name : label;
+
     /// <summary>Dropdown-button captions: the active pick's name, or the category label when nothing is armed.</summary>
-    public string ShapesHeader => (ArmedTool as ShapeToolItem)?.Name ?? "Shapes";
+    public string ShapesHeader => HeaderFor(ShapeCategory.Basic, "Shapes");
+
+    public string FlowchartHeader => HeaderFor(ShapeCategory.Flowchart, "Flowchart");
 
     // One armed connector feeds two dropdowns; each shows the pick only when it owns that kind,
     // else its category label. ER "Relationship" lives in the ER group, so neither claims it.
@@ -224,6 +256,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
         OnPropertyChanged(nameof(IsEntityNodeMode));
         OnPropertyChanged(nameof(ShapesHeader));
+        OnPropertyChanged(nameof(FlowchartHeader));
         OnPropertyChanged(nameof(CommonConnectorsHeader));
         OnPropertyChanged(nameof(UmlConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));

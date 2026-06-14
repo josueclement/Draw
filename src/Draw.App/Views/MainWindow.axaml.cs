@@ -186,6 +186,7 @@ public partial class MainWindow : Window
     private void WireToolDropdowns(ToolboxViewModel toolbox)
     {
         WireDropdown(ShapesDropDown, toolbox.SelectShapeToolCommand);
+        WireDropdown(FlowchartDropDown, toolbox.SelectShapeToolCommand);
         WireDropdown(CommonConnectorsDropDown, toolbox.SelectConnectorToolCommand);
         WireDropdown(UmlConnectorsDropDown, toolbox.SelectConnectorToolCommand);
         WireDropdown(ClassDropDown, toolbox.SelectClassNodeToolCommand);
