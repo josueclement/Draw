@@ -36,6 +36,27 @@
             <MenuItem Header="Tr_iangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}">
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=triangle}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
+            <MenuItem Header="_Hexagon" CommandParameter="{x:Static nodes:ShapeKind.Hexagon}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Hexagon}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Pentagon" CommandParameter="{x:Static nodes:ShapeKind.Pentagon}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Pentagon}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Octagon" CommandParameter="{x:Static nodes:ShapeKind.Octagon}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Octagon}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Star" CommandParameter="{x:Static nodes:ShapeKind.Star}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Star}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="C_ross" CommandParameter="{x:Static nodes:ShapeKind.Cross}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Cross}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Clou_d" CommandParameter="{x:Static nodes:ShapeKind.Cloud}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Cloud}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Cal_lout" CommandParameter="{x:Static nodes:ShapeKind.Callout}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Callout}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         <MenuItem Header="_UML">
             <MenuItem Header="_Note" CommandParameter="{x:Static nodes:ShapeKind.Note}">

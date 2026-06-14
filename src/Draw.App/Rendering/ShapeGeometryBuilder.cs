@@ -27,8 +27,29 @@ public static class ShapeGeometryBuilder
             ShapeKind.Ellipse => new EllipseGeometry(new Rect(0, 0, width, height)),
             ShapeKind.Circle => Circle(width, height),
             ShapeKind.Note => NoteGeometry(width, height),
+            ShapeKind.Cloud => CloudGeometry(width, height),
             _ => Polygon(ShapeOutline.GetPolygon(kind, new ModelRect(0, 0, width, height))),
         };
+    }
+
+    private static Geometry CloudGeometry(double width, double height)
+    {
+        (ModelPoint start, IReadOnlyList<ShapeOutline.QuadSegment> segments) =
+            ShapeOutline.CloudCurve(new ModelRect(0, 0, width, height));
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(new Point(start.X, start.Y), isFilled: true);
+            foreach (ShapeOutline.QuadSegment segment in segments)
+            {
+                ctx.QuadraticBezierTo(new Point(segment.Control.X, segment.Control.Y), new Point(segment.End.X, segment.End.Y));
+            }
+
+            ctx.EndFigure(true);
+        }
+
+        return geometry;
     }
 
     private static Geometry NoteGeometry(double width, double height)

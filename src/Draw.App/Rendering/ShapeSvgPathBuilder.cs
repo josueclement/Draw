@@ -32,8 +32,26 @@ public static class ShapeSvgPathBuilder
             ShapeKind.Ellipse => new SvgShape(Ellipse(0d, 0d, width, height), null),
             ShapeKind.Circle => new SvgShape(Circle(width, height), null),
             ShapeKind.Note => Note(width, height),
+            ShapeKind.Cloud => new SvgShape(Cloud(width, height), null),
             _ => new SvgShape(Polygon(ShapeOutline.GetPolygon(kind, new ModelRect(0d, 0d, width, height))), null),
         };
+    }
+
+    private static string Cloud(double w, double h)
+    {
+        (ModelPoint start, IReadOnlyList<ShapeOutline.QuadSegment> segments) =
+            ShapeOutline.CloudCurve(new ModelRect(0d, 0d, w, h));
+
+        StringBuilder sb = new();
+        sb.Append("M").Append(Num(start.X)).Append(',').Append(Num(start.Y));
+        foreach (ShapeOutline.QuadSegment segment in segments)
+        {
+            sb.Append(" Q").Append(Num(segment.Control.X)).Append(',').Append(Num(segment.Control.Y))
+              .Append(' ').Append(Num(segment.End.X)).Append(',').Append(Num(segment.End.Y));
+        }
+
+        sb.Append(" Z");
+        return sb.ToString();
     }
 
     private static string Rectangle(double w, double h)

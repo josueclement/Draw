@@ -164,6 +164,13 @@
                         <ribbon:RibbonMenuItem Header="Parallelogram" CommandParameter="{x:Static nodes:ShapeKind.Parallelogram}" IconData="{pia:IconGeometry Icon=parallelogram}" />
                         <ribbon:RibbonMenuItem Header="Trapezoid" CommandParameter="{x:Static nodes:ShapeKind.Trapezoid}" IconData="{StaticResource ToolIcon.Trapezoid}" />
                         <ribbon:RibbonMenuItem Header="Triangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}" IconData="{pia:IconGeometry Icon=triangle}" />
+                        <ribbon:RibbonMenuItem Header="Hexagon" CommandParameter="{x:Static nodes:ShapeKind.Hexagon}" IconData="{StaticResource ToolIcon.Hexagon}" />
+                        <ribbon:RibbonMenuItem Header="Pentagon" CommandParameter="{x:Static nodes:ShapeKind.Pentagon}" IconData="{StaticResource ToolIcon.Pentagon}" />
+                        <ribbon:RibbonMenuItem Header="Octagon" CommandParameter="{x:Static nodes:ShapeKind.Octagon}" IconData="{StaticResource ToolIcon.Octagon}" />
+                        <ribbon:RibbonMenuItem Header="Star" CommandParameter="{x:Static nodes:ShapeKind.Star}" IconData="{StaticResource ToolIcon.Star}" />
+                        <ribbon:RibbonMenuItem Header="Cross" CommandParameter="{x:Static nodes:ShapeKind.Cross}" IconData="{StaticResource ToolIcon.Cross}" />
+                        <ribbon:RibbonMenuItem Header="Cloud" CommandParameter="{x:Static nodes:ShapeKind.Cloud}" IconData="{StaticResource ToolIcon.Cloud}" />
+                        <ribbon:RibbonMenuItem Header="Callout" CommandParameter="{x:Static nodes:ShapeKind.Callout}" IconData="{StaticResource ToolIcon.Callout}" />
                     </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonDropDownButton x:Name="CommonConnectorsDropDown" Header="{Binding Toolbox.CommonConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
                         <ribbon:RibbonMenuItem Header="Association" CommandParameter="{x:Static rel:RelationshipKind.Association}" IconData="{StaticResource ToolIcon.Association}" />

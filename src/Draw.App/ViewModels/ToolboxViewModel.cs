@@ -42,6 +42,13 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ShapeToolItem("Parallelogram", ShapeKind.Parallelogram),
         new ShapeToolItem("Trapezoid", ShapeKind.Trapezoid),
         new ShapeToolItem("Triangle", ShapeKind.Triangle),
+        new ShapeToolItem("Hexagon", ShapeKind.Hexagon),
+        new ShapeToolItem("Pentagon", ShapeKind.Pentagon),
+        new ShapeToolItem("Octagon", ShapeKind.Octagon),
+        new ShapeToolItem("Star", ShapeKind.Star),
+        new ShapeToolItem("Cross", ShapeKind.Cross),
+        new ShapeToolItem("Cloud", ShapeKind.Cloud),
+        new ShapeToolItem("Callout", ShapeKind.Callout),
         // Armed by the standalone UML-group "Note" button; intentionally absent from the Shapes dropdown.
         new ShapeToolItem("Note", ShapeKind.Note),
     };

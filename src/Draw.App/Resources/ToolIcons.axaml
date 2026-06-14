@@ -19,6 +19,15 @@
     <!-- Note: a folded-corner sheet. Body silhouette with the dog-ear cut out (even-odd hole). -->
     <StreamGeometry x:Key="ToolIcon.Note">F0 M4,3 L14,3 L20,9 L20,21 L4,21 Z M14,3 L14,9 L20,9 Z</StreamGeometry>
 
+    <!-- Geometric shapes (filled silhouettes, mirroring ShapeOutline.GetPolygon / CloudCurve). -->
+    <StreamGeometry x:Key="ToolIcon.Hexagon">M7,2 L17,2 L22,12 L17,22 L7,22 L2,12 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Pentagon">M12,2 L21.51,8.91 L17.88,20.09 L6.12,20.09 L2.49,8.91 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Octagon">M21.24,15.83 L15.83,21.24 L8.17,21.24 L2.76,15.83 L2.76,8.17 L8.17,2.76 L15.83,2.76 L21.24,8.17 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Star">M12,2 L14.25,8.91 L21.51,8.91 L15.63,13.18 L17.88,20.09 L12,15.82 L6.12,20.09 L8.37,13.18 L2.49,8.91 L9.75,8.91 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Cross">M9,3 L15,3 L15,9 L21,9 L21,15 L15,15 L15,21 L9,21 L9,15 L3,15 L3,9 L9,9 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Cloud">M12,6.96 Q16.44,4.31 16.36,9.48 Q20.88,12 16.36,14.52 Q16.44,19.69 12,17.04 Q7.56,19.69 7.64,14.52 Q3.12,12 7.64,9.48 Q7.56,4.31 12,6.96 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Callout">M3,3 L21,3 L21,14 L11,14 L7,20 L8,14 L3,14 Z</StreamGeometry>
+
     <!-- Arrange: distribute glyphs (three evenly-spaced bars). Phosphor has align icons but no
          distribute equivalents, so author them here. Horizontal = bars spread along X (vertical bars);
          vertical = bars spread along Y (horizontal bars). -->
