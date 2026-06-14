@@ -37,6 +37,9 @@
                 <MenuItem Header="_New document" Command="{Binding NewCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=file_plus}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="New _Mind Map" Command="{Binding NewMindMapCommand}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.RoundedRectangle}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
                 <MenuItem Header="_Open…" Command="{Binding OpenCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=folder_open}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
@@ -132,6 +135,7 @@
             <ribbon:RibbonTab Header="Home">
                 <ribbon:RibbonGroup Header="File">
                     <ribbon:RibbonButton Header="New document" Command="{Binding NewCommand}" IconData="{pia:IconGeometry Icon=file_plus}" />
+                    <ribbon:RibbonButton Header="New mind map" Command="{Binding NewMindMapCommand}" IconData="{StaticResource ToolIcon.RoundedRectangle}" />
                     <ribbon:RibbonButton Header="Open" Command="{Binding OpenCommand}" IconData="{pia:IconGeometry Icon=folder_open}" />
                     <ribbon:RibbonButton Header="Save" Command="{Binding SaveCommand}" IconData="{pia:IconGeometry Icon=floppy_disk}" />
                     <ribbon:RibbonButton Header="Save As" Command="{Binding SaveAsCommand}" IconData="{pia:IconGeometry Icon=floppy_disk_back}" />
@@ -224,6 +228,12 @@
                 <ribbon:RibbonGroup Header="ER">
                     <ribbon:RibbonButton Header="Table" Command="{Binding Toolbox.SelectEntityToolCommand}" IconData="{pia:IconGeometry Icon=table}" />
                     <ribbon:RibbonButton Header="Relationship" Command="{Binding Toolbox.SelectConnectorToolCommand}" CommandParameter="{x:Static rel:RelationshipKind.Relationship}" IconData="{pia:IconGeometry Icon=line_segment}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Mind map">
+                    <ribbon:RibbonDropDownButton x:Name="MindMapDropDown" Header="{Binding Toolbox.MindMapHeader}" IconData="{StaticResource ToolIcon.RoundedRectangle}">
+                        <ribbon:RibbonMenuItem Header="Topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopic}" IconData="{pia:IconGeometry Icon=rectangle}" />
+                        <ribbon:RibbonMenuItem Header="Rounded topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopicRounded}" IconData="{StaticResource ToolIcon.RoundedRectangle}" />
+                    </ribbon:RibbonDropDownButton>
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Image">
                     <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />

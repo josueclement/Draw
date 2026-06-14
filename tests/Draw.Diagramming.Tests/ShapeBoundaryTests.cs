@@ -32,6 +32,14 @@ public class ShapeBoundaryTests
         => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Note, Unit, new Point2D(500, 50)));
 
     [Fact]
+    public void MindMapTopic_AttachesAsPlainRectangle()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.MindMapTopic, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void MindMapTopicRounded_AttachesAsPlainRectangle()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.MindMapTopicRounded, Unit, new Point2D(500, 50)));
+
+    [Fact]
     public void Ellipse_ExitsAtRightmostPoint_ForHorizontalRay()
         => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Ellipse, Unit, new Point2D(500, 50)));
 

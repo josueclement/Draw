@@ -86,6 +86,26 @@
                 <ItemsControl.DataTemplates>
                     <DataTemplate DataType="vm:ShapeNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Panel.Styles>
+                                <!-- Mind-map '+' buttons: hidden until the topic is hovered. -->
+                                <Style Selector="Button.mindMapAdd">
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                    <Setter Property="Width" Value="20" />
+                                    <Setter Property="Height" Value="20" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="CornerRadius" Value="10" />
+                                    <Setter Property="FontSize" Value="13" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                                </Style>
+                                <Style Selector="Panel:pointerover Button.mindMapAdd">
+                                    <Setter Property="Opacity" Value="1" />
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                </Style>
+                            </Panel.Styles>
                             <Path Data="{Binding Geometry}"
                                   Fill="{Binding Fill}"
                                   Stroke="{Binding Stroke}"
@@ -110,6 +130,22 @@
                                      TextWrapping="Wrap"
                                      Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Top" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-10,0,0"
+                                    ToolTip.Tip="Add child topic" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Right" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-10,0"
+                                    ToolTip.Tip="Add child topic" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Bottom" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-10"
+                                    ToolTip.Tip="Add child topic" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Left" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-10,0,0,0"
+                                    ToolTip.Tip="Add child topic" />
                         </Panel>
                     </DataTemplate>
 
@@ -432,13 +468,23 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ConnectorViewModel">
                         <Canvas>
+                            <!-- Selection halo: stroked centerline for ordinary connectors; a ribbon
+                                 outline for mind-map branches (drawn under the filled ribbon). -->
                             <Path Data="{Binding Geometry}" Stretch="None"
                                   Stroke="{x:Static views:DiagramView.SelectionHaloBrush}" StrokeThickness="6"
-                                  IsVisible="{Binding IsSelected}" />
+                                  IsVisible="{Binding ShowLineHalo}" />
+                            <Path Data="{Binding BranchGeometry}" Stretch="None"
+                                  Stroke="{x:Static views:DiagramView.SelectionHaloBrush}" StrokeThickness="4"
+                                  IsVisible="{Binding ShowBranchHalo}" />
+                            <!-- Mind-map branch: a filled, depth-scaled tapered ribbon. -->
+                            <Path Data="{Binding BranchGeometry}" Stretch="None"
+                                  Fill="{Binding Stroke}"
+                                  IsVisible="{Binding IsMindMapBranch}" />
                             <Path Data="{Binding Geometry}" Stretch="None"
                                   Stroke="{Binding Stroke}"
                                   StrokeThickness="{Binding StrokeThickness}"
-                                  StrokeDashArray="{Binding StrokeDashArray}" />
+                                  StrokeDashArray="{Binding StrokeDashArray}"
+                                  IsVisible="{Binding !IsMindMapBranch}" />
                             <Path Data="{Binding SourceDecoration}" Stretch="None"
                                   Stroke="{Binding Stroke}"
                                   StrokeThickness="{Binding StrokeThickness}"

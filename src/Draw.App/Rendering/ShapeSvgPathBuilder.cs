@@ -28,7 +28,9 @@ public static class ShapeSvgPathBuilder
         return kind switch
         {
             ShapeKind.Rectangle => new SvgShape(Rectangle(width, height), null),
+            ShapeKind.MindMapTopic => new SvgShape(Rectangle(width, height), null),
             ShapeKind.RoundedRectangle => new SvgShape(RoundedRectangle(width, height, cornerRadius), null),
+            ShapeKind.MindMapTopicRounded => new SvgShape(RoundedRectangle(width, height, cornerRadius), null),
             ShapeKind.Ellipse => new SvgShape(Ellipse(0d, 0d, width, height), null),
             ShapeKind.Circle => new SvgShape(Circle(width, height), null),
             ShapeKind.Note => Note(width, height),

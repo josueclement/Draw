@@ -23,7 +23,9 @@ public static class ShapeGeometryBuilder
         return kind switch
         {
             ShapeKind.Rectangle => new RectangleGeometry(new Rect(0, 0, width, height)),
+            ShapeKind.MindMapTopic => new RectangleGeometry(new Rect(0, 0, width, height)),
             ShapeKind.RoundedRectangle => RoundedRectangle(width, height, cornerRadius),
+            ShapeKind.MindMapTopicRounded => RoundedRectangle(width, height, cornerRadius),
             ShapeKind.Ellipse => new EllipseGeometry(new Rect(0, 0, width, height)),
             ShapeKind.Circle => Circle(width, height),
             ShapeKind.Note => NoteGeometry(width, height),

@@ -56,6 +56,7 @@ public sealed class ShellViewModel : ViewModelBase
         Toolbox.PropertyChanged += OnToolboxPropertyChanged;
 
         NewCommand = new RelayCommand(OnNew);
+        NewMindMapCommand = new RelayCommand(OnNewMindMap);
         OpenCommand = new AsyncRelayCommand(OnOpenAsync);
         OpenRecentCommand = new AsyncRelayCommand<string>(OnOpenRecentAsync);
         SaveCommand = new AsyncRelayCommand(OnSaveAsync, () => HasActiveDocument);
@@ -104,6 +105,7 @@ public sealed class ShellViewModel : ViewModelBase
     public ShortcutHintsViewModel ShortcutHints { get; }
 
     public RelayCommand NewCommand { get; }
+    public RelayCommand NewMindMapCommand { get; }
     public AsyncRelayCommand OpenCommand { get; }
     public AsyncRelayCommand<string> OpenRecentCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
@@ -203,6 +205,8 @@ public sealed class ShellViewModel : ViewModelBase
     }
 
     private void OnNew() => AddAndActivate(_factory.CreateNew(DiagramType.Freeform));
+
+    private void OnNewMindMap() => AddAndActivate(_factory.CreateNew(DiagramType.MindMap));
 
     private async Task OnOpenAsync()
     {

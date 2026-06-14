@@ -7,7 +7,8 @@ public sealed class ShapeNode : NodeBase
 
     public string Text { get; set; } = string.Empty;
 
-    /// <summary>Corner radius used only when <see cref="Kind"/> is <see cref="ShapeKind.RoundedRectangle"/>.</summary>
+    /// <summary>Corner radius used only when <see cref="Kind"/> is <see cref="ShapeKind.RoundedRectangle"/>
+    /// or <see cref="ShapeKind.MindMapTopicRounded"/>.</summary>
     public double CornerRadius { get; set; } = 12d;
 
     public override NodeBase Clone()

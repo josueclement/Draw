@@ -186,6 +186,23 @@ public static class DiagramSvgRenderer
 
     private static void EmitConnector(StringBuilder sb, ConnectorViewModel connector)
     {
+        // Mind-map branch: a filled tapered ribbon (matching the on-canvas fill), no decorations.
+        if (connector.IsMindMapBranch)
+        {
+            IReadOnlyList<ModelPoint> outline = connector.GetBranchOutline();
+            if (outline.Count >= 3)
+            {
+                sb.Append("<polygon points=\"")
+                  .Append(string.Join(" ", outline.Select(p => $"{Num(p.X)},{Num(p.Y)}")))
+                  .Append("\" ").Append(Paint("fill", connector.Stroke)).Append(" stroke=\"none\"/>\n");
+            }
+
+            EmitConnectorLabel(sb, connector.CenterLabelText, connector.HasCenterLabel, connector.CenterLabelX, connector.CenterLabelY, connector.LabelForeground);
+            EmitConnectorLabel(sb, connector.SourceLabelText, connector.HasSourceLabel, connector.SourceLabelX, connector.SourceLabelY, connector.LabelForeground);
+            EmitConnectorLabel(sb, connector.TargetLabelText, connector.HasTargetLabel, connector.TargetLabelX, connector.TargetLabelY, connector.LabelForeground);
+            return;
+        }
+
         string points = string.Join(" ", connector.GetFlattenedPoints().Select(p => $"{Num(p.X)},{Num(p.Y)}"));
         double thickness = connector.StrokeThickness;
         sb.Append("<polyline points=\"").Append(points).Append("\" fill=\"none\" ")

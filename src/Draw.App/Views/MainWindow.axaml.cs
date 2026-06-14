@@ -193,6 +193,7 @@ public partial class MainWindow : Window
         WireDropdown(ClassDropDown, toolbox.SelectClassNodeToolCommand);
         WireDropdown(UseCaseDropDown, toolbox.SelectUseCaseToolCommand);
         WireDropdown(StructureDropDown, toolbox.SelectUmlToolCommand);
+        WireDropdown(MindMapDropDown, toolbox.SelectShapeToolCommand);
     }
 
     // Carbon doesn't close the popup when a RibbonMenuItem is clicked (it dismisses only on an outside

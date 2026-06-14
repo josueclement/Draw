@@ -83,4 +83,13 @@ public enum ShapeKind
 
     /// <summary>A horizontal double-headed (bidirectional) block arrow.</summary>
     ArrowDouble = 28,
+
+    // Mind-map topics (Phase 6). Rendered exactly like Rectangle / RoundedRectangle, but carry the
+    // mind-map affordance: hovering shows a '+' on each side that spawns a linked, tapered child.
+
+    /// <summary>A mind-map topic drawn as a plain rectangle; gains the hover-'+' child affordance.</summary>
+    MindMapTopic = 29,
+
+    /// <summary>A mind-map topic drawn as a rounded rectangle; gains the hover-'+' child affordance.</summary>
+    MindMapTopicRounded = 30,
 }

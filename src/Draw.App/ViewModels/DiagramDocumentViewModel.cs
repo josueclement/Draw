@@ -9,6 +9,7 @@ using Draw.App.Configuration;
 using Draw.App.Services;
 using Draw.Diagramming.Geometry;
 using Draw.Diagramming.Layout;
+using Draw.Diagramming.MindMap;
 using Draw.Diagramming.Routing;
 using Draw.Diagramming.Styling;
 using Draw.Diagramming.Uml;
@@ -369,7 +370,15 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         where TVm : NodeViewModelBase
     {
         CaptureUndo();
+        return PlaceNodeCore<TVm>(node, center, w, h);
+    }
 
+    // The CaptureUndo-free placement core, so a multi-step gesture (e.g. a mind-map child plus its
+    // branch connector) can be captured as a single undo step. See the split-capture contract on
+    // CaptureUndo — the caller owns the snapshot.
+    private TVm PlaceNodeCore<TVm>(NodeBase node, Point2D center, double w, double h)
+        where TVm : NodeViewModelBase
+    {
         Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
         if (SnapEnabled)
         {
@@ -416,32 +425,175 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         CaptureUndo();
+        ConnectorViewModel vm = LinkNodesCore(source, target, kind, isMindMapBranch: false, sourceAnchor: null, targetAnchor: null);
+        SelectConnector(vm);
+        MarkModified();
+        return vm;
+    }
+
+    // The CaptureUndo-free connector-creation core. Adds the connector to the model + view models and
+    // pins its endpoints; explicit anchors override the auto side-centre pinning. The caller owns the
+    // undo snapshot and selection. Returns the new connector view model.
+    private ConnectorViewModel LinkNodesCore(
+        NodeViewModelBase source,
+        NodeViewModelBase target,
+        RelationshipKind kind,
+        bool isMindMapBranch,
+        Point2D? sourceAnchor,
+        Point2D? targetAnchor)
+    {
         Connector connector = new()
         {
-            SourceNodeId = sourceId,
-            TargetNodeId = targetId,
+            SourceNodeId = source.Id,
+            TargetNodeId = target.Id,
             Kind = kind,
             Route = RouteStyle.Rounded,
+            IsMindMapBranch = isMindMapBranch,
         };
         _document.Connectors.Add(connector);
         ConnectorViewModel vm = new(connector, source, target, _router, _theme);
         Connectors.Add(vm);
 
-        // Curve-on-connect: pin each end to the centre of the side it naturally attaches to. An
-        // unpinned rounded connector aims dead-on at the other shape and renders straight; a
-        // side-centre anchor gives the cardinal outward normal that makes the rounded route bow
-        // into a curve immediately. Classify both sides from the initial auto-route before pinning,
-        // since pinning the source recomputes the route (and would move the target attachment).
-        Point2D autoStart = vm.RouteStart;
-        Point2D autoEnd = vm.RouteEnd;
-        BoxSide sourceSide = ConnectionDistributor.ClassifySide(source.Bounds, autoStart);
-        BoxSide targetSide = ConnectionDistributor.ClassifySide(target.Bounds, autoEnd);
-        vm.SetSourceAnchor(ConnectionDistributor.EvenAnchor(sourceSide, 0, 1));
-        vm.SetTargetAnchor(ConnectionDistributor.EvenAnchor(targetSide, 0, 1));
+        if (sourceAnchor is { } sa && targetAnchor is { } ta)
+        {
+            // Mind-map branch: pin to the explicit side centres (facing → opposite) the '+' implied.
+            vm.SetSourceAnchor(sa);
+            vm.SetTargetAnchor(ta);
+        }
+        else
+        {
+            // Curve-on-connect: pin each end to the centre of the side it naturally attaches to. An
+            // unpinned rounded connector aims dead-on at the other shape and renders straight; a
+            // side-centre anchor gives the cardinal outward normal that makes the rounded route bow
+            // into a curve immediately. Classify both sides from the initial auto-route before pinning,
+            // since pinning the source recomputes the route (and would move the target attachment).
+            Point2D autoStart = vm.RouteStart;
+            Point2D autoEnd = vm.RouteEnd;
+            BoxSide sourceSide = ConnectionDistributor.ClassifySide(source.Bounds, autoStart);
+            BoxSide targetSide = ConnectionDistributor.ClassifySide(target.Bounds, autoEnd);
+            vm.SetSourceAnchor(ConnectionDistributor.EvenAnchor(sourceSide, 0, 1));
+            vm.SetTargetAnchor(ConnectionDistributor.EvenAnchor(targetSide, 0, 1));
+        }
 
-        SelectConnector(vm);
-        MarkModified();
         return vm;
+    }
+
+    /// <summary>
+    /// Spawns a mind-map child of <paramref name="parent"/> on the given <paramref name="side"/>: a topic
+    /// that inherits the parent's shape kind and style, placed a gap out on that side (nudged clear of
+    /// existing nodes), joined by a tapered mind-map branch (parent → child). One undo step; the child is
+    /// left selected for immediate inline editing. Returns null if <paramref name="parent"/> is not placed.
+    /// </summary>
+    public ShapeNodeViewModel? CreateChildNode(ShapeNodeViewModel parent, BoxSide side)
+    {
+        if (parent is null || FindNode(parent.Id) is null)
+        {
+            return null;
+        }
+
+        CaptureUndo();
+
+        ShapeNode childModel = new()
+        {
+            Kind = parent.Model.Kind,
+            Style = parent.Model.Style.Clone(),
+        };
+
+        double w = _options.DefaultShapeWidth;
+        double h = _options.DefaultShapeHeight;
+        Point2D center = ComputeChildCenter(parent.Bounds, side, w, h);
+        ShapeNodeViewModel child = PlaceNodeCore<ShapeNodeViewModel>(childModel, center, w, h);
+
+        (Point2D sourceAnchor, Point2D targetAnchor) = BranchAnchors(side);
+        LinkNodesCore(parent, child, RelationshipKind.Association, isMindMapBranch: true, sourceAnchor, targetAnchor);
+
+        RefreshMindMapBranches();
+        MarkModified();
+        return child; // PlaceNodeCore already selected it.
+    }
+
+    // The initial child centre: out along the clicked side by the parent half-extent + a gap + the child
+    // half-extent, then fanned along that side until the child rect clears every existing node.
+    private Point2D ComputeChildCenter(Rect2D parent, BoxSide side, double childW, double childH)
+    {
+        const double gap = 60d;
+        Point2D parentCenter = parent.Center;
+        Point2D center = side switch
+        {
+            BoxSide.Left => new Point2D(parent.X - gap - (childW / 2d), parentCenter.Y),
+            BoxSide.Right => new Point2D(parent.Right + gap + (childW / 2d), parentCenter.Y),
+            BoxSide.Top => new Point2D(parentCenter.X, parent.Y - gap - (childH / 2d)),
+            _ => new Point2D(parentCenter.X, parent.Bottom + gap + (childH / 2d)),
+        };
+
+        Point2D step = side is BoxSide.Left or BoxSide.Right
+            ? new Point2D(0d, childH + 20d)
+            : new Point2D(childW + 20d, 0d);
+
+        Point2D candidate = center;
+        for (int attempt = 0; attempt < 200 && OverlapsExistingNode(candidate, childW, childH); attempt++)
+        {
+            int magnitude = (attempt / 2) + 1;
+            double signedScale = (attempt % 2 == 0) ? magnitude : -magnitude;
+            candidate = center + (step * signedScale);
+        }
+
+        return candidate;
+    }
+
+    private bool OverlapsExistingNode(Point2D center, double w, double h)
+    {
+        Rect2D rect = new(center.X - (w / 2d), center.Y - (h / 2d), w, h);
+        foreach (NodeViewModelBase node in Nodes)
+        {
+            // A small inflate keeps a breathing gap so children don't sit flush against a neighbour.
+            if (rect.IntersectsWith(node.Bounds.Inflate(10d)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Pins a branch from the parent's facing-side centre to the child's opposite-side centre, so the
+    // rounded route leaves and enters along the clicked axis.
+    private static (Point2D Source, Point2D Target) BranchAnchors(BoxSide side) => side switch
+    {
+        BoxSide.Left => (new Point2D(0d, 0.5d), new Point2D(1d, 0.5d)),
+        BoxSide.Right => (new Point2D(1d, 0.5d), new Point2D(0d, 0.5d)),
+        BoxSide.Top => (new Point2D(0.5d, 0d), new Point2D(0.5d, 1d)),
+        _ => (new Point2D(0.5d, 1d), new Point2D(0.5d, 0d)),
+    };
+
+    // Recomputes each mind-map branch's source depth so its taper widths scale with the tree. Cheap
+    // no-op when the document has no branches. Called whenever the connector set is rebuilt and after
+    // a child is spawned.
+    private void RefreshMindMapBranches()
+    {
+        bool anyBranch = false;
+        foreach (ConnectorViewModel vm in Connectors)
+        {
+            if (vm.IsMindMapBranch)
+            {
+                anyBranch = true;
+                break;
+            }
+        }
+
+        if (!anyBranch)
+        {
+            return;
+        }
+
+        IReadOnlyDictionary<Guid, int> depths = MindMapHierarchy.ComputeDepths(_document.Connectors);
+        foreach (ConnectorViewModel vm in Connectors)
+        {
+            if (vm.IsMindMapBranch)
+            {
+                vm.SetBranchDepth(MindMapHierarchy.DepthOf(depths, vm.Source.Id));
+            }
+        }
     }
 
     /// <summary>Copies the selection to the clipboard. See <see cref="ClipboardCoordinator"/>.</summary>
@@ -827,6 +979,8 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
                 Connectors.Add(new ConnectorViewModel(connector, source, target, _router, _theme));
             }
         }
+
+        RefreshMindMapBranches();
     }
 
     private static double ConnectorDistance(ConnectorViewModel connector, Point2D world)

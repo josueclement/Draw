@@ -65,6 +65,8 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ShapeToolItem("Arrow up", ShapeKind.ArrowUp),
         new ShapeToolItem("Arrow down", ShapeKind.ArrowDown),
         new ShapeToolItem("Bidirectional", ShapeKind.ArrowDouble),
+        new ShapeToolItem("Topic", ShapeKind.MindMapTopic),
+        new ShapeToolItem("Rounded topic", ShapeKind.MindMapTopicRounded),
         // Armed by the standalone UML-group "Note" button; intentionally absent from the Shapes dropdown.
         new ShapeToolItem("Note", ShapeKind.Note),
     };
@@ -203,6 +205,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         Basic,
         Flowchart,
         Arrow,
+        MindMap,
         Other,
     }
 
@@ -213,6 +216,7 @@ public sealed class ToolboxViewModel : ViewModelBase
             => ShapeCategory.Flowchart,
         ShapeKind.ArrowRight or ShapeKind.ArrowLeft or ShapeKind.ArrowUp or ShapeKind.ArrowDown or ShapeKind.ArrowDouble
             => ShapeCategory.Arrow,
+        ShapeKind.MindMapTopic or ShapeKind.MindMapTopicRounded => ShapeCategory.MindMap,
         ShapeKind.Note => ShapeCategory.Other,
         _ => ShapeCategory.Basic,
     };
@@ -226,6 +230,8 @@ public sealed class ToolboxViewModel : ViewModelBase
     public string FlowchartHeader => HeaderFor(ShapeCategory.Flowchart, "Flowchart");
 
     public string ArrowsHeader => HeaderFor(ShapeCategory.Arrow, "Arrows");
+
+    public string MindMapHeader => HeaderFor(ShapeCategory.MindMap, "Mind map");
 
     // One armed connector feeds two dropdowns; each shows the pick only when it owns that kind,
     // else its category label. ER "Relationship" lives in the ER group, so neither claims it.
@@ -293,6 +299,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShapesHeader));
         OnPropertyChanged(nameof(FlowchartHeader));
         OnPropertyChanged(nameof(ArrowsHeader));
+        OnPropertyChanged(nameof(MindMapHeader));
         OnPropertyChanged(nameof(CommonConnectorsHeader));
         OnPropertyChanged(nameof(UmlConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));

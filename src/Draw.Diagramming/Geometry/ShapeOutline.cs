@@ -45,6 +45,9 @@ public static class ShapeOutline
         {
             case ShapeKind.Rectangle:
             case ShapeKind.RoundedRectangle:
+            // Mind-map topics are rectangles / rounded rectangles for routing purposes.
+            case ShapeKind.MindMapTopic:
+            case ShapeKind.MindMapTopicRounded:
             // Connectors attach to the full rectangle; the small dog-ear is ignored for routing.
             case ShapeKind.Note:
             // Curved flowchart shapes attach to their bounding rectangle (a good approximation: each

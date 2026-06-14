@@ -1184,6 +1184,31 @@ public partial class DiagramView : UserControl
         }
     }
 
+    // The hover '+' on a mind-map topic: spawn a linked child on the clicked side and open it for typing.
+    private void OnCreateChildClick(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is null || (sender as Control)?.DataContext is not ShapeNodeViewModel parent)
+        {
+            return;
+        }
+
+        BoxSide side = ((sender as Control)?.Tag as string) switch
+        {
+            "Top" => BoxSide.Top,
+            "Bottom" => BoxSide.Bottom,
+            "Left" => BoxSide.Left,
+            _ => BoxSide.Right,
+        };
+
+        if (_vm.CreateChildNode(parent, side) is { } child)
+        {
+            child.IsEditing = true;
+            FocusEditorFor(child, selectAll: true);
+        }
+
+        e.Handled = true;
+    }
+
     private void OnInsertBelowClick(object? sender, RoutedEventArgs e)
     {
         if (MemberOf(sender) is not { } member || OwningNode(member) is not { } node)

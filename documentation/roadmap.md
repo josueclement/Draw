@@ -44,6 +44,22 @@ theme-aware styling. A new **Relationship** connector with **per-end crow's-foot
 diagram* entry wiring `DiagramType.Er`. See `documentation/plans/2026-06-04-er-database-shapes.md`.
 **Still pending:** `Draw.Sql` ER→DDL generation and `Draw.Export` SVG/PDF.
 
+## Phase 6 — Mind maps 🚧 (pending visual verification)
+
+A mind-map workflow on top of the existing canvas. Two new shape kinds — **Mind map topic** and
+**Rounded topic** (`ShapeKind.MindMapTopic`/`MindMapTopicRounded`, rendered as plain/rounded
+rectangles) — gain a special affordance: hovering shows a **`+` on each of the four sides** that
+spawns a **linked child** on that side (inheriting the parent's shape + style, opening for inline
+typing, one undo step), nudged clear of existing nodes. The branch connectors are **organic tapered
+ribbons** — filled variable-width geometry, **thick near the central topic and tapering thinner with
+tree depth and toward each child** (`Connector.IsMindMapBranch`; depth from
+`MindMap/MindMapHierarchy`, widths from `MindMapBranchStyle`, outline from `TaperedStroke` — all
+UI-agnostic + headless-tested; rendered as a filled `Path`, with SVG/PNG export parity). A new
+**`DiagramType.MindMap`** with a *New Mind Map* command (File menu + Home ribbon) pre-seeds a central
+topic; a **Mind map** ribbon group + Shift+S submenu arm the two tools. Branch taper is explicit
+(only `+`-created links), so ordinary connectors are unaffected. See
+`documentation/plans/2026-06-14-mind-maps.md`.
+
 ## Connector editing — forced anchors, waypoints, movable labels ✅ (cross-cutting)
 
 Direct in-canvas control over connector geometry on top of Phase 2: pin either endpoint anywhere on

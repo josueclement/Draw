@@ -4,6 +4,8 @@ using Draw.Diagramming.Routing;
 using Draw.Diagramming.Styling;
 using Draw.Diagramming.Undo;
 using Draw.Model.Documents;
+using Draw.Model.Nodes;
+using Draw.Model.Primitives;
 using Draw.Model.Serialization;
 using Microsoft.Extensions.Options;
 
@@ -61,6 +63,30 @@ public sealed class DiagramDocumentViewModelFactory : IDiagramDocumentViewModelF
     {
         DiagramDocument document = DiagramDocument.CreateEmpty(type);
         document.DefaultShapeStyle = StylePalette.Default.ToShapeStyle(_theme.IsDark);
+
+        if (type == DiagramType.MindMap)
+        {
+            SeedCentralTopic(document);
+        }
+
         return Create(document, filePath: null);
+    }
+
+    // A new mind map opens with one central topic — the taper root — placed near the top-left of the
+    // initial viewport (pan 0 / zoom 1), ready for the user to rename and grow with the hover '+' buttons.
+    private void SeedCentralTopic(DiagramDocument document)
+    {
+        EditorOptions options = _editorOptions.Value;
+        double w = options.DefaultShapeWidth;
+        double h = options.DefaultShapeHeight;
+        const double centerX = 320d;
+        const double centerY = 240d;
+        document.Nodes.Add(new ShapeNode
+        {
+            Kind = ShapeKind.MindMapTopicRounded,
+            Text = "Central topic",
+            Bounds = new Rect2D(centerX - (w / 2d), centerY - (h / 2d), w, h),
+            Style = document.DefaultShapeStyle.Clone(),
+        });
     }
 }
