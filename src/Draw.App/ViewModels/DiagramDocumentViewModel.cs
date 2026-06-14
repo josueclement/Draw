@@ -348,6 +348,18 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         return PlaceNode<NodeViewModelBase>(node, center, descriptor.DefaultWidth, descriptor.DefaultHeight);
     }
 
+    public NodeViewModelBase AddUmlNode(UmlNodeKind kind, Point2D center)
+    {
+        NodeBase node = kind switch
+        {
+            UmlNodeKind.Package => new PackageNode { Title = "Package", Style = _document.DefaultShapeStyle.Clone() },
+            UmlNodeKind.Component => new ComponentNode { Name = "Component", Style = _document.DefaultShapeStyle.Clone() },
+            _ => new DeploymentNode { Name = "Node", Style = _document.DefaultShapeStyle.Clone() },
+        };
+        NodeKindDescriptor descriptor = _nodeKinds.For(node);
+        return PlaceNode<NodeViewModelBase>(node, center, descriptor.DefaultWidth, descriptor.DefaultHeight);
+    }
+
     // The shared create flow for every AddXxx: snap+place the bounds, assign the z-index for the kind's
     // stacking band, add the model + its view model, select it, mark dirty — one undo step. The caller
     // supplies a model node with its kind-specific fields (and Style) already set, plus the placement

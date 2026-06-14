@@ -24,6 +24,9 @@ public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind) : ToolIt
 /// <summary>The ER table tool. There is a single entity kind, so it carries only a display name.</summary>
 public sealed record EntityToolItem(string Name) : ToolItem(Name);
 
+/// <summary>A selectable UML structural-node entry in the toolbox palette.</summary>
+public sealed record UmlToolItem(string Name, UmlNodeKind Kind) : ToolItem(Name);
+
 /// <summary>
 /// Tracks the active drawing tool as a single <see cref="ArmedTool"/> (null = the select tool). The
 /// per-category <c>Selected*</c> properties are typed projections over it, so mutual exclusion is
@@ -94,6 +97,13 @@ public sealed class ToolboxViewModel : ViewModelBase
         new UseCaseToolItem("System boundary", UseCaseNodeKind.SystemBoundary),
     };
 
+    public ObservableCollection<UmlToolItem> UmlNodes { get; } = new()
+    {
+        new UmlToolItem("Package", UmlNodeKind.Package),
+        new UmlToolItem("Component", UmlNodeKind.Component),
+        new UmlToolItem("Deployment", UmlNodeKind.Deployment),
+    };
+
     /// <summary>The single ER table tool, armed by the ER ribbon button.</summary>
     public EntityToolItem Entity { get; } = new("Table");
 
@@ -104,6 +114,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         SelectConnectorToolCommand = new RelayCommand<RelationshipKind>(kind => SelectedConnector = Connectors.First(c => c.Kind == kind));
         SelectClassNodeToolCommand = new RelayCommand<ClassNodeKind>(kind => SelectedClassNode = ClassNodes.First(c => c.Kind == kind));
         SelectUseCaseToolCommand = new RelayCommand<UseCaseNodeKind>(kind => SelectedUseCaseNode = UseCaseNodes.First(u => u.Kind == kind));
+        SelectUmlToolCommand = new RelayCommand<UmlNodeKind>(kind => SelectedUmlNode = UmlNodes.First(u => u.Kind == kind));
         SelectEntityToolCommand = new RelayCommand(() => SelectedEntity = Entity);
     }
 
@@ -114,6 +125,8 @@ public sealed class ToolboxViewModel : ViewModelBase
     public RelayCommand<ClassNodeKind> SelectClassNodeToolCommand { get; }
 
     public RelayCommand<UseCaseNodeKind> SelectUseCaseToolCommand { get; }
+
+    public RelayCommand<UmlNodeKind> SelectUmlToolCommand { get; }
 
     public RelayCommand SelectEntityToolCommand { get; }
 
@@ -157,6 +170,12 @@ public sealed class ToolboxViewModel : ViewModelBase
         set => Arm(value, () => ArmedTool is UseCaseToolItem);
     }
 
+    public UmlToolItem? SelectedUmlNode
+    {
+        get => ArmedTool as UmlToolItem;
+        set => Arm(value, () => ArmedTool is UmlToolItem);
+    }
+
     public EntityToolItem? SelectedEntity
     {
         get => ArmedTool as EntityToolItem;
@@ -170,6 +189,8 @@ public sealed class ToolboxViewModel : ViewModelBase
     public bool IsClassNodeMode => ArmedTool is ClassNodeToolItem;
 
     public bool IsUseCaseNodeMode => ArmedTool is UseCaseToolItem;
+
+    public bool IsUmlNodeMode => ArmedTool is UmlToolItem;
 
     public bool IsEntityNodeMode => ArmedTool is EntityToolItem;
 
@@ -222,6 +243,8 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public string UseCaseHeader => (ArmedTool as UseCaseToolItem)?.Name ?? "Use case";
 
+    public string StructureHeader => (ArmedTool as UmlToolItem)?.Name ?? "Structure";
+
     /// <summary>
     /// Status-bar hint describing how to use the armed tool; <c>null</c> when the select tool is active.
     /// </summary>
@@ -230,6 +253,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         ShapeToolItem shape => $"Click on the canvas to place {shape.Name}.",
         ClassNodeToolItem classNode => $"Click on the canvas to place {classNode.Name}.",
         UseCaseToolItem useCaseNode => $"Click on the canvas to place {useCaseNode.Name}.",
+        UmlToolItem umlNode => $"Click on the canvas to place {umlNode.Name}.",
         EntityToolItem entity => $"Click on the canvas to place {entity.Name}.",
         ConnectorToolItem connector => $"Drag from one node to another to draw {connector.Name}.",
         _ => null,
@@ -257,12 +281,14 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedConnector));
         OnPropertyChanged(nameof(SelectedClassNode));
         OnPropertyChanged(nameof(SelectedUseCaseNode));
+        OnPropertyChanged(nameof(SelectedUmlNode));
         OnPropertyChanged(nameof(SelectedEntity));
         OnPropertyChanged(nameof(IsSelectTool));
         OnPropertyChanged(nameof(IsShapeMode));
         OnPropertyChanged(nameof(IsConnectorMode));
         OnPropertyChanged(nameof(IsClassNodeMode));
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
+        OnPropertyChanged(nameof(IsUmlNodeMode));
         OnPropertyChanged(nameof(IsEntityNodeMode));
         OnPropertyChanged(nameof(ShapesHeader));
         OnPropertyChanged(nameof(FlowchartHeader));
@@ -271,6 +297,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(UmlConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));
         OnPropertyChanged(nameof(UseCaseHeader));
+        OnPropertyChanged(nameof(StructureHeader));
         OnPropertyChanged(nameof(ActiveToolHint));
     }
 }

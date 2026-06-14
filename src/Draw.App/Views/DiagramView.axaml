@@ -312,6 +312,110 @@
                                      IsVisible="{Binding IsEditing}" />
                         </Panel>
                     </DataTemplate>
+
+                    <DataTemplate DataType="vm:PackageNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Grid RowDefinitions="Auto,*">
+                                <Border Grid.Row="0"
+                                        Background="{Binding Fill}"
+                                        BorderBrush="{Binding Stroke}"
+                                        BorderThickness="{Binding BorderThickness}"
+                                        HorizontalAlignment="Left"
+                                        Width="{Binding TabWidth}"
+                                        Height="{Binding TabHeight}" />
+                                <Border Grid.Row="1"
+                                        Background="{Binding Fill}"
+                                        BorderBrush="{Binding Stroke}"
+                                        BorderThickness="{Binding BorderThickness}" />
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding Title}"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="{Binding FontFamily}"
+                                           FontSize="{Binding FontSize}"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="8"
+                                           IsVisible="{Binding !IsEditing}" />
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding Label, Mode=TwoWay}"
+                                         FontSize="{Binding FontSize}"
+                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalAlignment="Center" Background="Transparent"
+                                         IsVisible="{Binding IsEditing}" />
+                            </Grid>
+                        </Panel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:ComponentNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Border Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}" />
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        IsVisible="{Binding !IsEditing}">
+                                <TextBlock Text="«component»"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="{Binding FontFamily}"
+                                           FontSize="{Binding FontSize}"
+                                           FontStyle="Italic"
+                                           TextAlignment="Center" />
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="{Binding FontFamily}"
+                                           FontSize="{Binding FontSize}"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalAlignment="Center" Background="Transparent"
+                                     IsVisible="{Binding IsEditing}" />
+                            <!-- Port tabs straddling the left edge (the world layer has ClipToBounds=False). -->
+                            <Border Width="12" Height="16"
+                                    Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                    Margin="-6,16,0,0" />
+                            <Border Width="12" Height="16"
+                                    Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                    Margin="-6,44,0,0" />
+                        </Panel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:DeploymentNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Path Data="{Binding Geometry}"
+                                  Fill="{Binding Fill}"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}" />
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{Binding Foreground}"
+                                       FontFamily="{Binding FontFamily}"
+                                       FontSize="{Binding FontSize}"
+                                       FontWeight="Bold"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Margin="{Binding FrontFacePadding}"
+                                       IsVisible="{Binding !IsEditing}" />
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalAlignment="Center" Background="Transparent"
+                                     Margin="{Binding FrontFacePadding}"
+                                     IsVisible="{Binding IsEditing}" />
+                        </Panel>
+                    </DataTemplate>
                 </ItemsControl.DataTemplates>
             </ItemsControl>
 

@@ -107,6 +107,11 @@
         <StreamGeometry>M12,19 L18,13 L14,13 L14,11 L10,11 L10,13 L6,13 Z</StreamGeometry>
     </GeometryGroup>
 
+    <!-- UML structural nodes (filled silhouettes). -->
+    <StreamGeometry x:Key="ToolIcon.Package">M3,6 H11 V9 H21 V19 H3 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Component">M7,5 H20 V19 H7 Z M3,8 H8 V12 H3 Z M3,13 H8 V17 H3 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.Deployment">M3,8 L7,4 H21 V16 L17,20 H3 Z</StreamGeometry>
+
     <!-- Class diagram: interface lollipop (provided-interface circle on a stem) -->
     <GeometryGroup x:Key="ToolIcon.Interface" FillRule="EvenOdd">
         <EllipseGeometry Rect="8,3,8,8" />

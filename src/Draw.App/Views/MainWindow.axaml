@@ -214,6 +214,11 @@
                         <ribbon:RibbonMenuItem Header="Include" CommandParameter="{x:Static rel:RelationshipKind.Include}" IconData="{StaticResource ToolIcon.Dependency}" />
                         <ribbon:RibbonMenuItem Header="Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}" IconData="{StaticResource ToolIcon.Dependency}" />
                     </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonDropDownButton x:Name="StructureDropDown" Header="{Binding Toolbox.StructureHeader}" IconData="{StaticResource ToolIcon.Package}">
+                        <ribbon:RibbonMenuItem Header="Package" CommandParameter="{x:Static vm:UmlNodeKind.Package}" IconData="{StaticResource ToolIcon.Package}" />
+                        <ribbon:RibbonMenuItem Header="Component" CommandParameter="{x:Static vm:UmlNodeKind.Component}" IconData="{StaticResource ToolIcon.Component}" />
+                        <ribbon:RibbonMenuItem Header="Deployment" CommandParameter="{x:Static vm:UmlNodeKind.Deployment}" IconData="{StaticResource ToolIcon.Deployment}" />
+                    </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonButton Header="Note" Command="{Binding Toolbox.SelectShapeToolCommand}" CommandParameter="{x:Static nodes:ShapeKind.Note}" IconData="{StaticResource ToolIcon.Note}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="ER">

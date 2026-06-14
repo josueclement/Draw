@@ -104,13 +104,29 @@ public static class DiagramSvgRenderer
             case ClassNodeViewModel:
             case EntityNodeViewModel:
             case SystemBoundaryNodeViewModel:
-                sb.Append("<rect x=\"").Append(Num(x)).Append("\" y=\"").Append(Num(y))
-                  .Append("\" width=\"").Append(Num(w)).Append("\" height=\"").Append(Num(h)).Append("\" ")
-                  .Append(Paint("fill", node.Fill)).Append(' ').Append(Paint("stroke", node.Stroke))
-                  .Append(" stroke-width=\"").Append(Num(thickness)).Append("\"/>\n");
+                EmitRect(sb, x, y, w, h, node, thickness);
+                break;
+            case PackageNodeViewModel package:
+                EmitRect(sb, x, y, package.TabWidth, package.TabHeight, node, thickness);
+                EmitRect(sb, x, y + package.TabHeight, w, h - package.TabHeight, node, thickness);
+                break;
+            case ComponentNodeViewModel:
+                // Body plus the two port tabs straddling the left edge (matches the data template).
+                EmitRect(sb, x, y, w, h, node, thickness);
+                EmitRect(sb, x - 6d, y + 16d, 12d, 16d, node, thickness);
+                EmitRect(sb, x - 6d, y + 44d, 12d, 16d, node, thickness);
+                break;
+            case DeploymentNodeViewModel:
+                EmitShape(sb, UmlNodeGeometry.DeploymentSvg(w, h), x, y, node, thickness);
                 break;
         }
     }
+
+    private static void EmitRect(StringBuilder sb, double x, double y, double w, double h, NodeViewModelBase node, double thickness)
+        => sb.Append("<rect x=\"").Append(Num(x)).Append("\" y=\"").Append(Num(y))
+             .Append("\" width=\"").Append(Num(w)).Append("\" height=\"").Append(Num(h)).Append("\" ")
+             .Append(Paint("fill", node.Fill)).Append(' ').Append(Paint("stroke", node.Stroke))
+             .Append(" stroke-width=\"").Append(Num(thickness)).Append("\"/>\n");
 
     private static void EmitShape(StringBuilder sb, SvgShape shape, double x, double y, NodeViewModelBase node, double thickness)
     {

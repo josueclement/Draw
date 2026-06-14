@@ -456,6 +456,14 @@ public partial class DiagramView : UserControl
             return true;
         }
 
+        // UML structural-node placement.
+        if (toolbox?.SelectedUmlNode is { } umlTool)
+        {
+            vm.AddUmlNode(umlTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return true;
+        }
+
         // ER table placement.
         if (toolbox is { SelectedEntity: not null })
         {

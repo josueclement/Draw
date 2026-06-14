@@ -123,6 +123,15 @@
             <MenuItem Header="_System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}">
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=bounding_box}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
+            <MenuItem Header="_Package" CommandParameter="{x:Static vm:UmlNodeKind.Package}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Package}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="C_omponent" CommandParameter="{x:Static vm:UmlNodeKind.Component}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Component}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="De_ployment" CommandParameter="{x:Static vm:UmlNodeKind.Deployment}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Deployment}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         <MenuItem Header="_ER">
             <MenuItem Header="_Table" Tag="entity">
