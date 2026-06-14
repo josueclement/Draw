@@ -14,11 +14,13 @@ public sealed class FontSpec
 
     public bool Italic { get; set; }
 
-    // Default text: Carbon light-theme "foreground" near-black (#1E1F22). Doubles as the sentinel the
-    // App layer uses to detect un-customised text and swap in the theme-aware brush (dark: #BCBEC4).
+    // Default text: Carbon light-theme "foreground" near-black (#1E1F22). The concrete fallback used when
+    // Color is null and no theme brush is available (e.g. export). Since v2, "follow the theme default"
+    // is represented explicitly by a null Color — not by value-equality on this constant.
     public static readonly ArgbColor DefaultColor = new(0xFF, 0x1E, 0x1F, 0x22);
 
-    public ArgbColor Color { get; set; } = DefaultColor;
+    /// <summary>The text colour, or <c>null</c> to follow the active theme's default node text.</summary>
+    public ArgbColor? Color { get; set; }
 
     public FontSpec Clone() => new()
     {

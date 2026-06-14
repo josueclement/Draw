@@ -156,7 +156,7 @@ public sealed class ClipboardCoordinator
             PixelHeight = pixelHeight,
             Bounds = bounds,
             Style = _context.Document.DefaultShapeStyle.Clone(),
-            ZIndex = NextZIndex(),
+            ZIndex = _context.NextZIndex(),
         };
 
         _context.Document.Nodes.Add(node);
@@ -269,7 +269,4 @@ public sealed class ClipboardCoordinator
         bitmap.Save(stream);
         return stream.ToArray();
     }
-
-    private int NextZIndex()
-        => _context.Document.Nodes.Count == 0 ? 0 : _context.Document.Nodes.Max(n => n.ZIndex) + 1;
 }

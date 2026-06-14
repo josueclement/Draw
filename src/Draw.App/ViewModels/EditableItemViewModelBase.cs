@@ -4,12 +4,28 @@ using System.Collections.Generic;
 namespace Draw.App.ViewModels;
 
 /// <summary>
+/// The inline-editing surface an <c>InlineRowEditController</c> drives, independent of the row's model
+/// type, so one controller serves both class members and entity columns.
+/// </summary>
+public interface IEditableRow
+{
+    bool IsEditing { get; }
+
+    /// <summary>The row's current name; blank means a not-yet-named row that can be discarded.</summary>
+    string EditableName { get; }
+
+    void BeginEdit();
+
+    void CommitEdit();
+}
+
+/// <summary>
 /// Shared lifecycle for a bindable wrapper over a model item editable inline (raw text) or
 /// field-by-field. Subclasses (class members, entity columns) supply only the type-specific
 /// format/parse/apply hooks; the edit/commit/cancel flow and its undo-capture contract live here so
 /// the two cannot drift apart.
 /// </summary>
-public abstract class EditableItemViewModelBase<TModel> : ViewModelBase
+public abstract class EditableItemViewModelBase<TModel> : ViewModelBase, IEditableRow
     where TModel : class
 {
     private string _editSeed = string.Empty;
@@ -110,6 +126,9 @@ public abstract class EditableItemViewModelBase<TModel> : ViewModelBase
 
     /// <summary>The model's current name, used to decide when a newly-added item becomes established.</summary>
     protected abstract string ModelName { get; }
+
+    /// <summary><see cref="IEditableRow.EditableName"/>: the row's name for the controller's blank check.</summary>
+    public string EditableName => ModelName;
 
     /// <summary>Re-raises every derived property bound to the row.</summary>
     protected abstract void RaiseAll();

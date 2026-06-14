@@ -1,0 +1,66 @@
+# Codifies the conventions already present in the tree (see CLAUDE.md "Conventions").
+# Consistent with Directory.Build.props (AnalysisLevel=latest, WarningsAsErrors=nullable):
+# the no-var rule is an error to match the zero-var codebase; all other style is advisory
+# so it never newly blocks a build (there is no lint gate today).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{csproj,props,targets,slnx}]
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false   # two trailing spaces = hard line break
+
+[*.cs]
+# --- File layout ---
+csharp_style_namespace_declarations = file_scoped:error
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# --- THE load-bearing invariant: never use 'var'. Enforced as a build error. ---
+csharp_style_var_for_built_in_types = false:error
+csharp_style_var_when_type_is_apparent = false:error
+csharp_style_var_elsewhere = false:error
+
+# --- Braces / layout (Allman, as written) ---
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:suggestion
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+
+# --- 'this.' is never used in the tree ---
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# --- Expression-bodied members: used widely for one-liners ---
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+csharp_style_expression_bodied_constructors = false:suggestion
+
+# --- Modern C# the codebase uses ---
+csharp_style_prefer_primary_constructors = false:suggestion   # VMs use explicit ctors + the field keyword
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+dotnet_style_prefer_conditional_expression_over_return = true:suggestion
+
+# --- Naming: private fields _camelCase ---
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case

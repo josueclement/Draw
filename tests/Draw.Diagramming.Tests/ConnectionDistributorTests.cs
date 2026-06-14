@@ -89,6 +89,23 @@ public class ConnectionDistributorTests
     }
 
     [Fact]
+    public void PlanPinning_OmitsEndWithinToleranceOfComputedAnchor()
+    {
+        Guid node = Guid.NewGuid();
+        // The computed anchor is (0,0.5); an end a hair off (sub-tolerance) still counts as "already
+        // there" — guards the tolerance compare against the prior exact float == (which would re-pin).
+        List<ConnectionDistributor.PinningEnd<int>> ends = new()
+        {
+            new ConnectionDistributor.PinningEnd<int>(1, node, Box, new Point2D(0, 50), new Point2D(0, 0.5 + 1e-12)),
+        };
+
+        IReadOnlyList<(int Token, Point2D Anchor)> plan =
+            ConnectionDistributor.PlanPinning(ends, ConnectionDistributor.EvenAnchor);
+
+        Assert.Empty(plan);
+    }
+
+    [Fact]
     public void PlanPinning_GroupsByNodeAndSide()
     {
         Guid a = Guid.NewGuid();

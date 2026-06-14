@@ -8,6 +8,18 @@ using ModelStyle = Draw.Model.Styling;
 
 namespace Draw.App.ViewModels;
 
+/// <summary>Which kind of selection the inspector is showing. The booleans the inspector panels bind
+/// to are computed from this one value, so a new node kind with an inspector panel is one enum case
+/// plus one XAML panel rather than another flag + cast + branch.</summary>
+public enum InspectorSelection
+{
+    None,
+    Label,
+    ClassNode,
+    EntityNode,
+    Connector,
+}
+
 /// <summary>Edits text/styling for the active document's selection — a shape or a connector.</summary>
 public sealed class InspectorViewModel : ViewModelBase
 {
@@ -32,73 +44,44 @@ public sealed class InspectorViewModel : ViewModelBase
     public static IReadOnlyList<ModelStyle.DashStyle> DashStyleOptions { get; } =
         Enum.GetValues<ModelStyle.DashStyle>();
 
-    public bool IsShapeSelected
+    /// <summary>The current selection kind. The per-kind booleans below are computed from this, so
+    /// LoadFromSelection sets exactly one value instead of a fan of flags.</summary>
+    public InspectorSelection SelectionKind
     {
         get;
         private set
         {
             if (SetProperty(ref field, value))
             {
-                OnPropertyChanged(nameof(HasNoSelection));
+                OnPropertyChanged(nameof(IsConnectorSelected));
+                OnPropertyChanged(nameof(IsClassNodeSelected));
+                OnPropertyChanged(nameof(IsEntityNodeSelected));
+                OnPropertyChanged(nameof(IsLabelNodeSelected));
                 OnPropertyChanged(nameof(IsNodeSelected));
+                OnPropertyChanged(nameof(HasNoSelection));
             }
         }
     }
 
-    public bool IsConnectorSelected
-    {
-        get;
-        private set { if (SetProperty(ref field, value)) OnPropertyChanged(nameof(HasNoSelection)); }
-    }
+    public bool IsConnectorSelected => SelectionKind == InspectorSelection.Connector;
 
     /// <summary>True only when exactly one connector is selected — gates the per-connector fields
-    /// (cardinality, labels) that have no meaningful shared value across a multi-connector selection.</summary>
+    /// (cardinality, labels) that have no meaningful shared value across a multi-connector selection.
+    /// A finer gate than <see cref="IsConnectorSelected"/>, so it stays a separate flag.</summary>
     public bool IsSingleConnectorSelected
     {
         get;
         private set => SetProperty(ref field, value);
     }
 
-    public bool IsClassNodeSelected
-    {
-        get;
-        private set
-        {
-            if (SetProperty(ref field, value))
-            {
-                OnPropertyChanged(nameof(HasNoSelection));
-                OnPropertyChanged(nameof(IsNodeSelected));
-            }
-        }
-    }
+    public bool IsClassNodeSelected => SelectionKind == InspectorSelection.ClassNode;
 
-    public bool IsLabelNodeSelected
-    {
-        get;
-        private set
-        {
-            if (SetProperty(ref field, value))
-            {
-                OnPropertyChanged(nameof(HasNoSelection));
-                OnPropertyChanged(nameof(IsNodeSelected));
-            }
-        }
-    }
+    public bool IsLabelNodeSelected => SelectionKind == InspectorSelection.Label;
 
-    public bool IsEntityNodeSelected
-    {
-        get;
-        private set
-        {
-            if (SetProperty(ref field, value))
-            {
-                OnPropertyChanged(nameof(HasNoSelection));
-                OnPropertyChanged(nameof(IsNodeSelected));
-            }
-        }
-    }
+    public bool IsEntityNodeSelected => SelectionKind == InspectorSelection.EntityNode;
 
-    public bool IsNodeSelected => IsLabelNodeSelected || IsClassNodeSelected || IsEntityNodeSelected;
+    public bool IsNodeSelected =>
+        SelectionKind is InspectorSelection.Label or InspectorSelection.ClassNode or InspectorSelection.EntityNode;
 
     public ClassNodeViewModel? SelectedClassNode
     {
@@ -112,7 +95,7 @@ public sealed class InspectorViewModel : ViewModelBase
         private set => SetProperty(ref field, value);
     }
 
-    public bool HasNoSelection => !IsLabelNodeSelected && !IsConnectorSelected && !IsClassNodeSelected && !IsEntityNodeSelected;
+    public bool HasNoSelection => SelectionKind == InspectorSelection.None;
 
     // --- Shape properties ---
 
@@ -292,16 +275,17 @@ public sealed class InspectorViewModel : ViewModelBase
             List<ConnectorViewModel> connectors = _target?.SelectedConnectors.ToList() ?? new List<ConnectorViewModel>();
             ConnectorViewModel? connector = connectors.Count > 0 ? connectors[0] : null;
             NodeViewModelBase? node = connector is null ? _target?.SelectedNodes.FirstOrDefault() : null;
-            ShapeNodeViewModel? shape = node as ShapeNodeViewModel;
             ClassNodeViewModel? klass = node as ClassNodeViewModel;
             EntityNodeViewModel? entity = node as EntityNodeViewModel;
 
-            IsConnectorSelected = connector is not null;
+            // Exactly one kind: connector takes priority; among nodes, class/entity have dedicated panels
+            // and everything else with an inline label (shape/actor/use-case/boundary) is "Label".
+            SelectionKind = connector is not null ? InspectorSelection.Connector
+                : klass is not null ? InspectorSelection.ClassNode
+                : entity is not null ? InspectorSelection.EntityNode
+                : node is { HasInlineLabel: true } ? InspectorSelection.Label
+                : InspectorSelection.None;
             IsSingleConnectorSelected = _target?.SelectedConnector is not null;
-            IsShapeSelected = shape is not null;
-            IsClassNodeSelected = klass is not null;
-            IsEntityNodeSelected = entity is not null;
-            IsLabelNodeSelected = node is { HasInlineLabel: true };
             SelectedClassNode = klass;
             SelectedEntityNode = entity;
 
@@ -322,7 +306,9 @@ public sealed class InspectorViewModel : ViewModelBase
             else if (node is not null)
             {
                 ModelStyle.ShapeStyle style = node.Model.Style;
-                FillHex = style.Fill.ToHex();
+                // A null fill follows the theme; show the concrete default in the picker so the field
+                // isn't blank (editing it writes a concrete colour, detaching from the theme default).
+                FillHex = (style.Fill ?? ModelStyle.ShapeStyle.DefaultFill).ToHex();
                 StrokeHex = style.Stroke.Color.ToHex();
                 StrokeThickness = style.Stroke.Thickness;
                 FontSize = style.Font.Size;

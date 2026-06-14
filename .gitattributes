@@ -1,0 +1,22 @@
+# Normalize all text files to LF in the repo and on checkout, on every platform.
+# The tree is 100% text today (cs/md/csproj/axaml/json/props/slnx/manifest); no binary
+# carve-outs are needed. .draw files are JSON text and are covered by `text=auto`.
+* text=auto eol=lf
+
+# Be explicit for the file types we ship, so intent survives even if the wildcard is edited.
+*.cs        text eol=lf
+*.csproj    text eol=lf
+*.props     text eol=lf
+*.targets   text eol=lf
+*.slnx      text eol=lf
+*.axaml     text eol=lf
+*.xaml      text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.manifest  text eol=lf
+*.draw      text eol=lf
+
+# If binary assets are ever added (icons/fonts/sample exports), declare them here, e.g.:
+# *.png  binary
+# *.ico  binary
+# *.ttf  binary

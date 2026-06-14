@@ -133,19 +133,20 @@ public abstract class NodeViewModelBase : ViewModelBase
         set => SetProperty(ref field, value);
     }
 
-    /// <summary>True when the fill is the un-customised default, so it follows the active theme.</summary>
-    public bool UsesDefaultFill => Model.Style.Fill == ModelStyle.ShapeStyle.DefaultFill;
+    /// <summary>True when the fill is the un-customised default (null), so it follows the active theme.</summary>
+    public bool UsesDefaultFill => Model.Style.Fill is null;
 
-    /// <summary>True when the text colour is the un-customised default, so it follows the active theme.</summary>
-    public bool UsesDefaultForeground => Model.Style.Font.Color == ModelStyle.FontSpec.DefaultColor;
+    /// <summary>True when the text colour is the un-customised default (null), so it follows the active theme.</summary>
+    public bool UsesDefaultForeground => Model.Style.Font.Color is null;
 
     /// <summary>The active-theme variant of the quick-palette swatch this node is linked to, or null
     /// when it carries no <c>PaletteId</c> (custom or default colours).</summary>
     private SwatchVariant? Swatch
-        => StylePalette.TryGet(Model.Style.PaletteId, out StyleSwatch swatch) ? swatch.Variant(_theme.IsDark) : null;
+        => StylePalette.TryGet(Model.Style.PaletteId, out StyleSwatch? swatch) ? swatch.Variant(_theme.IsDark) : null;
 
     public IBrush Fill => Swatch is { } s ? s.Fill.ToBrush()
-        : UsesDefaultFill && _theme.DefaultNodeFill is { } fill ? fill : Model.Style.Fill.ToBrush();
+        : Model.Style.Fill is { } fill ? fill.ToBrush()
+        : _theme.DefaultNodeFill ?? ModelStyle.ShapeStyle.DefaultFill.ToBrush();
 
     public IBrush Stroke => Swatch is { } s ? s.Stroke.ToBrush() : Model.Style.Stroke.Color.ToBrush();
 
@@ -164,7 +165,8 @@ public abstract class NodeViewModelBase : ViewModelBase
     public AvaloniaList<double>? StrokeDashArray => Model.Style.Stroke.Dash.ToDashArray();
 
     public IBrush Foreground => Swatch is { } s ? s.Text.ToBrush()
-        : UsesDefaultForeground && _theme.DefaultNodeText is { } text ? text : Model.Style.Font.Color.ToBrush();
+        : Model.Style.Font.Color is { } color ? color.ToBrush()
+        : _theme.DefaultNodeText ?? ModelStyle.FontSpec.DefaultColor.ToBrush();
 
     public FontFamily FontFamily => new(Model.Style.Font.Family);
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Draw.Model.Styling;
 
 namespace Draw.Diagramming.Styling;
@@ -64,7 +65,7 @@ public static class StylePalette
     private static readonly Dictionary<string, StyleSwatch> ById = BuildIndex(Swatches);
 
     /// <summary>Looks up a swatch by its stored id; <c>false</c> for null/unknown ids.</summary>
-    public static bool TryGet(string? id, out StyleSwatch swatch)
+    public static bool TryGet(string? id, [MaybeNullWhen(false)] out StyleSwatch swatch)
     {
         if (id is not null && ById.TryGetValue(id, out StyleSwatch? found))
         {
@@ -72,7 +73,7 @@ public static class StylePalette
             return true;
         }
 
-        swatch = null!;
+        swatch = null;
         return false;
     }
 

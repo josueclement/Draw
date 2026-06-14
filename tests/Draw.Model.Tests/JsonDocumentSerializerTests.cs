@@ -210,9 +210,9 @@ public class JsonDocumentSerializerTests
     public void Deserialize_SchemaVersionJustAboveCurrent_Throws()
     {
         JsonDocumentSerializer serializer = new();
+        string json = $"{{\"schemaVersion\":{DocumentSchema.CurrentVersion + 1}}}";
 
-        Assert.Throws<UnsupportedSchemaVersionException>(
-            () => serializer.Deserialize("{\"schemaVersion\":2}"));
+        Assert.Throws<UnsupportedSchemaVersionException>(() => serializer.Deserialize(json));
     }
 
     [Theory]
@@ -233,13 +233,71 @@ public class JsonDocumentSerializerTests
     public void Deserialize_OlderSchema_IsStampedToCurrentVersion()
     {
         // The migration seam upgrades an older document to the current shape and stamps the version,
-        // so downstream code never sees a stale SchemaVersion. (No transforms exist yet, but the
-        // re-stamp is the observable contract the seam must keep once migrations are added.)
+        // so downstream code never sees a stale SchemaVersion (the v1→v2 colour transform is below).
         JsonDocumentSerializer serializer = new();
 
         DiagramDocument doc = serializer.Deserialize("{\"schemaVersion\":0}");
 
         Assert.Equal(DocumentSchema.CurrentVersion, doc.SchemaVersion);
+    }
+
+    [Fact]
+    public void Migrate_V1DefaultColours_BecomeNull_ToFollowTheme()
+    {
+        // A v1 document stored the theme-following default fill/text as their literal colours; v2
+        // represents "follow the theme" as null, so migration must null those legacy defaults.
+        JsonDocumentSerializer serializer = new();
+        ShapeNode node = new() { Style = new ShapeStyle { Fill = ShapeStyle.DefaultFill } };
+        node.Style.Font.Color = FontSpec.DefaultColor;
+        DiagramDocument v1 = new() { SchemaVersion = 1, Nodes = { node } };
+
+        DiagramDocument migrated = serializer.Deserialize(serializer.Serialize(v1));
+
+        ShapeNode result = Assert.IsType<ShapeNode>(migrated.Nodes[0]);
+        Assert.Null(result.Style.Fill);
+        Assert.Null(result.Style.Font.Color);
+        Assert.Equal(DocumentSchema.CurrentVersion, migrated.SchemaVersion);
+    }
+
+    [Fact]
+    public void Migrate_V1CustomFill_IsPreserved()
+    {
+        JsonDocumentSerializer serializer = new();
+        ArgbColor custom = ArgbColor.FromRgb(0x11, 0x22, 0x33);
+        ShapeNode node = new() { Style = new ShapeStyle { Fill = custom } };
+        DiagramDocument v1 = new() { SchemaVersion = 1, Nodes = { node } };
+
+        DiagramDocument migrated = serializer.Deserialize(serializer.Serialize(v1));
+
+        Assert.Equal(custom, Assert.IsType<ShapeNode>(migrated.Nodes[0]).Style.Fill);
+    }
+
+    [Fact]
+    public void RoundTrip_NullFill_IsOmittedFromJson_AndReadsBackAsNull()
+    {
+        JsonDocumentSerializer serializer = new();
+        DiagramDocument doc = new() { Nodes = { new ShapeNode() } }; // default style → null fill
+
+        string json = serializer.Serialize(doc);
+        Assert.DoesNotContain("\"fill\"", json, StringComparison.OrdinalIgnoreCase);
+
+        DiagramDocument round = serializer.Deserialize(json);
+        Assert.Null(Assert.IsType<ShapeNode>(round.Nodes[0]).Style.Fill);
+    }
+
+    [Fact]
+    public void RoundTrip_V2_ExplicitFillEqualToDefault_StaysNonNull()
+    {
+        // The bug C1 fixes: in v2 a user may pick exactly the default colour as a custom fill. It must
+        // round-trip as a concrete (non-null) colour, not be re-interpreted as "follow the theme".
+        // Migration runs only for v1, so a current-version document is never re-nulled.
+        JsonDocumentSerializer serializer = new();
+        ShapeNode node = new() { Style = new ShapeStyle { Fill = ShapeStyle.DefaultFill } };
+        DiagramDocument v2 = new() { Nodes = { node } }; // SchemaVersion defaults to current
+
+        DiagramDocument round = serializer.Deserialize(serializer.Serialize(v2));
+
+        Assert.Equal(ShapeStyle.DefaultFill, Assert.IsType<ShapeNode>(round.Nodes[0]).Style.Fill);
     }
 
     [Theory]

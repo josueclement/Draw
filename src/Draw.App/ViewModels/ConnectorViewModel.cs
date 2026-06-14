@@ -58,15 +58,15 @@ public sealed class ConnectorViewModel : ViewModelBase
     /// <summary>The active-theme variant of the quick-palette swatch this connector is linked to, or
     /// null when it carries no <c>PaletteId</c>.</summary>
     private SwatchVariant? Swatch
-        => StylePalette.TryGet(_model.Style.PaletteId, out StyleSwatch swatch) ? swatch.Variant(_theme.IsDark) : null;
+        => StylePalette.TryGet(_model.Style.PaletteId, out StyleSwatch? swatch) ? swatch.Variant(_theme.IsDark) : null;
 
     public IBrush Stroke => Swatch is { } s ? s.Stroke.ToBrush() : _model.Style.Stroke.Color.ToBrush();
 
-    /// <summary>Brush for the connector's labels: the swatch's text colour, else the theme-aware
-    /// default (matching node text), else the customised font colour.</summary>
+    /// <summary>Brush for the connector's labels: the swatch's text colour, else the customised font
+    /// colour, else (null = default) the theme-aware default matching node text.</summary>
     public IBrush LabelForeground => Swatch is { } s ? s.Text.ToBrush()
-        : _model.Style.Font.Color == ModelStyle.FontSpec.DefaultColor && _theme.DefaultNodeText is { } text ? text
-        : _model.Style.Font.Color.ToBrush();
+        : _model.Style.Font.Color is { } color ? color.ToBrush()
+        : _theme.DefaultNodeText ?? ModelStyle.FontSpec.DefaultColor.ToBrush();
 
     public double StrokeThickness => _model.Style.Stroke.Thickness;
 
@@ -291,35 +291,7 @@ public sealed class ConnectorViewModel : ViewModelBase
         List<ModelPoint> logical = new() { _route.Start };
         logical.AddRange(_model.BendPoints);
         logical.Add(_route.End);
-
-        int best = 0;
-        double bestDistance = double.PositiveInfinity;
-        for (int i = 1; i < logical.Count; i++)
-        {
-            double distance = DistanceToSegment(world, logical[i - 1], logical[i]);
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = i - 1;
-            }
-        }
-
-        return best;
-    }
-
-    private static double DistanceToSegment(ModelPoint p, ModelPoint a, ModelPoint b)
-    {
-        ModelPoint ab = b - a;
-        double lengthSquared = (ab.X * ab.X) + (ab.Y * ab.Y);
-        if (lengthSquared <= double.Epsilon)
-        {
-            return p.DistanceTo(a);
-        }
-
-        double t = (((p.X - a.X) * ab.X) + ((p.Y - a.Y) * ab.Y)) / lengthSquared;
-        t = Math.Clamp(t, 0d, 1d);
-        ModelPoint projection = new(a.X + (t * ab.X), a.Y + (t * ab.Y));
-        return p.DistanceTo(projection);
+        return SegmentGeometry.NearestSegmentIndex(world, logical);
     }
 
     private void RaiseLabelPositions()

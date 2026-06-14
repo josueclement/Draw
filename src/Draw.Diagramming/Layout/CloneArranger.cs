@@ -39,10 +39,12 @@ public static class CloneArranger
         ArgumentNullException.ThrowIfNull(sourceConnectors);
         ArgumentNullException.ThrowIfNull(existingNodes);
 
-        // Reproduce the document's NextZIndex()/LowestZIndex() exactly: ordinary clones take max+1 and up,
-        // boundary clones take min-1 and down. Ordinary placement only ever raises the max and boundary
-        // placement only ever lowers the min, so these two running counters never interfere — equivalent
-        // to recomputing both over the growing document on every clone, but without mutating anything.
+        // Reproduce the document's z-banding (App-layer IDocumentEditContext.NextZIndex/NextBackgroundZIndex)
+        // exactly: ordinary clones take max+1 and up, boundary clones take min-1 and down. This stays a local
+        // computation on purpose — CloneArranger is UI-agnostic (Draw.Diagramming) and takes no dependency on
+        // the App seam, and it runs two running counters over a growing batch rather than one call per node.
+        // Ordinary placement only ever raises the max and boundary placement only ever lowers the min, so the
+        // two counters never interfere — equivalent to recomputing both over the document on every clone.
         int nextOrdinary = existingNodes.Count == 0 ? 0 : existingNodes.Max(n => n.ZIndex) + 1;
         int nextBoundary = (existingNodes.Count == 0 ? 0 : existingNodes.Min(n => n.ZIndex)) - 1;
 

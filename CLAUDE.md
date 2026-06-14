@@ -72,10 +72,10 @@ Invariants that are easy to violate and must be preserved:
   by running on Windows/macOS (or ask the user to run and report).
 - **Linux prerequisite:** `sudo apt-get install -y libfontconfig1 libice6 libsm6`, or Skia fails
   to load at startup. Windows/macOS need nothing extra.
-- **Noisy working tree:** there is no `.gitattributes`, so ~90 files perennially show as modified
-  (CRLF vs LF). Editing a file can flip its line endings and make the *whole* file show as
-  changed. Check real changes with `git diff --ignore-cr-at-eol`, and commit/push only when asked
-  and only the intended files.
+- **Line endings:** a `.gitattributes` (`* text=auto eol=lf`) normalizes the tree to LF, so the
+  old CRLF phantom-diffs are gone. If you still see spurious whole-file diffs (e.g. a stale local
+  checkout), check real changes with `git diff --ignore-cr-at-eol`. Commit/push only when asked and
+  only the intended files.
 - **Avalonia 12 trap:** `ItemsControl` defaults `ClipToBounds=true`; with a `Canvas` ItemsPanel
   the control measures to 0×0 and clips its items away (invisible nodes). The world-space
   layers in `DiagramView.axaml` set `ClipToBounds="False"` for this reason — don't remove it.

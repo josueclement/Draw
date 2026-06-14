@@ -17,7 +17,7 @@ Nodes are templated Avalonia controls positioned on a `Canvas` inside a zoom/pan
 transform; selection handles and the marquee live on an overlay canvas. Avalonia renders
 with Skia under the hood, so no raw `SKCanvas` is needed. `ShapeNodeViewModel` exposes
 Avalonia media (geometry/brushes) derived from the model; `ShapeGeometryBuilder` produces
-the outline for each of the 7 shape kinds (sharing `ShapeOutline` with the router).
+the outline for each of the 9 shape kinds (sharing `ShapeOutline` with the router).
 
 ## Connectors (Phase 2)
 
@@ -54,6 +54,20 @@ the node collection so it renders behind the use cases it frames (no parent-chil
 Use-case relationships (association, include / extend, generalization) reuse the Phase 2
 connectors unchanged; the toolbox now surfaces Include and Extend.
 
+## ER diagrams (Phase 5)
+
+Entity-relationship tables are modeled by `EntityNode` (a titled box over a flat list of
+`EntityColumn`s) on the same `NodeViewModelBase` foundation as every other node kind. Each
+column carries its relational semantics as flags — primary/foreign key, unique, nullable — plus
+a free-text SQL `Type`. Columns round-trip to and from ER text (`name: type` followed by
+space-separated flag tokens such as `PK`, `FK`, `UNIQUE`/`UQ`, `NOT NULL`/`NN`, `NULL`) through
+`Draw.Diagramming.Er.ColumnSignature`, mirroring how `Uml.MemberSignature` handles class
+members; both inline editing (double-tap a row) and inspector edits route undo capture and
+dirty-marking through `INodeEditContext`. Entities attach connectors as a plain rectangle
+(`BoundaryKind == Rectangle`), and ER relationships reuse the Phase 2 connectors with
+crow's-foot cardinality decorations. `DiagramType.Er` selects the ER default palette at
+document creation.
+
 ## Bootstrapping
 
 `Program.Main` builds an `IHost`, starts it, runs Avalonia's classic desktop lifetime to
@@ -75,6 +89,16 @@ provides DI, configuration, logging and (later) hosted services. `App` resolves
 
 ## Verification
 
-There is no automated test suite. Verify changes with `dotnet build Draw.slnx` (compiled XAML
-validates bindings and types) plus a manual run on Windows/macOS — the headless Linux/WSL2
-environment cannot render the GUI.
+Two xUnit v3 test projects cover the pure-logic layers (no Avalonia dependency, so they run
+headless under WSL2): `tests/Draw.Model.Tests` (serialization round-trips and migration, model
+`Clone` completeness) and `tests/Draw.Diagramming.Tests` (routing, shape-boundary geometry,
+snapping, layout/arrange, connector + node-handle hit-testing, memento undo/redo, and UML/ER
+signature parsing). Run them with `dotnet test --solution Draw.slnx` (xUnit v3 on the Microsoft
+Testing Platform, wired via `global.json`'s `test.runner`).
+
+The `Draw.App` MVVM/view-model layer is intentionally not unit-tested: its view models and
+coordinators depend on `Avalonia.Media` value types (and so pull in Avalonia), so their
+orchestration is verified by `dotnet build Draw.slnx` (compiled XAML validates bindings and
+types) plus a manual run on Windows/macOS — the headless Linux/WSL2 environment cannot render
+the GUI. The reusable cores those coordinators delegate to (`ShapeArranger`, `ZOrderArranger`,
+`ConnectionDistributor`) live in `Draw.Diagramming` and are unit-tested there.

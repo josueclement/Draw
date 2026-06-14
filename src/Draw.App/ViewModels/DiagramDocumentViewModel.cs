@@ -23,27 +23,23 @@ using Draw.Model.Styling;
 namespace Draw.App.ViewModels;
 
 /// <summary>Editor state and mutating operations for one open diagram (one tab).</summary>
-public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDocumentEditContext, IDisposable
+public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, IDocumentEditContext, IViewportHost, IDisposable
 {
     private readonly IUndoService _undo;
     private readonly IConnectorRouter _router;
     private readonly IDocumentSerializer _serializer;
     private readonly EditorOptions _options;
     private readonly IThemeService _theme;
+    private readonly NodeKindRegistry _nodeKinds;
     private readonly ClipboardCoordinator _clipboardCoordinator;
     private readonly ConnectorSpacingCoordinator _connectorSpacingCoordinator;
     private readonly ZOrderCoordinator _zOrderCoordinator;
     private readonly AlignmentCoordinator _alignmentCoordinator;
+    private readonly SelectionCoordinator _selectionCoordinator;
+    private readonly ViewportCoordinator _viewportCoordinator;
+    private readonly StyleCoordinator _styleCoordinator;
     private DiagramDocument _document;
     private string _cleanSnapshot;
-
-    // Ribbon View-tab zoom step + bounds; bounds mirror the Ctrl+wheel clamp in DiagramView.
-    private const double ZoomStep = 1.2d;
-    private const double MinZoom = 0.1d;
-    private const double MaxZoom = 8d;
-
-    // Padding (world units) kept around content when fitting it to the viewport.
-    private const double FitMargin = 40d;
 
     public DiagramDocumentViewModel(
         DiagramDocument document,
@@ -53,6 +49,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         EditorOptions options,
         IThemeService theme,
         IClipboardService clipboard,
+        NodeKindRegistry nodeKinds,
         string? filePath)
     {
         _document = document ?? throw new ArgumentNullException(nameof(document));
@@ -61,13 +58,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _serializer = serializer ?? throw new ArgumentNullException(nameof(serializer));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _theme = theme ?? throw new ArgumentNullException(nameof(theme));
+        _nodeKinds = nodeKinds ?? throw new ArgumentNullException(nameof(nodeKinds));
         _clipboardCoordinator = new ClipboardCoordinator(this, _serializer, clipboard);
         _connectorSpacingCoordinator = new ConnectorSpacingCoordinator(this);
         _zOrderCoordinator = new ZOrderCoordinator(this);
         _alignmentCoordinator = new AlignmentCoordinator(this);
+        _selectionCoordinator = new SelectionCoordinator(this);
+        _viewportCoordinator = new ViewportCoordinator(this);
+        _styleCoordinator = new StyleCoordinator(this, _theme);
         FilePath = filePath;
         _undo.StateChanged += (_, _) => RaiseUndoState();
-        _theme.ThemeChanged += OnThemeChanged;
         // Construct the selection-gated commands before RebuildNodes(): it raises a selection-changed
         // notification that calls NotifyCanExecuteChanged() on both, so they must already exist.
         AlignCommand = new RelayCommand<AlignmentMode>(
@@ -83,7 +83,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             _ => HasNodeSelection);
         // Also selection-gated (CanExecute depends on node count) and notified in
         // RaiseSelectionChanged, so it likewise must exist before RebuildNodes().
-        FitToContentCommand = new RelayCommand(FitToContent, () => Nodes.Count > 0);
+        FitToContentCommand = new RelayCommand(_viewportCoordinator.FitToContent, () => Nodes.Count > 0);
         // Relative-alignment commands; selection-gated and notified in RaiseSelectionChanged, so they
         // must exist before RebuildNodes() too.
         SetReferenceCommand = new RelayCommand(SetReference, () => CanSetReference);
@@ -96,14 +96,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         RebuildConnectors();
         _cleanSnapshot = _serializer.Serialize(_document);
 
-        ZoomInCommand = new RelayCommand(() => Zoom = Math.Clamp(Zoom * ZoomStep, MinZoom, MaxZoom));
-        ZoomOutCommand = new RelayCommand(() => Zoom = Math.Clamp(Zoom / ZoomStep, MinZoom, MaxZoom));
-        ZoomResetCommand = new RelayCommand(() =>
-        {
-            Zoom = 1d;
-            PanX = 0d;
-            PanY = 0d;
-        });
+        ZoomInCommand = new RelayCommand(_viewportCoordinator.ZoomIn);
+        ZoomOutCommand = new RelayCommand(_viewportCoordinator.ZoomOut);
+        ZoomResetCommand = new RelayCommand(_viewportCoordinator.ZoomReset);
     }
 
     public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
@@ -117,6 +112,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public double GridSize => _options.GridSize;
 
     public bool SnapEnabled => _options.SnapToGrid;
+
+    /// <summary>Minimum zoom factor, from <see cref="EditorOptions"/> — the single source shared with
+    /// the Ctrl+wheel clamp in <c>DiagramView</c>.</summary>
+    public double MinZoom => _options.MinZoom;
+
+    /// <summary>Maximum zoom factor; see <see cref="MinZoom"/>.</summary>
+    public double MaxZoom => _options.MaxZoom;
 
     public string? FilePath
     {
@@ -308,62 +310,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public ShapeNodeViewModel AddShape(ShapeKind kind, Point2D center)
     {
-        CaptureUndo();
-
-        double w = _options.DefaultShapeWidth;
-        double h = _options.DefaultShapeHeight;
-        Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
-        if (SnapEnabled)
-        {
-            bounds = bounds.PositionSnappedToGrid(GridSize);
-        }
-
-        ShapeNode node = new()
-        {
-            Kind = kind,
-            Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
-            ZIndex = NextZIndex(),
-        };
-
-        _document.Nodes.Add(node);
-        ShapeNodeViewModel vm = new(node, _theme);
-        Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
-        return vm;
+        // Shapes keep their configurable default size (EditorOptions); other kinds size from the registry.
+        ShapeNode node = new() { Kind = kind, Style = _document.DefaultShapeStyle.Clone() };
+        return PlaceNode<ShapeNodeViewModel>(node, center, _options.DefaultShapeWidth, _options.DefaultShapeHeight);
     }
-
-    private const double ClassNodeDefaultWidth = 170d;
-    private const double ClassNodeDefaultHeight = 110d;
 
     public ClassNodeViewModel AddClassNode(ClassNodeKind kind, Point2D center)
     {
-        CaptureUndo();
-
-        double w = ClassNodeDefaultWidth;
-        double h = ClassNodeDefaultHeight;
-        Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
-        if (SnapEnabled)
-        {
-            bounds = bounds.PositionSnappedToGrid(GridSize);
-        }
-
-        ClassNode node = new()
-        {
-            Kind = kind,
-            Name = DefaultClassName(kind),
-            Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
-            ZIndex = NextZIndex(),
-        };
-
-        _document.Nodes.Add(node);
-        ClassNodeViewModel vm = new(node, this, _theme);
-        Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
-        return vm;
+        ClassNode node = new() { Kind = kind, Name = DefaultClassName(kind), Style = _document.DefaultShapeStyle.Clone() };
+        NodeKindDescriptor descriptor = _nodeKinds.For(node);
+        return PlaceNode<ClassNodeViewModel>(node, center, descriptor.DefaultWidth, descriptor.DefaultHeight);
     }
 
     private static string DefaultClassName(ClassNodeKind kind) => kind switch
@@ -373,54 +329,34 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         _ => "Class",
     };
 
-    private const double EntityNodeDefaultWidth = 180d;
-    private const double EntityNodeDefaultHeight = 120d;
-
     public EntityNodeViewModel AddEntityNode(Point2D center)
     {
-        CaptureUndo();
-
-        double w = EntityNodeDefaultWidth;
-        double h = EntityNodeDefaultHeight;
-        Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
-        if (SnapEnabled)
-        {
-            bounds = bounds.PositionSnappedToGrid(GridSize);
-        }
-
-        EntityNode node = new()
-        {
-            Name = "Table",
-            Bounds = bounds,
-            Style = _document.DefaultShapeStyle.Clone(),
-            ZIndex = NextZIndex(),
-        };
-
-        _document.Nodes.Add(node);
-        EntityNodeViewModel vm = new(node, this, _theme);
-        Nodes.Add(vm);
-        SelectOnly(vm);
-        MarkModified();
-        return vm;
+        EntityNode node = new() { Name = "Table", Style = _document.DefaultShapeStyle.Clone() };
+        NodeKindDescriptor descriptor = _nodeKinds.For(node);
+        return PlaceNode<EntityNodeViewModel>(node, center, descriptor.DefaultWidth, descriptor.DefaultHeight);
     }
-
-    private const double ActorDefaultWidth = 48d;
-    private const double ActorDefaultHeight = 84d;
-    private const double UseCaseDefaultWidth = 130d;
-    private const double UseCaseDefaultHeight = 72d;
-    private const double BoundaryDefaultWidth = 320d;
-    private const double BoundaryDefaultHeight = 220d;
 
     public NodeViewModelBase AddUseCaseNode(UseCaseNodeKind kind, Point2D center)
     {
-        CaptureUndo();
-
-        (double w, double h) = kind switch
+        NodeBase node = kind switch
         {
-            UseCaseNodeKind.Actor => (ActorDefaultWidth, ActorDefaultHeight),
-            UseCaseNodeKind.SystemBoundary => (BoundaryDefaultWidth, BoundaryDefaultHeight),
-            _ => (UseCaseDefaultWidth, UseCaseDefaultHeight),
+            UseCaseNodeKind.Actor => new ActorNode { Name = "Actor", Style = _document.DefaultShapeStyle.Clone() },
+            UseCaseNodeKind.SystemBoundary => new SystemBoundaryNode { Title = "System", Style = _document.DefaultShapeStyle.Clone() },
+            _ => new UseCaseNode { Text = "Use case", Style = _document.DefaultShapeStyle.Clone() },
         };
+        NodeKindDescriptor descriptor = _nodeKinds.For(node);
+        return PlaceNode<NodeViewModelBase>(node, center, descriptor.DefaultWidth, descriptor.DefaultHeight);
+    }
+
+    // The shared create flow for every AddXxx: snap+place the bounds, assign the z-index for the kind's
+    // stacking band, add the model + its view model, select it, mark dirty — one undo step. The caller
+    // supplies a model node with its kind-specific fields (and Style) already set, plus the placement
+    // centre and size. The z-band — and the background kind's draw-behind insertion — is data-driven
+    // from the node-kind descriptor, so a system boundary is no longer special-cased by type here.
+    private TVm PlaceNode<TVm>(NodeBase node, Point2D center, double w, double h)
+        where TVm : NodeViewModelBase
+    {
+        CaptureUndo();
 
         Rect2D bounds = new(center.X - (w / 2), center.Y - (h / 2), w, h);
         if (SnapEnabled)
@@ -428,28 +364,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             bounds = bounds.PositionSnappedToGrid(GridSize);
         }
 
-        NodeBase node = kind switch
-        {
-            UseCaseNodeKind.Actor => new ActorNode
-            {
-                Name = "Actor", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = NextZIndex(),
-            },
-            UseCaseNodeKind.SystemBoundary => new SystemBoundaryNode
-            {
-                Title = "System", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = LowestZIndex() - 1,
-            },
-            _ => new UseCaseNode
-            {
-                Text = "Use case", Bounds = bounds, Style = _document.DefaultShapeStyle.Clone(), ZIndex = NextZIndex(),
-            },
-        };
+        node.Bounds = bounds;
+        bool background = _nodeKinds.For(node).ZBand == NodeZBand.Background;
+        node.ZIndex = background ? NextBackgroundZIndex() : NextZIndex();
 
         _document.Nodes.Add(node);
-        NodeViewModelBase vm = CreateNodeViewModel(node);
+        TVm vm = (TVm)CreateNodeViewModel(node);
 
-        // A boundary renders behind everything: it gets the lowest z-index AND goes to the
-        // front of the (insertion-ordered) collection so it draws first even before a rebuild.
-        if (node is SystemBoundaryNode)
+        // A background node (system boundary) renders behind everything: lowest z-index AND inserted at
+        // the front of the (insertion-ordered) collection so it draws first even before a rebuild.
+        if (background)
         {
             Nodes.Insert(0, vm);
         }
@@ -556,28 +480,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         return bounds;
-    }
-
-    /// <summary>Zooms/pans so all content fits centred in the viewport, never enlarging past 100%.</summary>
-    private void FitToContent()
-    {
-        if (GetContentBounds() is not { } content || ViewportWidth <= 0 || ViewportHeight <= 0)
-        {
-            return;
-        }
-
-        Rect2D b = content.Inflate(FitMargin);
-        double fit = Math.Min(ViewportWidth / b.Width, ViewportHeight / b.Height);
-        double zoom = Math.Clamp(Math.Min(fit, 1d), MinZoom, MaxZoom);
-        Zoom = zoom;
-        PanX = (ViewportWidth / 2d) - (b.Center.X * zoom);
-        PanY = (ViewportHeight / 2d) - (b.Center.Y * zoom);
-    }
-
-    private Point2D ViewportCenterWorld()
-    {
-        double zoom = Zoom <= 0 ? 1d : Zoom;
-        return new Point2D(((ViewportWidth / 2d) - PanX) / zoom, ((ViewportHeight / 2d) - PanY) / zoom);
     }
 
     public void DeleteSelected()
@@ -706,94 +608,44 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         MarkModified();
     }
 
+    // These delegate the IsSelected mutations to the SelectionCoordinator, then fire the one
+    // RaiseSelectionChanged fan-out the view binds to (the gesture-level capture/notify split is
+    // deliberate — see CaptureUndo). The view model stays the façade; the rules live in the coordinator.
     public void SelectOnly(NodeViewModelBase vm)
     {
-        ClearConnectorSelection();
-        foreach (NodeViewModelBase n in Nodes)
-        {
-            n.IsSelected = ReferenceEquals(n, vm);
-        }
-
+        _selectionCoordinator.SelectOnly(vm);
         RaiseSelectionChanged();
     }
 
     public void ToggleSelect(NodeViewModelBase vm)
     {
-        ClearConnectorSelection();
-        vm.IsSelected = !vm.IsSelected;
+        _selectionCoordinator.ToggleSelect(vm);
         RaiseSelectionChanged();
     }
 
     /// <summary>Selects exactly the given nodes (clearing any other selection). Used after paste/duplicate.</summary>
     public void SelectNodes(IReadOnlyCollection<NodeViewModelBase> nodes)
     {
-        ClearConnectorSelection();
-        HashSet<NodeViewModelBase> set = nodes as HashSet<NodeViewModelBase> ?? new HashSet<NodeViewModelBase>(nodes);
-        foreach (NodeViewModelBase n in Nodes)
-        {
-            n.IsSelected = set.Contains(n);
-        }
-
+        _selectionCoordinator.SelectNodes(nodes);
         RaiseSelectionChanged();
     }
 
     public void ClearSelection()
     {
-        ClearConnectorSelection();
-        foreach (NodeViewModelBase n in Nodes)
-        {
-            n.IsSelected = false;
-        }
-
+        _selectionCoordinator.ClearSelection();
         RaiseSelectionChanged();
     }
 
     public void SelectInRect(Rect2D rect, bool additive)
     {
-        foreach (NodeViewModelBase n in Nodes)
-        {
-            if (!additive)
-            {
-                n.IsSelected = false;
-            }
-
-            if (rect.IntersectsWith(n.Model.Bounds))
-            {
-                n.IsSelected = true;
-            }
-        }
-
-        // A connector is grabbed when the marquee overlaps any part of its line (consistent with shapes,
-        // which select on overlap). Its flattened route handles curves and bend points.
-        foreach (ConnectorViewModel c in Connectors)
-        {
-            if (!additive)
-            {
-                c.IsSelected = false;
-            }
-
-            if (MarqueeGeometry.IntersectsPolyline(rect, c.GetFlattenedPoints()))
-            {
-                c.IsSelected = true;
-            }
-        }
-
+        _selectionCoordinator.SelectInRect(rect, additive);
         RaiseSelectionChanged();
     }
 
     /// <summary>Selects exactly one connector, clearing every other node and connector (plain click).</summary>
     public void SelectConnector(ConnectorViewModel connector)
     {
-        foreach (NodeViewModelBase n in Nodes)
-        {
-            n.IsSelected = false;
-        }
-
-        foreach (ConnectorViewModel c in Connectors)
-        {
-            c.IsSelected = ReferenceEquals(c, connector);
-        }
-
+        _selectionCoordinator.SelectConnector(connector);
         RaiseSelectionChanged();
     }
 
@@ -801,7 +653,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// connectors or nodes (Shift+click). Enables mixed shape+connector selections.</summary>
     public void ToggleSelectConnector(ConnectorViewModel connector)
     {
-        connector.IsSelected = !connector.IsSelected;
+        _selectionCoordinator.ToggleSelectConnector(connector);
         RaiseSelectionChanged();
     }
 
@@ -809,7 +661,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     /// (Shift+click). Unlike <see cref="ToggleSelect"/>, it does not clear the connector selection.</summary>
     public void ToggleSelectUnified(NodeViewModelBase node)
     {
-        node.IsSelected = !node.IsSelected;
+        _selectionCoordinator.ToggleSelectUnified(node);
         RaiseSelectionChanged();
     }
 
@@ -863,75 +715,14 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public void NotifyStyleEditStarting() => CaptureUndo();
 
-    /// <summary>Applies a quick-palette swatch to the whole selection: a coordinated fill + stroke +
-    /// text on every selected node, and stroke + label colour on a selected connector. Stores the
-    /// swatch id so the colours follow the active theme, and bakes the current theme's variant into the
-    /// raw colour fields as a fallback. One undo step; a no-op (and no undo) when nothing is selected.</summary>
-    public void ApplyStyleSwatch(StyleSwatch swatch)
-    {
-        SwatchVariant v = swatch.Variant(_theme.IsDark);
-        ApplyStyleToSelection(
-            style =>
-            {
-                style.PaletteId = swatch.Id;
-                style.Fill = v.Fill;
-                style.Stroke.Color = v.Stroke;
-                style.Font.Color = v.Text;
-            },
-            style =>
-            {
-                style.PaletteId = swatch.Id;
-                style.Stroke.Color = v.Stroke;
-                style.Font.Color = v.Text;
-            });
-    }
+    /// <summary>Applies a quick-palette swatch to the whole selection (see <see cref="StyleCoordinator"/>).</summary>
+    public void ApplyStyleSwatch(StyleSwatch swatch) => _styleCoordinator.ApplyStyleSwatch(swatch);
 
-    /// <summary>Resets the selection to the default style: the first ("Blue") quick-palette swatch,
-    /// which is also what newly-created shapes get. Behaves exactly like clicking that swatch — a
-    /// theme-aware fill/stroke/text linked to the palette. Stroke thickness, dash, and font family/size
-    /// are left untouched.</summary>
-    public void ResetStyleToDefault() => ApplyStyleSwatch(StylePalette.Default);
+    /// <summary>Resets the selection to the default ("Blue") swatch — the style new shapes get.</summary>
+    public void ResetStyleToDefault() => _styleCoordinator.ResetStyleToDefault();
 
-    /// <summary>Makes the selected nodes outline-only (transparent fill) and unlinks them from any
-    /// palette swatch. Connectors have no fill, so they're unaffected.</summary>
-    public void ApplyNoFill()
-        => ApplyStyleToSelection(
-            style =>
-            {
-                style.PaletteId = null;
-                style.Fill = ArgbColor.Transparent;
-            },
-            mutateConnector: null);
-
-    // Shared body for the palette actions: one undo snapshot, mutate every selected node + a selected
-    // connector, refresh bindings, mark dirty. No-op (no undo) when the selection is empty.
-    private void ApplyStyleToSelection(Action<ShapeStyle> mutateNode, Action<ConnectorStyle>? mutateConnector)
-    {
-        List<NodeViewModelBase> nodes = SelectedNodes.ToList();
-        List<ConnectorViewModel> connectors = SelectedConnectors.ToList();
-        if (nodes.Count == 0 && connectors.Count == 0)
-        {
-            return;
-        }
-
-        NotifyStyleEditStarting();
-        foreach (NodeViewModelBase node in nodes)
-        {
-            mutateNode(node.Model.Style);
-            node.RaiseStyleChanged();
-        }
-
-        if (mutateConnector is not null)
-        {
-            foreach (ConnectorViewModel connector in connectors)
-            {
-                mutateConnector(connector.Model.Style);
-                connector.RaiseStyleChanged();
-            }
-        }
-
-        MarkModified();
-    }
+    /// <summary>Makes the selected nodes outline-only (transparent fill), unlinked from any swatch.</summary>
+    public void ApplyNoFill() => _styleCoordinator.ApplyNoFill();
 
     void INodeEditContext.BeginMemberEdit() => CaptureUndo();
 
@@ -945,7 +736,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     void IDocumentEditContext.RaiseSelectionChanged() => RaiseSelectionChanged();
 
-    Point2D IDocumentEditContext.ViewportCenterWorld() => ViewportCenterWorld();
+    Point2D IDocumentEditContext.ViewportCenterWorld() => _viewportCoordinator.ViewportCenterWorld();
 
     public IReadOnlyList<string> GetTypeSuggestions()
     {
@@ -966,15 +757,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     public NodeViewModelBase? FindNode(Guid id) => Nodes.FirstOrDefault(n => n.Id == id);
 
-    private void ClearConnectorSelection()
-    {
-        foreach (ConnectorViewModel c in Connectors)
-        {
-            c.IsSelected = false;
-        }
-    }
+    public int NextZIndex() => _document.Nodes.Count == 0 ? 0 : _document.Nodes.Max(n => n.ZIndex) + 1;
 
-    private int NextZIndex() => _document.Nodes.Count == 0 ? 0 : _document.Nodes.Max(n => n.ZIndex) + 1;
+    public int NextBackgroundZIndex() => LowestZIndex() - 1;
 
     private void RebuildNodes()
     {
@@ -993,39 +778,16 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         RaiseSelectionChanged();
     }
 
-    private NodeViewModelBase CreateNodeViewModel(NodeBase node) => node switch
-    {
-        ClassNode @class => new ClassNodeViewModel(@class, this, _theme),
-        EntityNode entity => new EntityNodeViewModel(entity, this, _theme),
-        ActorNode actor => new ActorNodeViewModel(actor, _theme),
-        UseCaseNode useCase => new UseCaseNodeViewModel(useCase, _theme),
-        SystemBoundaryNode boundary => new SystemBoundaryNodeViewModel(boundary, _theme),
-        ImageNode image => new ImageNodeViewModel(image, _theme),
-        ShapeNode shape => new ShapeNodeViewModel(shape, _theme),
-        _ => throw new NotSupportedException($"Unsupported node type: {node.GetType().Name}"),
-    };
+    // Delegates to the node-kind registry (the single source pairing model type → view-model factory),
+    // which replaces the former runtime-throwing type switch; coverage is guarded at registry construction.
+    private NodeViewModelBase CreateNodeViewModel(NodeBase node) => _nodeKinds.CreateViewModel(node, this, _theme);
 
-    // On theme change, re-raise style-derived brushes so default-styled nodes adopt the new theme's
-    // fill/text colours (user-customised colours are unaffected — see NodeViewModelBase.UsesDefault*).
-    private void OnThemeChanged(object? sender, EventArgs e)
-    {
-        foreach (NodeViewModelBase node in Nodes)
-        {
-            node.RaiseStyleChanged();
-        }
-
-        // Palette-linked connectors resolve their stroke/label colour from the active theme too.
-        foreach (ConnectorViewModel connector in Connectors)
-        {
-            connector.RaiseStyleChanged();
-        }
-    }
-
-    /// <summary>Detaches from the shared theme service when the tab closes, so this VM can be collected,
-    /// and disposes any resource-holding node view models (e.g. decoded image bitmaps).</summary>
+    /// <summary>Detaches the style coordinator from the shared theme service when the tab closes, so this
+    /// VM can be collected, and disposes any resource-holding node view models (e.g. decoded image
+    /// bitmaps).</summary>
     public void Dispose()
     {
-        _theme.ThemeChanged -= OnThemeChanged;
+        _styleCoordinator.Dispose();
         foreach (NodeViewModelBase node in Nodes)
         {
             (node as IDisposable)?.Dispose();
@@ -1056,31 +818,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     }
 
     private static double ConnectorDistance(ConnectorViewModel connector, Point2D world)
-    {
-        IReadOnlyList<Point2D> points = connector.GetFlattenedPoints();
-        double min = double.PositiveInfinity;
-        for (int i = 1; i < points.Count; i++)
-        {
-            min = Math.Min(min, DistanceToSegment(world, points[i - 1], points[i]));
-        }
-
-        return min;
-    }
-
-    private static double DistanceToSegment(Point2D p, Point2D a, Point2D b)
-    {
-        Point2D ab = b - a;
-        double lengthSquared = (ab.X * ab.X) + (ab.Y * ab.Y);
-        if (lengthSquared <= double.Epsilon)
-        {
-            return p.DistanceTo(a);
-        }
-
-        double t = (((p.X - a.X) * ab.X) + ((p.Y - a.Y) * ab.Y)) / lengthSquared;
-        t = Math.Clamp(t, 0d, 1d);
-        Point2D projection = new(a.X + (t * ab.X), a.Y + (t * ab.Y));
-        return p.DistanceTo(projection);
-    }
+        => SegmentGeometry.DistanceToPolyline(world, connector.GetFlattenedPoints());
 
     private void RaiseUndoState()
     {

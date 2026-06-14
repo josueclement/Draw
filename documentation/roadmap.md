@@ -6,7 +6,7 @@ Delivered MVP-first; each phase is independently runnable.
 
 Solution scaffolding + `IHost`/DI/Fluent theme; JSON document model with save/open/new and
 multi-document tabs; full editor UX (zoom/pan, grid + snap, marquee multi-select,
-move/resize handles, copy via duplicate, keyboard shortcuts); the 7 basic shapes with
+move/resize handles, copy via duplicate, keyboard shortcuts); the 9 basic shapes with
 text; per-shape styling + inspector; memento undo/redo; PNG + clipboard export.
 
 ## Phase 2 — Connectors ✅
@@ -274,9 +274,10 @@ finally **5a/5b** — all dialogs routed through Carbon's `IContentDialogService
 look, and the `FileDialogService` picker prologue folded into two helpers. The effort is complete;
 only the optional secondary-VM decomposition pass (`ConnectorViewModel`, `ShellViewModel`,
 `InspectorViewModel`) remains, deferred as off the critical path. **5c** is left as-is by design.
-The debt concentrates in two oversized files: `DiagramView.axaml.cs` (2032 lines —
-monolithic pointer handlers over ~13 loose gesture-state fields acting as an implicit state machine)
-and `DiagramDocumentViewModel.cs` (a 1540-line god VM with ~9 responsibilities). The plan recommends a
+The debt concentrates in `DiagramView.axaml.cs` (2032 lines — monolithic pointer handlers over
+~13 loose gesture-state fields acting as an implicit state machine); `DiagramDocumentViewModel.cs`
+has since been reduced to ~1121 lines by peeling the clipboard/alignment/z-order/connector-spacing
+coordinators out into focused collaborators. The plan recommends a
 regression **test safety net first** — reintroducing one focused test project for the pure-logic
 routing/parsing/serialization layers (tests were removed 2026-06-03) — then **phased** extraction of
 the two giants (split mega-handlers, lift a gesture-state object, peel interaction controllers and
