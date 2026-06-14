@@ -66,6 +66,42 @@ public static class ShapeOutline
             case ShapeKind.OffPageConnector:
                 return new[] { P(0, 0), P(w, 0), P(w, h * 0.6), P(w / 2, h), P(0, h * 0.6) };
 
+            // Block arrows: a shaft (middle third) with a triangular head spanning the full extent.
+            case ShapeKind.ArrowRight:
+                return new[]
+                {
+                    P(0, h / 3), P(w * 0.6, h / 3), P(w * 0.6, 0), P(w, h / 2),
+                    P(w * 0.6, h), P(w * 0.6, 2 * h / 3), P(0, 2 * h / 3),
+                };
+
+            case ShapeKind.ArrowLeft:
+                return new[]
+                {
+                    P(w, h / 3), P(w, 2 * h / 3), P(w * 0.4, 2 * h / 3), P(w * 0.4, h),
+                    P(0, h / 2), P(w * 0.4, 0), P(w * 0.4, h / 3),
+                };
+
+            case ShapeKind.ArrowUp:
+                return new[]
+                {
+                    P(w / 3, h), P(w / 3, h * 0.4), P(0, h * 0.4), P(w / 2, 0),
+                    P(w, h * 0.4), P(2 * w / 3, h * 0.4), P(2 * w / 3, h),
+                };
+
+            case ShapeKind.ArrowDown:
+                return new[]
+                {
+                    P(w / 3, 0), P(2 * w / 3, 0), P(2 * w / 3, h * 0.6), P(w, h * 0.6),
+                    P(w / 2, h), P(0, h * 0.6), P(w / 3, h * 0.6),
+                };
+
+            case ShapeKind.ArrowDouble:
+                return new[]
+                {
+                    P(0, h / 2), P(w * 0.25, 0), P(w * 0.25, h / 3), P(w * 0.75, h / 3), P(w * 0.75, 0),
+                    P(w, h / 2), P(w * 0.75, h), P(w * 0.75, 2 * h / 3), P(w * 0.25, 2 * h / 3), P(w * 0.25, h),
+                };
+
             case ShapeKind.Diamond:
                 return new[] { P(w / 2, 0), P(w, h / 2), P(w / 2, h), P(0, h / 2) };
 

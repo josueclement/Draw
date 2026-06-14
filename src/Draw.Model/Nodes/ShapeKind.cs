@@ -66,4 +66,21 @@ public enum ShapeKind
 
     /// <summary>A delay symbol: a rectangle with a semicircular right end; routing uses the bounding rectangle.</summary>
     Delay = 23,
+
+    // Block arrows (Phase 3 of the shape-library expansion).
+
+    /// <summary>A block arrow pointing right.</summary>
+    ArrowRight = 24,
+
+    /// <summary>A block arrow pointing left.</summary>
+    ArrowLeft = 25,
+
+    /// <summary>A block arrow pointing up.</summary>
+    ArrowUp = 26,
+
+    /// <summary>A block arrow pointing down.</summary>
+    ArrowDown = 27,
+
+    /// <summary>A horizontal double-headed (bidirectional) block arrow.</summary>
+    ArrowDouble = 28,
 }

@@ -57,6 +57,11 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ShapeToolItem("Off-page connector", ShapeKind.OffPageConnector),
         new ShapeToolItem("Display", ShapeKind.Display),
         new ShapeToolItem("Delay", ShapeKind.Delay),
+        new ShapeToolItem("Arrow right", ShapeKind.ArrowRight),
+        new ShapeToolItem("Arrow left", ShapeKind.ArrowLeft),
+        new ShapeToolItem("Arrow up", ShapeKind.ArrowUp),
+        new ShapeToolItem("Arrow down", ShapeKind.ArrowDown),
+        new ShapeToolItem("Bidirectional", ShapeKind.ArrowDouble),
         // Armed by the standalone UML-group "Note" button; intentionally absent from the Shapes dropdown.
         new ShapeToolItem("Note", ShapeKind.Note),
     };
@@ -185,6 +190,8 @@ public sealed class ToolboxViewModel : ViewModelBase
         ShapeKind.Terminator or ShapeKind.Cylinder or ShapeKind.Document or ShapeKind.PredefinedProcess
             or ShapeKind.ManualInput or ShapeKind.OffPageConnector or ShapeKind.Display or ShapeKind.Delay
             => ShapeCategory.Flowchart,
+        ShapeKind.ArrowRight or ShapeKind.ArrowLeft or ShapeKind.ArrowUp or ShapeKind.ArrowDown or ShapeKind.ArrowDouble
+            => ShapeCategory.Arrow,
         ShapeKind.Note => ShapeCategory.Other,
         _ => ShapeCategory.Basic,
     };
@@ -196,6 +203,8 @@ public sealed class ToolboxViewModel : ViewModelBase
     public string ShapesHeader => HeaderFor(ShapeCategory.Basic, "Shapes");
 
     public string FlowchartHeader => HeaderFor(ShapeCategory.Flowchart, "Flowchart");
+
+    public string ArrowsHeader => HeaderFor(ShapeCategory.Arrow, "Arrows");
 
     // One armed connector feeds two dropdowns; each shows the pick only when it owns that kind,
     // else its category label. ER "Relationship" lives in the ER group, so neither claims it.
@@ -257,6 +266,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsEntityNodeMode));
         OnPropertyChanged(nameof(ShapesHeader));
         OnPropertyChanged(nameof(FlowchartHeader));
+        OnPropertyChanged(nameof(ArrowsHeader));
         OnPropertyChanged(nameof(CommonConnectorsHeader));
         OnPropertyChanged(nameof(UmlConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));

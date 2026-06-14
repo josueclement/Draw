@@ -84,6 +84,23 @@
                 <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Delay}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
         </MenuItem>
+        <MenuItem Header="_Arrows">
+            <MenuItem Header="Arrow _right" CommandParameter="{x:Static nodes:ShapeKind.ArrowRight}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowRight}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Arrow _left" CommandParameter="{x:Static nodes:ShapeKind.ArrowLeft}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowLeft}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Arrow _up" CommandParameter="{x:Static nodes:ShapeKind.ArrowUp}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowUp}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Arrow _down" CommandParameter="{x:Static nodes:ShapeKind.ArrowDown}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowDown}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Bidirectional" CommandParameter="{x:Static nodes:ShapeKind.ArrowDouble}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowDouble}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
         <MenuItem Header="_UML">
             <MenuItem Header="_Note" CommandParameter="{x:Static nodes:ShapeKind.Note}">
                 <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Note}" Width="16" Height="16" /></MenuItem.Icon>

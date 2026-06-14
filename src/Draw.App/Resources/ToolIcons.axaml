@@ -38,6 +38,13 @@
     <StreamGeometry x:Key="ToolIcon.Display">M7,4 H18 A5,7 0 0 1 18,20 H7 Q2,12 7,4 Z</StreamGeometry>
     <StreamGeometry x:Key="ToolIcon.Delay">M4,4 H14 A7,7 0 0 1 14,20 H4 Z</StreamGeometry>
 
+    <!-- Block arrows (filled silhouettes, mirroring ShapeOutline.GetPolygon). -->
+    <StreamGeometry x:Key="ToolIcon.ArrowRight">M2,9 H14 V5 L22,12 L14,19 V15 H2 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.ArrowLeft">M22,9 H10 V5 L2,12 L10,19 V15 H22 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.ArrowUp">M9,22 V10 H5 L12,2 L19,10 H15 V22 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.ArrowDown">M9,2 V14 H5 L12,22 L19,14 H15 V2 Z</StreamGeometry>
+    <StreamGeometry x:Key="ToolIcon.ArrowDouble">M2,12 L8,5 V9 H16 V5 L22,12 L16,19 V15 H8 V19 Z</StreamGeometry>
+
     <!-- Arrange: distribute glyphs (three evenly-spaced bars). Phosphor has align icons but no
          distribute equivalents, so author them here. Horizontal = bars spread along X (vertical bars);
          vertical = bars spread along Y (horizontal bars). -->

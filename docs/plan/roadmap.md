@@ -12,7 +12,7 @@ dropdowns (Shapes / Flowchart / Arrows) with matching Shift+S tool-menu submenus
 |-------|-------|--------|--------|
 | 1 | Geometric: Hexagon, Pentagon, Octagon, Star, Cross, Cloud, Callout | `phase01-geometric-shapes` | Code complete — awaiting visual verify + commit |
 | 2 | Flowchart: Terminator, Cylinder, Document, Predefined process, Manual input, Off-page connector, Display, Delay | `phase02-flowchart-shapes` | Code complete — awaiting visual verify + commit |
-| 3 | Block arrows: right, left, up, down, bidirectional | `phase03-block-arrows` | Not started |
+| 3 | Block arrows: right, left, up, down, bidirectional | `phase03-block-arrows` | Code complete — awaiting visual verify + commit |
 | 4 | UML structural nodes: Package, Component, Deployment | `phase04-uml-structural-nodes` | Not started |
 
 ## Per-shape technique

@@ -182,6 +182,13 @@
                         <ribbon:RibbonMenuItem Header="Display" CommandParameter="{x:Static nodes:ShapeKind.Display}" IconData="{StaticResource ToolIcon.Display}" />
                         <ribbon:RibbonMenuItem Header="Delay" CommandParameter="{x:Static nodes:ShapeKind.Delay}" IconData="{StaticResource ToolIcon.Delay}" />
                     </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonDropDownButton x:Name="ArrowsDropDown" Header="{Binding Toolbox.ArrowsHeader}" IconData="{StaticResource ToolIcon.ArrowRight}">
+                        <ribbon:RibbonMenuItem Header="Arrow right" CommandParameter="{x:Static nodes:ShapeKind.ArrowRight}" IconData="{StaticResource ToolIcon.ArrowRight}" />
+                        <ribbon:RibbonMenuItem Header="Arrow left" CommandParameter="{x:Static nodes:ShapeKind.ArrowLeft}" IconData="{StaticResource ToolIcon.ArrowLeft}" />
+                        <ribbon:RibbonMenuItem Header="Arrow up" CommandParameter="{x:Static nodes:ShapeKind.ArrowUp}" IconData="{StaticResource ToolIcon.ArrowUp}" />
+                        <ribbon:RibbonMenuItem Header="Arrow down" CommandParameter="{x:Static nodes:ShapeKind.ArrowDown}" IconData="{StaticResource ToolIcon.ArrowDown}" />
+                        <ribbon:RibbonMenuItem Header="Bidirectional" CommandParameter="{x:Static nodes:ShapeKind.ArrowDouble}" IconData="{StaticResource ToolIcon.ArrowDouble}" />
+                    </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonDropDownButton x:Name="CommonConnectorsDropDown" Header="{Binding Toolbox.CommonConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
                         <ribbon:RibbonMenuItem Header="Association" CommandParameter="{x:Static rel:RelationshipKind.Association}" IconData="{StaticResource ToolIcon.Association}" />
                         <ribbon:RibbonMenuItem Header="Directed association" CommandParameter="{x:Static rel:RelationshipKind.DirectedAssociation}" IconData="{StaticResource ToolIcon.DirectedAssociation}" />

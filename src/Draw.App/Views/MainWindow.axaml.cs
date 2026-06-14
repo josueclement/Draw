@@ -187,6 +187,7 @@ public partial class MainWindow : Window
     {
         WireDropdown(ShapesDropDown, toolbox.SelectShapeToolCommand);
         WireDropdown(FlowchartDropDown, toolbox.SelectShapeToolCommand);
+        WireDropdown(ArrowsDropDown, toolbox.SelectShapeToolCommand);
         WireDropdown(CommonConnectorsDropDown, toolbox.SelectConnectorToolCommand);
         WireDropdown(UmlConnectorsDropDown, toolbox.SelectConnectorToolCommand);
         WireDropdown(ClassDropDown, toolbox.SelectClassNodeToolCommand);

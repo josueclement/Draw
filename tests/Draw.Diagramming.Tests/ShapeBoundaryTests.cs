@@ -121,6 +121,26 @@ public class ShapeBoundaryTests
         => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.OffPageConnector, Unit, new Point2D(50, 500)));
 
     [Fact]
+    public void ArrowRight_ExitsAtTip_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowRight, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void ArrowLeft_ExitsAtTip_ForLeftwardRay()
+        => AssertPoint(0, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowLeft, Unit, new Point2D(-500, 50)));
+
+    [Fact]
+    public void ArrowUp_ExitsAtTip_ForUpwardRay()
+        => AssertPoint(50, 0, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowUp, Unit, new Point2D(50, -500)));
+
+    [Fact]
+    public void ArrowDown_ExitsAtTip_ForDownwardRay()
+        => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowDown, Unit, new Point2D(50, 500)));
+
+    [Fact]
+    public void ArrowDouble_ExitsAtRightTip_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowDouble, Unit, new Point2D(500, 50)));
+
+    [Fact]
     public void DegenerateDirection_ReturnsCenter()
         => AssertPoint(50, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Rectangle, Unit, new Point2D(50, 50)));
 
