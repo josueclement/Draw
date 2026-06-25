@@ -797,14 +797,16 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        ContextMenu menu = BuildArrangeMenu(_vm);
+        // The Appearance/Styles submenus reuse shell-level commands; the shell is this view's window DataContext.
+        ShellViewModel? shell = TopLevel.GetTopLevel(this)?.DataContext as ShellViewModel;
+        ContextMenu menu = BuildArrangeMenu(_vm, shell);
         // Defer so the pan gesture's pointer capture is fully released before the popup opens.
         Dispatcher.UIThread.Post(() => menu.Open(Viewport));
     }
 
     // Built in code (rather than XAML) so the items bind directly to the document VM's commands — that
     // gives correct enable/disable (Distribute needs >=3 selected) with no DataContext plumbing.
-    private static ContextMenu BuildArrangeMenu(DiagramDocumentViewModel vm)
+    private static ContextMenu BuildArrangeMenu(DiagramDocumentViewModel vm, ShellViewModel? shell)
     {
         // Icons mirror the ribbon's Arrange group exactly (MainWindow.axaml): align glyphs come from
         // Phosphor, the rest from the ToolIcon.* geometries in Resources/ToolIcons.axaml.
@@ -850,6 +852,12 @@ public partial class DiagramView : UserControl
         disabledIcon.Setters.Add(new Setter(Visual.OpacityProperty, 0.4));
         menu.Styles.Add(disabledIcon);
         menu.Items.Add(markers);
+        // Styles sit directly under Icons: the ribbon's quick palette surfaced on the shape menu.
+        if (shell is not null)
+        {
+            menu.Items.Add(BuildStylesMenu(vm, shell));
+        }
+
         menu.Items.Add(new Separator());
         menu.Items.Add(align);
         menu.Items.Add(order);
@@ -875,8 +883,92 @@ public partial class DiagramView : UserControl
         menu.Items.Add(new MenuItem { Header = "Set as reference", Command = vm.SetReferenceCommand, Icon = MenuIcon(Phosphor(Icon.push_pin)) });
         menu.Items.Add(alignToRef);
         menu.Items.Add(new MenuItem { Header = "Clear reference", Command = vm.ClearReferenceCommand, Icon = MenuIcon(Phosphor(Icon.x)) });
+
+        // View-level actions at the bottom: Zoom from the document VM, Appearance toggles from the shell.
+        menu.Items.Add(new Separator());
+        menu.Items.Add(BuildZoomMenu(vm));
+        if (shell is not null)
+        {
+            menu.Items.Add(BuildAppearanceMenu(shell));
+        }
+
         return menu;
     }
+
+    // Styles: the ribbon's quick palette (one item per swatch) plus Reset / No fill. Swatch items use the
+    // palette's own ApplyCommand and the Reset/No-fill commands all target the active document, so they
+    // work unchanged here. Gated on a selection, mirroring the ribbon's Styles group.
+    private static MenuItem BuildStylesMenu(DiagramDocumentViewModel vm, ShellViewModel shell)
+    {
+        MenuItem styles = new() { Header = "Styles", IsEnabled = vm.HasSelection };
+        foreach (StyleSwatchViewModel swatch in shell.StylePalette.Swatches)
+        {
+            styles.Items.Add(new MenuItem
+            {
+                Header = swatch.Name,
+                Command = swatch.ApplyCommand,
+                Icon = SwatchIcon(swatch),
+            });
+        }
+
+        styles.Items.Add(new Separator());
+        styles.Items.Add(new MenuItem { Header = "Reset", Command = shell.StylePalette.ResetCommand, Icon = MenuIcon(Phosphor(Icon.arrow_counter_clockwise)) });
+        styles.Items.Add(new MenuItem { Header = "No fill", Command = shell.StylePalette.NoFillCommand, Icon = MenuIcon(ToolGeometry("ToolIcon.NoFill")) });
+        return styles;
+    }
+
+    // Zoom: the View tab's zoom commands, all on the document VM. Icons match the ribbon.
+    private static MenuItem BuildZoomMenu(DiagramDocumentViewModel vm)
+    {
+        MenuItem zoom = new() { Header = "Zoom" };
+        zoom.Items.Add(new MenuItem { Header = "Zoom in", Command = vm.ZoomInCommand, Icon = MenuIcon(Phosphor(Icon.magnifying_glass_plus)) });
+        zoom.Items.Add(new MenuItem { Header = "Zoom out", Command = vm.ZoomOutCommand, Icon = MenuIcon(Phosphor(Icon.magnifying_glass_minus)) });
+        zoom.Items.Add(new MenuItem { Header = "Reset", Command = vm.ZoomResetCommand, Icon = MenuIcon(Phosphor(Icon.arrows_out)) });
+        zoom.Items.Add(new MenuItem { Header = "Fit to content", Command = vm.FitToContentCommand, Icon = MenuIcon(Phosphor(Icon.arrows_in)) });
+        return zoom;
+    }
+
+    // Appearance: the View tab's Appearance group. Toggle theme is a one-shot command; Properties and
+    // Snap to grid are checkable items reflecting the shell state at open time (the menu is rebuilt each
+    // open) and flip the shell properties — the same ones the ribbon toggle buttons bind two-way.
+    private static MenuItem BuildAppearanceMenu(ShellViewModel shell)
+    {
+        MenuItem appearance = new() { Header = "Appearance" };
+        appearance.Items.Add(new MenuItem { Header = "Toggle theme", Command = shell.ToggleThemeCommand, Icon = MenuIcon(Phosphor(Icon.moon)) });
+
+        MenuItem properties = new()
+        {
+            Header = "Properties",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = shell.IsInspectorOpen,
+            Icon = MenuIcon(Phosphor(Icon.sidebar)),
+        };
+        properties.Click += (_, _) => shell.IsInspectorOpen = !shell.IsInspectorOpen;
+        appearance.Items.Add(properties);
+
+        MenuItem snap = new()
+        {
+            Header = "Snap to grid",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = shell.SnapToGrid,
+            Icon = MenuIcon(Phosphor(Icon.grid_four)),
+        };
+        snap.Click += (_, _) => shell.SnapToGrid = !shell.SnapToGrid;
+        appearance.Items.Add(snap);
+        return appearance;
+    }
+
+    // A 16x16 colour chip mirroring the ribbon swatch face, used as a styles menu-item icon.
+    private static Border SwatchIcon(StyleSwatchViewModel swatch)
+        => new()
+        {
+            Width = 16,
+            Height = 16,
+            CornerRadius = new CornerRadius(3),
+            BorderThickness = new Thickness(1.5),
+            Background = swatch.PreviewBackground,
+            BorderBrush = swatch.PreviewBorder,
+        };
 
     private static MenuItem ArrangeItem<T>(string header, RelayCommand<T> command, T parameter, Geometry? icon)
         => new() { Header = header, Command = command, CommandParameter = parameter, Icon = MenuIcon(icon) };

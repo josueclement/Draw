@@ -318,3 +318,19 @@ edit pattern + mirrored XAML templates; actor geometry shared between canvas and
 consistency in `DialogService`, and correctness hardening (signature-parse validation, `ImageNode.Clone`
 deep copy, centralized geometry epsilons, a schema-migration seam). Each item is labelled with effort and
 risk. See `documentation/plans/2026-06-10-code-review-remediation.md`.
+
+## Ribbon tab split + richer shape context menu 🚧 (cross-cutting, pending visual verification)
+
+Declutters the ribbon for small screens and surfaces common view/style actions on the canvas. The
+ribbon goes from 4 dense tabs to **9 focused ones** — **Export** (was Home ▸ Export) and **UML**,
+**ER**, **Mind map**, **Styles** (each was an Insert group) become their own tabs, in the order
+Home · Insert · UML · ER · Mind map · Styles · Arrange · View · Export; **Insert image** folds into
+Insert ▸ **Common**; and **Arrange ▸ Order** collapses from four buttons into a single dropdown
+mirroring the Align dropdown (shared command wired in `MainWindow.axaml.cs` `WireOrderDropdown`,
+auto-closing on pick). The shape right-click menu gains three submenus reusing existing commands:
+**Styles** (the full quick-palette swatches + Reset/No fill, directly under Icons) and, at the bottom,
+**Zoom** (View ▸ Zoom) and **Appearance** (Toggle theme + checkable Properties / Snap to grid). The
+menu builder (`DiagramView.BuildArrangeMenu`) now also takes the `ShellViewModel`, resolved from the
+view's window DataContext, since theme/inspector/snap/styles live on the shell. Pure XAML/markup +
+view-layer wiring; no model, VM-pattern, or package changes. See
+`documentation/plans/2026-06-25-ribbon-tabs-and-context-menus.md`.

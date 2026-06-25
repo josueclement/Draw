@@ -151,11 +151,6 @@
                     <ribbon:RibbonButton Header="Duplicate" Command="{Binding DuplicateCommand}" IconData="{pia:IconGeometry Icon=copy_simple}" />
                     <ribbon:RibbonButton Header="Delete" Command="{Binding DeleteCommand}" IconData="{pia:IconGeometry Icon=trash}" />
                 </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="Export">
-                    <ribbon:RibbonButton Header="Image" Command="{Binding ExportImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
-                    <ribbon:RibbonButton Header="SVG" Command="{Binding ExportSvgCommand}" IconData="{pia:IconGeometry Icon=file_svg}" />
-                    <ribbon:RibbonButton Header="Copy image" Command="{Binding CopyImageCommand}" IconData="{pia:IconGeometry Icon=copy}" />
-                </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 
             <ribbon:RibbonTab Header="Insert">
@@ -198,7 +193,11 @@
                         <ribbon:RibbonMenuItem Header="Association" CommandParameter="{x:Static rel:RelationshipKind.Association}" IconData="{StaticResource ToolIcon.Association}" />
                         <ribbon:RibbonMenuItem Header="Directed association" CommandParameter="{x:Static rel:RelationshipKind.DirectedAssociation}" IconData="{StaticResource ToolIcon.DirectedAssociation}" />
                     </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
                 </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="UML">
                 <ribbon:RibbonGroup Header="UML">
                     <ribbon:RibbonDropDownButton x:Name="ClassDropDown" Header="{Binding Toolbox.ClassHeader}" IconData="{pia:IconGeometry Icon=square_split_horizontal}">
                         <ribbon:RibbonMenuItem Header="Class" CommandParameter="{x:Static nodes:ClassNodeKind.Class}" IconData="{pia:IconGeometry Icon=square_split_horizontal}" />
@@ -226,10 +225,16 @@
                     </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonButton Header="Note" Command="{Binding Toolbox.SelectShapeToolCommand}" CommandParameter="{x:Static nodes:ShapeKind.Note}" IconData="{StaticResource ToolIcon.Note}" />
                 </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="ER">
                 <ribbon:RibbonGroup Header="ER">
                     <ribbon:RibbonButton Header="Table" Command="{Binding Toolbox.SelectEntityToolCommand}" IconData="{pia:IconGeometry Icon=table}" />
                     <ribbon:RibbonButton Header="Relationship" Command="{Binding Toolbox.SelectConnectorToolCommand}" CommandParameter="{x:Static rel:RelationshipKind.Relationship}" IconData="{pia:IconGeometry Icon=line_segment}" />
                 </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="Mind map">
                 <ribbon:RibbonGroup Header="Mind map">
                     <ribbon:RibbonDropDownButton x:Name="MindMapDropDown" Header="{Binding Toolbox.MindMapHeader}" IconData="{StaticResource ToolIcon.RoundedRectangle}">
                         <ribbon:RibbonMenuItem Header="Topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopic}" IconData="{pia:IconGeometry Icon=rectangle}" />
@@ -237,11 +242,11 @@
                     </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonButton Header="Branch" Command="{Binding Toolbox.SelectConnectorToolCommand}" CommandParameter="{x:Static rel:RelationshipKind.MindMapBranch}" IconData="{StaticResource ToolIcon.MindMapBranch}" />
                 </ribbon:RibbonGroup>
-                <ribbon:RibbonGroup Header="Image">
-                    <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
-                </ribbon:RibbonGroup>
-                <!-- Quick style palette: theme-aware pastel swatches (one click recolours fill+stroke+text on
-                     the selection) plus Reset and No-fill. Enabled only with a selection. -->
+            </ribbon:RibbonTab>
+
+            <!-- Quick style palette: theme-aware pastel swatches (one click recolours fill+stroke+text on
+                 the selection) plus Reset and No-fill. Enabled only with a selection. -->
+            <ribbon:RibbonTab Header="Styles">
                 <ribbon:RibbonGroup Header="Styles" IsEnabled="{Binding ActiveDocument.HasSelection}">
                     <ItemsControl ItemsSource="{Binding StylePalette.Swatches}" VerticalAlignment="Center">
                         <ItemsControl.Resources>
@@ -347,22 +352,14 @@
                                          IconData="{StaticResource ToolIcon.DistributeVertical}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Order">
-                    <ribbon:RibbonButton Header="Bring to front"
-                                         Command="{Binding ActiveDocument.OrderCommand}"
-                                         CommandParameter="{x:Static layout:ZOrderOperation.BringToFront}"
-                                         IconData="{StaticResource ToolIcon.BringToFront}" />
-                    <ribbon:RibbonButton Header="Bring forward"
-                                         Command="{Binding ActiveDocument.OrderCommand}"
-                                         CommandParameter="{x:Static layout:ZOrderOperation.BringForward}"
-                                         IconData="{StaticResource ToolIcon.BringForward}" />
-                    <ribbon:RibbonButton Header="Send backward"
-                                         Command="{Binding ActiveDocument.OrderCommand}"
-                                         CommandParameter="{x:Static layout:ZOrderOperation.SendBackward}"
-                                         IconData="{StaticResource ToolIcon.SendBackward}" />
-                    <ribbon:RibbonButton Header="Send to back"
-                                         Command="{Binding ActiveDocument.OrderCommand}"
-                                         CommandParameter="{x:Static layout:ZOrderOperation.SendToBack}"
-                                         IconData="{StaticResource ToolIcon.SendToBack}" />
+                    <ribbon:RibbonDropDownButton x:Name="OrderDropDown" Header="Order"
+                                                 IsEnabled="{Binding ActiveDocument.HasNodeSelection}"
+                                                 IconData="{StaticResource ToolIcon.BringToFront}">
+                        <ribbon:RibbonMenuItem Header="Bring to front" CommandParameter="{x:Static layout:ZOrderOperation.BringToFront}" IconData="{StaticResource ToolIcon.BringToFront}" />
+                        <ribbon:RibbonMenuItem Header="Bring forward" CommandParameter="{x:Static layout:ZOrderOperation.BringForward}" IconData="{StaticResource ToolIcon.BringForward}" />
+                        <ribbon:RibbonMenuItem Header="Send backward" CommandParameter="{x:Static layout:ZOrderOperation.SendBackward}" IconData="{StaticResource ToolIcon.SendBackward}" />
+                        <ribbon:RibbonMenuItem Header="Send to back" CommandParameter="{x:Static layout:ZOrderOperation.SendToBack}" IconData="{StaticResource ToolIcon.SendToBack}" />
+                    </ribbon:RibbonDropDownButton>
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Connections">
                     <ribbon:RibbonButton Header="Space connections"
@@ -393,6 +390,14 @@
                     <ribbon:RibbonToggleButton Header="Snap to grid"
                                                IconData="{pia:IconGeometry Icon=grid_four}"
                                                IsChecked="{Binding SnapToGrid, Mode=TwoWay}" />
+                </ribbon:RibbonGroup>
+            </ribbon:RibbonTab>
+
+            <ribbon:RibbonTab Header="Export">
+                <ribbon:RibbonGroup Header="Export">
+                    <ribbon:RibbonButton Header="Image" Command="{Binding ExportImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
+                    <ribbon:RibbonButton Header="SVG" Command="{Binding ExportSvgCommand}" IconData="{pia:IconGeometry Icon=file_svg}" />
+                    <ribbon:RibbonButton Header="Copy image" Command="{Binding CopyImageCommand}" IconData="{pia:IconGeometry Icon=copy}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
         </ribbon:Ribbon>
