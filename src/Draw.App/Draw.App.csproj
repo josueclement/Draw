@@ -6,6 +6,7 @@
     <RootNamespace>Draw.App</RootNamespace>
     <AssemblyName>Draw.App</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/draw.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
@@ -29,6 +30,11 @@
   <ItemGroup>
     <!-- Shipped defaults; Host.CreateApplicationBuilder loads it from the app's working directory. -->
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- App icon: window/taskbar icon (loaded via Window.Icon="/Assets/draw.ico"). -->
+    <AvaloniaResource Include="Assets/draw.ico" />
   </ItemGroup>
 
   <ItemGroup>

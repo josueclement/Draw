@@ -185,6 +185,21 @@ public class JsonDocumentSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_PreservesGeneralPurposeIcon()
+    {
+        JsonDocumentSerializer serializer = new();
+        ShapeNode node = new();
+        node.Markers.Add(NodeMarker.Island);
+        DiagramDocument doc = new() { Nodes = { node } };
+
+        string json = serializer.Serialize(doc);
+        DiagramDocument back = serializer.Deserialize(json);
+
+        Assert.Contains("\"Island\"", json, StringComparison.Ordinal);
+        Assert.Equal(new[] { NodeMarker.Island }, Assert.IsType<ShapeNode>(Assert.Single(back.Nodes)).Markers);
+    }
+
+    [Fact]
     public void Clone_NodeMarkers_AreIndependent()
     {
         JsonDocumentSerializer serializer = new();

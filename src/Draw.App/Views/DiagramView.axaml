@@ -519,8 +519,8 @@
             </ItemsControl>
 
             <!-- Status-marker badges: a decorative, non-interactive layer over the nodes/connectors. One
-                 item per node, positioned at the node's top-left like NodesLayer; the badge row floats just
-                 outside the top edge, right-aligned to the node's width. Markers are edited via the
+                 item per node, positioned at the node's top-left like NodesLayer; the badge row sits inside
+                 the node's upper-right corner, right-aligned to the node's width. Markers are edited via the
                  right-click "Markers" menu and the inspector, so this layer never takes hit-tests. -->
             <ItemsControl x:Name="MarkersLayer" ItemsSource="{Binding Nodes}" IsHitTestVisible="False" ClipToBounds="False">
                 <ItemsControl.ItemsPanel>
@@ -536,10 +536,10 @@
                 </ItemsControl.Styles>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:NodeViewModelBase">
-                        <Panel Width="{Binding Width}" IsVisible="{Binding HasAnyMarker}">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}" IsVisible="{Binding HasAnyMarker}">
                             <ItemsControl ItemsSource="{Binding MarkerBadges}"
                                           HorizontalAlignment="Right" VerticalAlignment="Top"
-                                          Margin="0,-20,2,0">
+                                          Margin="0,3,3,0">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <StackPanel Orientation="Horizontal" Spacing="2" />
@@ -547,8 +547,7 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="rendering:NodeMarkerVisual">
-                                        <Border Background="{DynamicResource CanvasBackgroundBrush}"
-                                                CornerRadius="3" Padding="1" ToolTip.Tip="{Binding Label}">
+                                        <Border Padding="1" ToolTip.Tip="{Binding Label}">
                                             <PathIcon Data="{Binding Icon}" Foreground="{Binding Brush}"
                                                       Width="14" Height="14" />
                                         </Border>

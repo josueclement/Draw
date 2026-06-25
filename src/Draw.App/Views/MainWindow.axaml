@@ -12,6 +12,7 @@
         x:Class="Draw.App.Views.MainWindow"
         x:DataType="vm:ShellViewModel"
         Title="{Binding Title}"
+        Icon="/Assets/draw.ico"
         Width="1200" Height="780"
         Background="{DynamicResource CarbonBackgroundBrush}"
         WindowStartupLocation="CenterScreen">
@@ -543,7 +544,7 @@
                                           SelectedItem="{Binding Inspector.Alignment, Mode=TwoWay}" />
                             </StackPanel>
                             <StackPanel Spacing="3">
-                                <TextBlock Text="Status markers" Opacity="0.7" />
+                                <TextBlock Text="Icons" Opacity="0.7" />
                                 <ItemsControl ItemsSource="{Binding Inspector.MarkerToggles}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>

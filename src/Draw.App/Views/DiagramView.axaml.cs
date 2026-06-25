@@ -822,8 +822,8 @@ public partial class DiagramView : UserControl
         order.Items.Add(ArrangeItem("Send backward", vm.OrderCommand, ZOrderOperation.SendBackward, ToolGeometry("ToolIcon.SendBackward")));
         order.Items.Add(ArrangeItem("Send to back", vm.OrderCommand, ZOrderOperation.SendToBack, ToolGeometry("ToolIcon.SendToBack")));
 
-        // Status markers: a checkable item per marker, toggled across the whole node selection.
-        MenuItem markers = new() { Header = "Markers", IsEnabled = vm.HasNodeSelection };
+        // Icons: a checkable item per icon, toggled across the whole node selection.
+        MenuItem markers = new() { Header = "Icons", IsEnabled = vm.HasNodeSelection };
         foreach (NodeMarker marker in NodeMarkerVisuals.Order)
         {
             NodeMarker captured = marker;
