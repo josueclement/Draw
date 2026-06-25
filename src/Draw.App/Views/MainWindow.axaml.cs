@@ -67,6 +67,7 @@ public partial class MainWindow : Window
         WireToolDropdowns(shell.Toolbox);
         WireAlignmentDropdown(AlignDropDown, m => _shell?.ActiveDocument?.AlignSelected(m));
         WireAlignmentDropdown(AlignToReferenceDropDown, m => _shell?.ActiveDocument?.AlignSelectedToReference(m));
+        WireOrderDropdown(OrderDropDown, op => _shell?.ActiveDocument?.ReorderSelected(op));
         WireToolMenus(shell.Toolbox);
         shell.ToolMenuRequested += OnToolMenuRequested;
         shell.PropertyChanged += OnShellPropertyChanged;
@@ -227,6 +228,23 @@ public partial class MainWindow : Window
                 apply(m);
             }
 
+            dropDown.IsDropDownOpen = false;
+        });
+
+        foreach (RibbonMenuItem item in dropDown.Items)
+        {
+            item.Command = command;
+        }
+    }
+
+    // Z-order dropdown: same one-shot pattern as the align dropdowns — a shared command resolves the
+    // active document at click time, each item's ZOrderOperation arrives via the XAML CommandParameter,
+    // and enable/disable is driven by the button's IsEnabled binding to ActiveDocument.HasNodeSelection.
+    private static void WireOrderDropdown(RibbonDropDownButton dropDown, Action<ZOrderOperation> apply)
+    {
+        RelayCommand<ZOrderOperation> command = new(op =>
+        {
+            apply(op);
             dropDown.IsDropDownOpen = false;
         });
 
