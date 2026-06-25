@@ -11,6 +11,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
@@ -827,9 +828,13 @@ public partial class DiagramView : UserControl
         foreach (NodeMarker marker in NodeMarkerVisuals.Order)
         {
             NodeMarker captured = marker;
+            NodeMarkerVisual visual = NodeMarkerVisuals.For(marker);
+            StackPanel header = new() { Orientation = Orientation.Horizontal, Spacing = 8 };
+            header.Children.Add(new PathIcon { Data = visual.Icon, Foreground = visual.Brush, Width = 16, Height = 16 });
+            header.Children.Add(new TextBlock { Text = visual.Label, VerticalAlignment = VerticalAlignment.Center });
             MenuItem item = new()
             {
-                Header = NodeMarkerVisuals.For(marker).Label,
+                Header = header,
                 ToggleType = MenuItemToggleType.CheckBox,
                 IsChecked = vm.SelectionHasMarker(marker),
             };
