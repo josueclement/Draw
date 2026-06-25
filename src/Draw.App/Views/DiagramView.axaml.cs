@@ -768,7 +768,9 @@ public partial class DiagramView : UserControl
     // Right-clicking the canvas (a click, not a pan drag) opens the arrange menu. Right-clicking an
     // unselected shape selects it first (mirrors left-click), so the menu works with no prior selection;
     // a shape already in a multi-selection keeps the whole group. Right-clicking empty space leaves the
-    // selection untouched, so the menu still opens for an existing selection and stays closed otherwise.
+    // selection untouched but still opens the menu: selection-specific items (Icons, Styles, Align,
+    // Order, Distribute, references) grey themselves out via their own IsEnabled/CanExecute, while the
+    // view actions (Zoom, Appearance) stay usable — which is the point of always showing it.
     // Align/Distribute need >=2 / >=3 and grey themselves out below that; Space connections works on a
     // single shape. Right-dragging still pans; the middle button never opens the menu.
     private void MaybeShowArrangeMenu(PointerReleasedEventArgs e)
@@ -790,11 +792,6 @@ public partial class DiagramView : UserControl
         if (node is not null && !node.IsSelected)
         {
             _vm.SelectOnly(node);
-        }
-
-        if (!_vm.SelectedNodes.Any())
-        {
-            return;
         }
 
         // The Appearance/Styles submenus reuse shell-level commands; the shell is this view's window DataContext.
