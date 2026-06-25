@@ -66,13 +66,13 @@ public sealed class ConnectorViewModel : ViewModelBase
 
     /// <summary>True when this connector is a mind-map branch: rendered as a filled tapered ribbon
     /// rather than a uniform stroked line, with no end decorations.</summary>
-    public bool IsMindMapBranch => _model.IsMindMapBranch;
+    public bool IsMindMapBranch => _model.Kind == RelationshipKind.MindMapBranch;
 
     /// <summary>Show the centerline selection halo only for ordinary (stroked) connectors.</summary>
-    public bool ShowLineHalo => IsSelected && !_model.IsMindMapBranch;
+    public bool ShowLineHalo => IsSelected && !IsMindMapBranch;
 
     /// <summary>Show the ribbon-outline selection halo only for mind-map branches.</summary>
-    public bool ShowBranchHalo => IsSelected && _model.IsMindMapBranch;
+    public bool ShowBranchHalo => IsSelected && IsMindMapBranch;
 
     /// <summary>The filled, tapered ribbon outline for a mind-map branch, or null for an ordinary
     /// connector. Width runs from <see cref="MindMapBranchStyle.WidthAt"/>(parentDepth) at the source
@@ -108,13 +108,13 @@ public sealed class ConnectorViewModel : ViewModelBase
         ? ConnectorDecorationBuilder.FromCardinality(_model.TargetCardinality)
         : ConnectorDecorationBuilder.Describe(_model.Kind).Target;
 
-    public Geometry? SourceDecoration => _model.IsMindMapBranch
+    public Geometry? SourceDecoration => IsMindMapBranch
         ? null
         : ConnectorDecorationBuilder.Build(SourceEnd, _route.Start, _route.StartDirection * -1d);
 
     public IBrush? SourceDecorationFill => DecorationFill(SourceEnd);
 
-    public Geometry? TargetDecoration => _model.IsMindMapBranch
+    public Geometry? TargetDecoration => IsMindMapBranch
         ? null
         : ConnectorDecorationBuilder.Build(TargetEnd, _route.End, _route.EndDirection);
 
@@ -192,7 +192,7 @@ public sealed class ConnectorViewModel : ViewModelBase
     public void SetBranchDepth(int parentDepth)
     {
         int clamped = parentDepth < 0 ? 0 : parentDepth;
-        if (!_model.IsMindMapBranch || _branchDepth == clamped)
+        if (!IsMindMapBranch || _branchDepth == clamped)
         {
             return;
         }
@@ -397,7 +397,7 @@ public sealed class ConnectorViewModel : ViewModelBase
     /// list for an ordinary connector. Shared by the on-canvas fill and the SVG export so they agree.</summary>
     public IReadOnlyList<ModelPoint> GetBranchOutline()
     {
-        if (!_model.IsMindMapBranch)
+        if (!IsMindMapBranch)
         {
             return Array.Empty<ModelPoint>();
         }
@@ -458,7 +458,9 @@ public sealed class ConnectorViewModel : ViewModelBase
     {
         if (_route.Cubics is { } cubics)
         {
-            const int perSegment = 16;
+            // Denser sampling than the visual minimum so a thick mind-map branch's offset outline reads as
+            // a smooth curve rather than a chain of flat facets near the root.
+            const int perSegment = 24;
             List<ModelPoint> samples = new((cubics.Count * perSegment) + 1) { _route.Start };
             ModelPoint segmentStart = _route.Start;
             foreach (CubicSegment segment in cubics)

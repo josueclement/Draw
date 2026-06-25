@@ -185,5 +185,10 @@
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=line_segment}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
         </MenuItem>
+        <MenuItem Header="_Mind map">
+            <MenuItem Header="_Branch" CommandParameter="{x:Static rel:RelationshipKind.MindMapBranch}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.MindMapBranch}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
     </ContextMenu>
 </ResourceDictionary>

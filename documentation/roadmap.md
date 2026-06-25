@@ -52,13 +52,26 @@ rectangles) — gain a special affordance: hovering shows a **`+` on each of the
 spawns a **linked child** on that side (inheriting the parent's shape + style, opening for inline
 typing, one undo step), nudged clear of existing nodes. The branch connectors are **organic tapered
 ribbons** — filled variable-width geometry, **thick near the central topic and tapering thinner with
-tree depth and toward each child** (`Connector.IsMindMapBranch`; depth from
+tree depth and toward each child** (`RelationshipKind.MindMapBranch`; depth from
 `MindMap/MindMapHierarchy`, widths from `MindMapBranchStyle`, outline from `TaperedStroke` — all
 UI-agnostic + headless-tested; rendered as a filled `Path`, with SVG/PNG export parity). A new
 **`DiagramType.MindMap`** with a *New Mind Map* command (File menu + Home ribbon) pre-seeds a central
 topic; a **Mind map** ribbon group + Shift+S submenu arm the two tools. Branch taper is explicit
-(only `+`-created links), so ordinary connectors are unaffected. See
+(the `MindMapBranch` kind), so ordinary connectors are unaffected. See
 `documentation/plans/2026-06-14-mind-maps.md`.
+
+### Refinement — drawable branch connector, status markers, fixes 🚧 (pending visual verification)
+
+Follow-up making mind maps editable beyond the `+` button. The tapered branch is now a **dedicated
+`RelationshipKind.MindMapBranch` connector** (replacing the former `Connector.IsMindMapBranch` bool;
+no migration — the bool only existed on this unmerged branch): it has a palette tool (Mind map ribbon
+group + Shift+C menu) so branches can be **drawn between any two shapes**, and its taper recomputes
+when reconnected. Every node can carry **status markers** (`NodeMarker`: Todo / In progress / Done /
+Stuck / Important / Idea / Question) — multiple, independent, stacked — rendered as coloured Phosphor
+icon badges floating above the node's top-right, set via the right-click **Markers** menu and an
+inspector toggle row. Two fixes: the hover-`+` buttons sit outside the edge so they no longer steal
+connector-endpoint grabs, and thick branches near the root render smooth (denser sampling + a
+round-joined ribbon edge). See `documentation/plans/2026-06-25-mind-map-improvements.md`.
 
 ## Connector editing — forced anchors, waypoints, movable labels ✅ (cross-cutting)
 

@@ -425,7 +425,15 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         }
 
         CaptureUndo();
-        ConnectorViewModel vm = LinkNodesCore(source, target, kind, isMindMapBranch: false, sourceAnchor: null, targetAnchor: null);
+        ConnectorViewModel vm = LinkNodesCore(source, target, kind, sourceAnchor: null, targetAnchor: null);
+
+        // A hand-drawn mind-map branch needs its depth (and thus taper) computed from the tree it just
+        // joined; ordinary connectors don't, and this is a cheap no-op when there are no branches.
+        if (kind == RelationshipKind.MindMapBranch)
+        {
+            RefreshMindMapBranches();
+        }
+
         SelectConnector(vm);
         MarkModified();
         return vm;
@@ -438,7 +446,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         NodeViewModelBase source,
         NodeViewModelBase target,
         RelationshipKind kind,
-        bool isMindMapBranch,
         Point2D? sourceAnchor,
         Point2D? targetAnchor)
     {
@@ -448,7 +455,6 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
             TargetNodeId = target.Id,
             Kind = kind,
             Route = RouteStyle.Rounded,
-            IsMindMapBranch = isMindMapBranch,
         };
         _document.Connectors.Add(connector);
         ConnectorViewModel vm = new(connector, source, target, _router, _theme);
@@ -505,7 +511,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         ShapeNodeViewModel child = PlaceNodeCore<ShapeNodeViewModel>(childModel, center, w, h);
 
         (Point2D sourceAnchor, Point2D targetAnchor) = BranchAnchors(side);
-        LinkNodesCore(parent, child, RelationshipKind.Association, isMindMapBranch: true, sourceAnchor, targetAnchor);
+        LinkNodesCore(parent, child, RelationshipKind.MindMapBranch, sourceAnchor, targetAnchor);
 
         RefreshMindMapBranches();
         MarkModified();
@@ -762,6 +768,46 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     /// <summary>Regroups selected shapes' connector ends onto their edge midpoints. See <see cref="ConnectorSpacingCoordinator"/>.</summary>
     public void MergeSelectedConnections() => _connectorSpacingCoordinator.MergeSelectedConnections();
+
+    /// <summary>True when every selected node carries <paramref name="marker"/> (and at least one node is
+    /// selected) — drives the checked state of the markers context menu and inspector toggles.</summary>
+    public bool SelectionHasMarker(NodeMarker marker)
+    {
+        List<NodeViewModelBase> nodes = SelectedNodes.ToList();
+        return nodes.Count > 0 && nodes.All(n => n.Model.Markers.Contains(marker));
+    }
+
+    /// <summary>
+    /// Toggles <paramref name="marker"/> across the whole node selection as one undo step: if every
+    /// selected node already has it, it is removed from all; otherwise it is added to those missing it.
+    /// No-op when no node is selected.
+    /// </summary>
+    public void ToggleNodeMarker(NodeMarker marker)
+    {
+        List<NodeViewModelBase> nodes = SelectedNodes.ToList();
+        if (nodes.Count == 0)
+        {
+            return;
+        }
+
+        CaptureUndo();
+        bool removeFromAll = nodes.All(n => n.Model.Markers.Contains(marker));
+        foreach (NodeViewModelBase node in nodes)
+        {
+            if (removeFromAll)
+            {
+                node.Model.Markers.Remove(marker);
+            }
+            else if (!node.Model.Markers.Contains(marker))
+            {
+                node.Model.Markers.Add(marker);
+            }
+
+            node.RaiseMarkersChanged();
+        }
+
+        MarkModified();
+    }
 
     public void SetNodeBounds(NodeViewModelBase vm, Rect2D bounds)
     {

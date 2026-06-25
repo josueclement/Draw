@@ -69,6 +69,8 @@ public static class ConnectorDecorationBuilder
             RelationshipKind.Dependency => (ConnectorEndDecoration.None, ConnectorEndDecoration.OpenArrow, true),
             RelationshipKind.Include => (ConnectorEndDecoration.None, ConnectorEndDecoration.OpenArrow, true),
             RelationshipKind.Extend => (ConnectorEndDecoration.None, ConnectorEndDecoration.OpenArrow, true),
+            // Mind-map branches render as a filled tapered ribbon with no end caps and a solid edge.
+            RelationshipKind.MindMapBranch => (ConnectorEndDecoration.None, ConnectorEndDecoration.None, false),
             _ => (ConnectorEndDecoration.None, ConnectorEndDecoration.None, false),
         };
 

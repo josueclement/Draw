@@ -31,7 +31,7 @@ public static class MindMapHierarchy
         HashSet<Guid> touched = new();
         foreach (Connector connector in connectors)
         {
-            if (!connector.IsMindMapBranch)
+            if (connector.Kind != RelationshipKind.MindMapBranch)
             {
                 continue;
             }

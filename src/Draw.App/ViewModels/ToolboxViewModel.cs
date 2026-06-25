@@ -83,6 +83,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ConnectorToolItem("Include", RelationshipKind.Include),
         new ConnectorToolItem("Extend", RelationshipKind.Extend),
         new ConnectorToolItem("Relationship", RelationshipKind.Relationship),
+        new ConnectorToolItem("Mind-map branch", RelationshipKind.MindMapBranch),
     };
 
     public ObservableCollection<ClassNodeToolItem> ClassNodes { get; } = new()
@@ -239,7 +240,8 @@ public sealed class ToolboxViewModel : ViewModelBase
         ArmedTool is ConnectorToolItem c && IsCommonConnector(c.Kind) ? c.Name : "Connector";
 
     public string UmlConnectorsHeader =>
-        ArmedTool is ConnectorToolItem c && !IsCommonConnector(c.Kind) && c.Kind != RelationshipKind.Relationship
+        ArmedTool is ConnectorToolItem c && !IsCommonConnector(c.Kind)
+            && c.Kind != RelationshipKind.Relationship && c.Kind != RelationshipKind.MindMapBranch
             ? c.Name : "Relationship";
 
     private static bool IsCommonConnector(RelationshipKind kind) =>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Draw.Model.Primitives;
 using Draw.Model.Styling;
@@ -31,6 +32,10 @@ public abstract class NodeBase
 
     public ShapeStyle Style { get; set; } = ShapeStyle.CreateDefault();
 
+    /// <summary>Status markers attached to this node, rendered as icon badges. Independent and ordered;
+    /// empty by default. See <see cref="NodeMarker"/>.</summary>
+    public List<NodeMarker> Markers { get; set; } = new();
+
     /// <summary>Returns a faithful deep copy, preserving <see cref="Id"/>.</summary>
     public abstract NodeBase Clone();
 
@@ -41,5 +46,6 @@ public abstract class NodeBase
         target.Bounds = Bounds;
         target.ZIndex = ZIndex;
         target.Style = Style.Clone();
+        target.Markers = new List<NodeMarker>(Markers);
     }
 }

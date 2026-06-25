@@ -119,6 +119,66 @@ public class JsonDocumentSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_PreservesMindMapBranchConnectorKind()
+    {
+        JsonDocumentSerializer serializer = new();
+        DiagramDocument doc = new();
+        doc.Connectors.Add(new Connector
+        {
+            SourceNodeId = Guid.NewGuid(),
+            TargetNodeId = Guid.NewGuid(),
+            Kind = RelationshipKind.MindMapBranch,
+        });
+
+        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
+
+        Assert.Equal(RelationshipKind.MindMapBranch, Assert.Single(back.Connectors).Kind);
+    }
+
+    [Fact]
+    public void RoundTrip_PreservesNodeMarkers_InOrder()
+    {
+        JsonDocumentSerializer serializer = new();
+        ShapeNode node = new() { Kind = ShapeKind.Rectangle, Bounds = new Rect2D(0, 0, 10, 10) };
+        node.Markers.Add(NodeMarker.Todo);
+        node.Markers.Add(NodeMarker.Done);
+        node.Markers.Add(NodeMarker.Important);
+        DiagramDocument doc = new() { Nodes = { node } };
+
+        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
+
+        ShapeNode result = Assert.IsType<ShapeNode>(Assert.Single(back.Nodes));
+        Assert.Equal(new[] { NodeMarker.Todo, NodeMarker.Done, NodeMarker.Important }, result.Markers);
+    }
+
+    [Fact]
+    public void Serialize_WritesMarkersAsStrings()
+    {
+        JsonDocumentSerializer serializer = new();
+        ShapeNode node = new();
+        node.Markers.Add(NodeMarker.Stuck);
+        DiagramDocument doc = new() { Nodes = { node } };
+
+        string json = serializer.Serialize(doc);
+
+        Assert.Contains("\"Stuck\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Clone_NodeMarkers_AreIndependent()
+    {
+        JsonDocumentSerializer serializer = new();
+        ShapeNode node = new();
+        node.Markers.Add(NodeMarker.Idea);
+        DiagramDocument doc = new() { Nodes = { node } };
+
+        DiagramDocument clone = serializer.Clone(doc);
+        Assert.IsType<ShapeNode>(clone.Nodes[0]).Markers.Add(NodeMarker.Question);
+
+        Assert.Equal(new[] { NodeMarker.Idea }, Assert.IsType<ShapeNode>(doc.Nodes[0]).Markers);
+    }
+
+    [Fact]
     public void RoundTrip_PreservesEveryNodeType()
     {
         JsonDocumentSerializer serializer = new();

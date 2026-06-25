@@ -128,4 +128,7 @@
     <StreamGeometry x:Key="ToolIcon.Realization">F0 M22,12 L14.5,7 L14.5,17 Z M19.2,12 L16.2,9.2 L16.2,14.8 Z M2,11.2 L6,11.2 L6,12.8 L2,12.8 Z M8.5,11.2 L12.8,11.2 L12.8,12.8 L8.5,12.8 Z</StreamGeometry>
     <StreamGeometry x:Key="ToolIcon.Dependency">M22,12 L15,8 L17.5,12 L15,16 Z M2,11.2 L6,11.2 L6,12.8 L2,12.8 Z M8.5,11.2 L12.8,11.2 L12.8,12.8 L8.5,12.8 Z</StreamGeometry>
 
+    <!-- Mind-map branch: a tapered ribbon, thick at the parent (left) thinning toward the child (right). -->
+    <StreamGeometry x:Key="ToolIcon.MindMapBranch">M2,7 L21,11.3 L21,12.7 L2,17 Z</StreamGeometry>
+
 </ResourceDictionary>

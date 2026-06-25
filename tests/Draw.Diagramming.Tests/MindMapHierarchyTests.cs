@@ -9,10 +9,10 @@ namespace Draw.Diagramming.Tests;
 public class MindMapHierarchyTests
 {
     private static Connector Branch(Guid source, Guid target)
-        => new() { SourceNodeId = source, TargetNodeId = target, IsMindMapBranch = true };
+        => new() { SourceNodeId = source, TargetNodeId = target, Kind = RelationshipKind.MindMapBranch };
 
     private static Connector Plain(Guid source, Guid target)
-        => new() { SourceNodeId = source, TargetNodeId = target, IsMindMapBranch = false };
+        => new() { SourceNodeId = source, TargetNodeId = target, Kind = RelationshipKind.Association };
 
     [Fact]
     public void NoConnectors_IsEmpty()

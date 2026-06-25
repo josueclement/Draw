@@ -28,14 +28,6 @@ public sealed class Connector
 
     public RouteStyle Route { get; set; } = RouteStyle.Straight;
 
-    /// <summary>
-    /// When true this connector is a mind-map branch: it renders as a filled, depth-scaled tapered
-    /// ribbon (thick near the central topic, thinner toward the leaves) instead of a uniform stroked
-    /// line, and carries no end decorations. Set when a child is spawned from a topic's '+' button.
-    /// Additive/back-compatible: defaults to false for every existing connector.
-    /// </summary>
-    public bool IsMindMapBranch { get; set; }
-
     public List<Point2D> BendPoints { get; set; } = new();
 
     public ConnectorStyle Style { get; set; } = new();
@@ -73,7 +65,6 @@ public sealed class Connector
         SourceCardinality = SourceCardinality,
         TargetCardinality = TargetCardinality,
         Route = Route,
-        IsMindMapBranch = IsMindMapBranch,
         BendPoints = BendPoints.ToList(),
         Style = Style.Clone(),
         SourceLabel = SourceLabel,
