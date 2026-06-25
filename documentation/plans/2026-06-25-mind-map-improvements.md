@@ -66,6 +66,24 @@ Real use of the Phase 6 mind maps (unmerged `phase06-mind-maps` branch) surfaced
 - GUI (Windows, user-run — not verifiable under WSL2): draw + reconnect a tapered branch; stack/toggle
   markers across node kinds and reload; `+` buttons clear of the edge; thick root branches smooth.
 
+## Follow-up (same day): endpoint-grab priority + gray default
+
+Two further fixes after testing the above:
+
+- **Endpoint grab now wins over the hover `+` button.** Moving the buttons out wasn't enough: the
+  endpoint handles live on the `IsHitTestVisible=False` overlay and are hit-tested geometrically in
+  `OnPointerPressed`, but a hovered `+` `Button` consumed the press so that handler never ran. (ZIndex
+  can't fix this — it's event routing, not render order.) `Views/DiagramView.axaml.cs` now subscribes
+  `PointerPressed` with `handledEventsToo: true` and, for an already-handled press, only runs the
+  selected-connector endpoint edit (which re-captures the pointer, suppressing the button's click);
+  every other already-handled press is left to the child untouched.
+- **Connectors default to gray.** `Styling/ConnectorStyle.cs` gets its own `DefaultStrokeColor`
+  (`#9A9AA0`, the palette Gray swatch stroke) on its `Stroke` initializer — node outlines keep the
+  shared blue `StrokeStyle.DefaultColor`. New connectors and (via `Fill="{Binding Stroke}"`) new
+  mind-map branches are gray; quick-palette/custom colors and existing connectors are unaffected (no
+  migration). Tests: a fresh connector is gray, a fresh node outline stays blue, and the gray
+  round-trips (`tests/Draw.Model.Tests/JsonDocumentSerializerTests.cs`).
+
 ## Not done / follow-ups
 
 - **Cross-node re-targeting** of an existing connector (drag an endpoint onto a *different* shape) is

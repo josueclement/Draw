@@ -119,6 +119,26 @@ public class JsonDocumentSerializerTests
     }
 
     [Fact]
+    public void NewConnector_DefaultsToGrayStroke_WhileNodeOutlineStaysBlue()
+    {
+        Assert.Equal(ConnectorStyle.DefaultStrokeColor, new Connector().Style.Stroke.Color);
+        Assert.Equal(StrokeStyle.DefaultColor, new ShapeNode().Style.Stroke.Color);
+        Assert.NotEqual(StrokeStyle.DefaultColor, ConnectorStyle.DefaultStrokeColor);
+    }
+
+    [Fact]
+    public void RoundTrip_PreservesDefaultGrayConnectorStroke()
+    {
+        JsonDocumentSerializer serializer = new();
+        DiagramDocument doc = new();
+        doc.Connectors.Add(new Connector { SourceNodeId = Guid.NewGuid(), TargetNodeId = Guid.NewGuid() });
+
+        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
+
+        Assert.Equal(ConnectorStyle.DefaultStrokeColor, Assert.Single(back.Connectors).Style.Stroke.Color);
+    }
+
+    [Fact]
     public void RoundTrip_PreservesMindMapBranchConnectorKind()
     {
         JsonDocumentSerializer serializer = new();

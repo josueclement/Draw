@@ -98,7 +98,10 @@ public partial class DiagramView : UserControl
             (row, selectAll) => FocusEditorFor(row, selectAll),
             () => Focus());
 
-        Viewport.PointerPressed += OnPointerPressed;
+        // handledEventsToo: a mind-map topic's hover '+' Button (a real control) marks the press handled,
+        // which would otherwise skip this handler — and with it the geometric connector-endpoint hit-test.
+        // We still receive it so grabbing a selected connector's endpoint can win over the button.
+        Viewport.AddHandler(InputElement.PointerPressedEvent, OnPointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
         Viewport.PointerMoved += OnPointerMoved;
         Viewport.PointerReleased += OnPointerReleased;
         Viewport.PointerWheelChanged += OnPointerWheel;
@@ -311,6 +314,25 @@ public partial class DiagramView : UserControl
     {
         if (_vm is null || e.Source is TextBox)
         {
+            return;
+        }
+
+        // The press was already handled by a child control (e.g. a hovered mind-map '+' button). Don't
+        // run the normal canvas gesture logic — but if it lands on the selected connector's endpoint,
+        // start the endpoint edit anyway (TryBeginConnectorEdit re-captures the pointer, so the button's
+        // click is suppressed). Any other already-handled press is left to the child untouched.
+        if (e.Handled)
+        {
+            PointerPoint handledPoint = e.GetCurrentPoint(Viewport);
+            if (handledPoint.Properties.IsLeftButtonPressed && _vm.SelectedConnector is { } selectedConnector)
+            {
+                TryBeginConnectorEdit(
+                    e.Pointer,
+                    selectedConnector,
+                    ScreenToWorld(handledPoint.Position),
+                    e.KeyModifiers.HasFlag(KeyModifiers.Alt));
+            }
+
             return;
         }
 

@@ -69,9 +69,12 @@ group + Shift+C menu) so branches can be **drawn between any two shapes**, and i
 when reconnected. Every node can carry **status markers** (`NodeMarker`: Todo / In progress / Done /
 Stuck / Important / Idea / Question) — multiple, independent, stacked — rendered as coloured Phosphor
 icon badges floating above the node's top-right, set via the right-click **Markers** menu and an
-inspector toggle row. Two fixes: the hover-`+` buttons sit outside the edge so they no longer steal
-connector-endpoint grabs, and thick branches near the root render smooth (denser sampling + a
-round-joined ribbon edge). See `documentation/plans/2026-06-25-mind-map-improvements.md`.
+inspector toggle row. Fixes: the hover-`+` buttons sit outside the edge **and** grabbing a selected
+connector's endpoint now wins the press over the button (the canvas handler runs `handledEventsToo`
+and re-captures the pointer — ZIndex can't fix an event-routing conflict); thick branches near the
+root render smooth (denser sampling + a round-joined ribbon edge); and connectors/branches now
+**default to gray** (`ConnectorStyle.DefaultStrokeColor`, node outlines stay blue). See
+`documentation/plans/2026-06-25-mind-map-improvements.md`.
 
 ## Connector editing — forced anchors, waypoints, movable labels ✅ (cross-cutting)
 
