@@ -79,6 +79,7 @@ public sealed class KeymapActionRegistry
         Add("edit.duplicate", false, () => (_shell.DuplicateCommand, null));
         Add("edit.delete", false, () => (_shell.DeleteCommand, null));
         Add("edit.insertImage", false, () => (_shell.InsertImageCommand, null));
+        AddDoc("edit.selectAll", d => (d.SelectAllCommand, null));
 
         // Document arrange (resolved against the active tab).
         foreach (AlignmentMode mode in Enum.GetValues<AlignmentMode>())
@@ -105,6 +106,7 @@ public sealed class KeymapActionRegistry
         AddDoc("view.zoomReset", d => (d.ZoomResetCommand, null));
         AddDoc("view.fitToContent", d => (d.FitToContentCommand, null));
         Add("view.toggleTheme", false, () => (_shell.ToggleThemeCommand, null));
+        Add("view.toggleInspector", false, () => (_shell.ToggleInspectorCommand, null));
 
         // Export.
         Add("export.image", false, () => (_shell.ExportImageCommand, null));

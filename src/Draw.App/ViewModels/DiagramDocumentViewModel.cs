@@ -100,6 +100,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         ZoomInCommand = new RelayCommand(_viewportCoordinator.ZoomIn);
         ZoomOutCommand = new RelayCommand(_viewportCoordinator.ZoomOut);
         ZoomResetCommand = new RelayCommand(_viewportCoordinator.ZoomReset);
+        SelectAllCommand = new RelayCommand(SelectAll);
     }
 
     public ObservableCollection<NodeViewModelBase> Nodes { get; } = new();
@@ -165,6 +166,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public RelayCommand ZoomOutCommand { get; }
 
     public RelayCommand ZoomResetCommand { get; }
+
+    /// <summary>Selects every node and connector in the active document (Ctrl+A).</summary>
+    public RelayCommand SelectAllCommand { get; }
 
     public RelayCommand FitToContentCommand { get; }
 
@@ -843,6 +847,13 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public void ClearSelection()
     {
         _selectionCoordinator.ClearSelection();
+        RaiseSelectionChanged();
+    }
+
+    /// <summary>Selects every node and connector in the document (Ctrl+A).</summary>
+    public void SelectAll()
+    {
+        _selectionCoordinator.SelectAll();
         RaiseSelectionChanged();
     }
 
