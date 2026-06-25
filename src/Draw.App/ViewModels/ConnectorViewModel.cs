@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Draw.App.Rendering;
 using Draw.App.Services;
 using Draw.Diagramming.Geometry;
+using Draw.Diagramming.MindMap;
 using Draw.Diagramming.Routing;
 using Draw.Diagramming.Styling;
 using Draw.Model.Connectors;
@@ -25,6 +26,7 @@ public sealed class ConnectorViewModel : ViewModelBase
     private readonly IConnectorRouter _router;
     private readonly IThemeService _theme;
     private ConnectorRoute _route;
+    private int _branchDepth;
 
     public ConnectorViewModel(Connector model, NodeViewModelBase source, NodeViewModelBase target, IConnectorRouter router, IThemeService theme)
     {
@@ -50,10 +52,32 @@ public sealed class ConnectorViewModel : ViewModelBase
     public bool IsSelected
     {
         get;
-        set => SetProperty(ref field, value);
+        set
+        {
+            if (SetProperty(ref field, value))
+            {
+                OnPropertyChanged(nameof(ShowLineHalo));
+                OnPropertyChanged(nameof(ShowBranchHalo));
+            }
+        }
     }
 
     public Geometry Geometry => BuildLineGeometry();
+
+    /// <summary>True when this connector is a mind-map branch: rendered as a filled tapered ribbon
+    /// rather than a uniform stroked line, with no end decorations.</summary>
+    public bool IsMindMapBranch => _model.Kind == RelationshipKind.MindMapBranch;
+
+    /// <summary>Show the centerline selection halo only for ordinary (stroked) connectors.</summary>
+    public bool ShowLineHalo => IsSelected && !IsMindMapBranch;
+
+    /// <summary>Show the ribbon-outline selection halo only for mind-map branches.</summary>
+    public bool ShowBranchHalo => IsSelected && IsMindMapBranch;
+
+    /// <summary>The filled, tapered ribbon outline for a mind-map branch, or null for an ordinary
+    /// connector. Width runs from <see cref="MindMapBranchStyle.WidthAt"/>(parentDepth) at the source
+    /// to WidthAt(parentDepth + 1) at the child, so the branch flows thick→thin from trunk to twig.</summary>
+    public Geometry? BranchGeometry => BuildBranchGeometry();
 
     /// <summary>The active-theme variant of the quick-palette swatch this connector is linked to, or
     /// null when it carries no <c>PaletteId</c>.</summary>
@@ -84,11 +108,15 @@ public sealed class ConnectorViewModel : ViewModelBase
         ? ConnectorDecorationBuilder.FromCardinality(_model.TargetCardinality)
         : ConnectorDecorationBuilder.Describe(_model.Kind).Target;
 
-    public Geometry? SourceDecoration => ConnectorDecorationBuilder.Build(SourceEnd, _route.Start, _route.StartDirection * -1d);
+    public Geometry? SourceDecoration => IsMindMapBranch
+        ? null
+        : ConnectorDecorationBuilder.Build(SourceEnd, _route.Start, _route.StartDirection * -1d);
 
     public IBrush? SourceDecorationFill => DecorationFill(SourceEnd);
 
-    public Geometry? TargetDecoration => ConnectorDecorationBuilder.Build(TargetEnd, _route.End, _route.EndDirection);
+    public Geometry? TargetDecoration => IsMindMapBranch
+        ? null
+        : ConnectorDecorationBuilder.Build(TargetEnd, _route.End, _route.EndDirection);
 
     public IBrush? TargetDecorationFill => DecorationFill(TargetEnd);
 
@@ -157,6 +185,20 @@ public sealed class ConnectorViewModel : ViewModelBase
     {
         _route = Compute();
         RaiseAll();
+    }
+
+    /// <summary>Sets the depth of this branch's source (parent) topic so its taper widths scale with
+    /// the tree, then re-raises the ribbon geometry. No-op for non-branch connectors.</summary>
+    public void SetBranchDepth(int parentDepth)
+    {
+        int clamped = parentDepth < 0 ? 0 : parentDepth;
+        if (!IsMindMapBranch || _branchDepth == clamped)
+        {
+            return;
+        }
+
+        _branchDepth = clamped;
+        OnPropertyChanged(nameof(BranchGeometry));
     }
 
     /// <summary>Unsubscribes from endpoint changes; call before discarding.</summary>
@@ -351,6 +393,43 @@ public sealed class ConnectorViewModel : ViewModelBase
         return new PolylineGeometry(_route.Points.Select(ToPoint).ToList(), isFilled: false);
     }
 
+    /// <summary>The closed tapered-ribbon outline (world coordinates) for a mind-map branch, or an empty
+    /// list for an ordinary connector. Shared by the on-canvas fill and the SVG export so they agree.</summary>
+    public IReadOnlyList<ModelPoint> GetBranchOutline()
+    {
+        if (!IsMindMapBranch)
+        {
+            return Array.Empty<ModelPoint>();
+        }
+
+        double startWidth = MindMapBranchStyle.WidthAt(_branchDepth);
+        double endWidth = MindMapBranchStyle.WidthAt(_branchDepth + 1);
+        return TaperedStroke.BuildOutline(GetFlattenedPoints(), startWidth, endWidth);
+    }
+
+    private Geometry? BuildBranchGeometry()
+    {
+        IReadOnlyList<ModelPoint> outline = GetBranchOutline();
+        if (outline.Count < 3)
+        {
+            return null;
+        }
+
+        StreamGeometry geometry = new();
+        using (StreamGeometryContext ctx = geometry.Open())
+        {
+            ctx.BeginFigure(ToPoint(outline[0]), isFilled: true);
+            for (int i = 1; i < outline.Count; i++)
+            {
+                ctx.LineTo(ToPoint(outline[i]));
+            }
+
+            ctx.EndFigure(true);
+        }
+
+        return geometry;
+    }
+
     private IBrush? DecorationFill(ConnectorEndDecoration decoration)
     {
         if (ConnectorDecorationBuilder.IsStrokeOnly(decoration))
@@ -379,7 +458,9 @@ public sealed class ConnectorViewModel : ViewModelBase
     {
         if (_route.Cubics is { } cubics)
         {
-            const int perSegment = 16;
+            // Denser sampling than the visual minimum so a thick mind-map branch's offset outline reads as
+            // a smooth curve rather than a chain of flat facets near the root.
+            const int perSegment = 24;
             List<ModelPoint> samples = new((cubics.Count * perSegment) + 1) { _route.Start };
             ModelPoint segmentStart = _route.Start;
             foreach (CubicSegment segment in cubics)
@@ -460,6 +541,7 @@ public sealed class ConnectorViewModel : ViewModelBase
     private void RaiseAll()
     {
         OnPropertyChanged(nameof(Geometry));
+        OnPropertyChanged(nameof(BranchGeometry));
         OnPropertyChanged(nameof(SourceDecoration));
         OnPropertyChanged(nameof(SourceDecorationFill));
         OnPropertyChanged(nameof(TargetDecoration));

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Media;
@@ -131,6 +132,39 @@ public abstract class NodeViewModelBase : ViewModelBase
     {
         get;
         set => SetProperty(ref field, value);
+    }
+
+    /// <summary>True when the node carries at least one status marker (gates the badge layer item).</summary>
+    public bool HasAnyMarker => Model.Markers.Count > 0;
+
+    /// <summary>The set markers' icon/colour/label, in <see cref="NodeMarkerVisuals.Order"/>, for the badge.</summary>
+    public IReadOnlyList<NodeMarkerVisual> MarkerBadges
+    {
+        get
+        {
+            if (Model.Markers.Count == 0)
+            {
+                return Array.Empty<NodeMarkerVisual>();
+            }
+
+            List<NodeMarkerVisual> badges = new(Model.Markers.Count);
+            foreach (NodeMarker marker in NodeMarkerVisuals.Order)
+            {
+                if (Model.Markers.Contains(marker))
+                {
+                    badges.Add(NodeMarkerVisuals.For(marker));
+                }
+            }
+
+            return badges;
+        }
+    }
+
+    /// <summary>Re-raises the marker-derived properties after the document toggles a marker on this node.</summary>
+    public void RaiseMarkersChanged()
+    {
+        OnPropertyChanged(nameof(HasAnyMarker));
+        OnPropertyChanged(nameof(MarkerBadges));
     }
 
     /// <summary>True when the fill is the un-customised default (null), so it follows the active theme.</summary>

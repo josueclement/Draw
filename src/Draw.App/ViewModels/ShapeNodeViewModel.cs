@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Avalonia.Media;
 using Draw.App.Rendering;
 using Draw.App.Services;
@@ -30,6 +31,14 @@ public sealed class ShapeNodeViewModel : NodeViewModelBase
 
     public ShapeKind Kind => _model.Kind;
 
+    /// <summary>True for mind-map topics: the node shows a hover '+' on each side that spawns a
+    /// linked, tapered child.</summary>
+    public bool IsMindMap => _model.Kind is ShapeKind.MindMapTopic or ShapeKind.MindMapTopicRounded;
+
+    /// <summary>The hover '+' child buttons show only on mind-map topics, and never while the inline
+    /// text editor is open (so they don't overlap or steal clicks from the editor).</summary>
+    public bool ShowChildButtons => IsMindMap && !IsEditing;
+
     public string Text
     {
         get => _model.Text;
@@ -48,4 +57,13 @@ public sealed class ShapeNodeViewModel : NodeViewModelBase
         => ShapeGeometryBuilder.Build(_model.Kind, _model.Bounds.Width, _model.Bounds.Height, _model.CornerRadius);
 
     protected override void OnSizeChanged() => OnPropertyChanged(nameof(Geometry));
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName == nameof(IsEditing))
+        {
+            OnPropertyChanged(nameof(ShowChildButtons));
+        }
+    }
 }

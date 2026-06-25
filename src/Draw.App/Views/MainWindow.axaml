@@ -37,6 +37,9 @@
                 <MenuItem Header="_New document" Command="{Binding NewCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=file_plus}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="New _Mind Map" Command="{Binding NewMindMapCommand}">
+                    <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.RoundedRectangle}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
                 <MenuItem Header="_Open…" Command="{Binding OpenCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=folder_open}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
@@ -132,6 +135,7 @@
             <ribbon:RibbonTab Header="Home">
                 <ribbon:RibbonGroup Header="File">
                     <ribbon:RibbonButton Header="New document" Command="{Binding NewCommand}" IconData="{pia:IconGeometry Icon=file_plus}" />
+                    <ribbon:RibbonButton Header="New mind map" Command="{Binding NewMindMapCommand}" IconData="{StaticResource ToolIcon.RoundedRectangle}" />
                     <ribbon:RibbonButton Header="Open" Command="{Binding OpenCommand}" IconData="{pia:IconGeometry Icon=folder_open}" />
                     <ribbon:RibbonButton Header="Save" Command="{Binding SaveCommand}" IconData="{pia:IconGeometry Icon=floppy_disk}" />
                     <ribbon:RibbonButton Header="Save As" Command="{Binding SaveAsCommand}" IconData="{pia:IconGeometry Icon=floppy_disk_back}" />
@@ -164,6 +168,30 @@
                         <ribbon:RibbonMenuItem Header="Parallelogram" CommandParameter="{x:Static nodes:ShapeKind.Parallelogram}" IconData="{pia:IconGeometry Icon=parallelogram}" />
                         <ribbon:RibbonMenuItem Header="Trapezoid" CommandParameter="{x:Static nodes:ShapeKind.Trapezoid}" IconData="{StaticResource ToolIcon.Trapezoid}" />
                         <ribbon:RibbonMenuItem Header="Triangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}" IconData="{pia:IconGeometry Icon=triangle}" />
+                        <ribbon:RibbonMenuItem Header="Hexagon" CommandParameter="{x:Static nodes:ShapeKind.Hexagon}" IconData="{StaticResource ToolIcon.Hexagon}" />
+                        <ribbon:RibbonMenuItem Header="Pentagon" CommandParameter="{x:Static nodes:ShapeKind.Pentagon}" IconData="{StaticResource ToolIcon.Pentagon}" />
+                        <ribbon:RibbonMenuItem Header="Octagon" CommandParameter="{x:Static nodes:ShapeKind.Octagon}" IconData="{StaticResource ToolIcon.Octagon}" />
+                        <ribbon:RibbonMenuItem Header="Star" CommandParameter="{x:Static nodes:ShapeKind.Star}" IconData="{StaticResource ToolIcon.Star}" />
+                        <ribbon:RibbonMenuItem Header="Cross" CommandParameter="{x:Static nodes:ShapeKind.Cross}" IconData="{StaticResource ToolIcon.Cross}" />
+                        <ribbon:RibbonMenuItem Header="Cloud" CommandParameter="{x:Static nodes:ShapeKind.Cloud}" IconData="{StaticResource ToolIcon.Cloud}" />
+                        <ribbon:RibbonMenuItem Header="Callout" CommandParameter="{x:Static nodes:ShapeKind.Callout}" IconData="{StaticResource ToolIcon.Callout}" />
+                    </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonDropDownButton x:Name="FlowchartDropDown" Header="{Binding Toolbox.FlowchartHeader}" IconData="{pia:IconGeometry Icon=diamond}">
+                        <ribbon:RibbonMenuItem Header="Terminator" CommandParameter="{x:Static nodes:ShapeKind.Terminator}" IconData="{StaticResource ToolIcon.Terminator}" />
+                        <ribbon:RibbonMenuItem Header="Cylinder" CommandParameter="{x:Static nodes:ShapeKind.Cylinder}" IconData="{StaticResource ToolIcon.Cylinder}" />
+                        <ribbon:RibbonMenuItem Header="Document" CommandParameter="{x:Static nodes:ShapeKind.Document}" IconData="{StaticResource ToolIcon.Document}" />
+                        <ribbon:RibbonMenuItem Header="Predefined process" CommandParameter="{x:Static nodes:ShapeKind.PredefinedProcess}" IconData="{StaticResource ToolIcon.PredefinedProcess}" />
+                        <ribbon:RibbonMenuItem Header="Manual input" CommandParameter="{x:Static nodes:ShapeKind.ManualInput}" IconData="{StaticResource ToolIcon.ManualInput}" />
+                        <ribbon:RibbonMenuItem Header="Off-page connector" CommandParameter="{x:Static nodes:ShapeKind.OffPageConnector}" IconData="{StaticResource ToolIcon.OffPageConnector}" />
+                        <ribbon:RibbonMenuItem Header="Display" CommandParameter="{x:Static nodes:ShapeKind.Display}" IconData="{StaticResource ToolIcon.Display}" />
+                        <ribbon:RibbonMenuItem Header="Delay" CommandParameter="{x:Static nodes:ShapeKind.Delay}" IconData="{StaticResource ToolIcon.Delay}" />
+                    </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonDropDownButton x:Name="ArrowsDropDown" Header="{Binding Toolbox.ArrowsHeader}" IconData="{StaticResource ToolIcon.ArrowRight}">
+                        <ribbon:RibbonMenuItem Header="Arrow right" CommandParameter="{x:Static nodes:ShapeKind.ArrowRight}" IconData="{StaticResource ToolIcon.ArrowRight}" />
+                        <ribbon:RibbonMenuItem Header="Arrow left" CommandParameter="{x:Static nodes:ShapeKind.ArrowLeft}" IconData="{StaticResource ToolIcon.ArrowLeft}" />
+                        <ribbon:RibbonMenuItem Header="Arrow up" CommandParameter="{x:Static nodes:ShapeKind.ArrowUp}" IconData="{StaticResource ToolIcon.ArrowUp}" />
+                        <ribbon:RibbonMenuItem Header="Arrow down" CommandParameter="{x:Static nodes:ShapeKind.ArrowDown}" IconData="{StaticResource ToolIcon.ArrowDown}" />
+                        <ribbon:RibbonMenuItem Header="Bidirectional" CommandParameter="{x:Static nodes:ShapeKind.ArrowDouble}" IconData="{StaticResource ToolIcon.ArrowDouble}" />
                     </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonDropDownButton x:Name="CommonConnectorsDropDown" Header="{Binding Toolbox.CommonConnectorsHeader}" IconData="{pia:IconGeometry Icon=line_segment}">
                         <ribbon:RibbonMenuItem Header="Association" CommandParameter="{x:Static rel:RelationshipKind.Association}" IconData="{StaticResource ToolIcon.Association}" />
@@ -190,11 +218,23 @@
                         <ribbon:RibbonMenuItem Header="Include" CommandParameter="{x:Static rel:RelationshipKind.Include}" IconData="{StaticResource ToolIcon.Dependency}" />
                         <ribbon:RibbonMenuItem Header="Extend" CommandParameter="{x:Static rel:RelationshipKind.Extend}" IconData="{StaticResource ToolIcon.Dependency}" />
                     </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonDropDownButton x:Name="StructureDropDown" Header="{Binding Toolbox.StructureHeader}" IconData="{StaticResource ToolIcon.Package}">
+                        <ribbon:RibbonMenuItem Header="Package" CommandParameter="{x:Static vm:UmlNodeKind.Package}" IconData="{StaticResource ToolIcon.Package}" />
+                        <ribbon:RibbonMenuItem Header="Component" CommandParameter="{x:Static vm:UmlNodeKind.Component}" IconData="{StaticResource ToolIcon.Component}" />
+                        <ribbon:RibbonMenuItem Header="Deployment" CommandParameter="{x:Static vm:UmlNodeKind.Deployment}" IconData="{StaticResource ToolIcon.Deployment}" />
+                    </ribbon:RibbonDropDownButton>
                     <ribbon:RibbonButton Header="Note" Command="{Binding Toolbox.SelectShapeToolCommand}" CommandParameter="{x:Static nodes:ShapeKind.Note}" IconData="{StaticResource ToolIcon.Note}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="ER">
                     <ribbon:RibbonButton Header="Table" Command="{Binding Toolbox.SelectEntityToolCommand}" IconData="{pia:IconGeometry Icon=table}" />
                     <ribbon:RibbonButton Header="Relationship" Command="{Binding Toolbox.SelectConnectorToolCommand}" CommandParameter="{x:Static rel:RelationshipKind.Relationship}" IconData="{pia:IconGeometry Icon=line_segment}" />
+                </ribbon:RibbonGroup>
+                <ribbon:RibbonGroup Header="Mind map">
+                    <ribbon:RibbonDropDownButton x:Name="MindMapDropDown" Header="{Binding Toolbox.MindMapHeader}" IconData="{StaticResource ToolIcon.RoundedRectangle}">
+                        <ribbon:RibbonMenuItem Header="Topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopic}" IconData="{pia:IconGeometry Icon=rectangle}" />
+                        <ribbon:RibbonMenuItem Header="Rounded topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopicRounded}" IconData="{StaticResource ToolIcon.RoundedRectangle}" />
+                    </ribbon:RibbonDropDownButton>
+                    <ribbon:RibbonButton Header="Branch" Command="{Binding Toolbox.SelectConnectorToolCommand}" CommandParameter="{x:Static rel:RelationshipKind.MindMapBranch}" IconData="{StaticResource ToolIcon.MindMapBranch}" />
                 </ribbon:RibbonGroup>
                 <ribbon:RibbonGroup Header="Image">
                     <ribbon:RibbonButton Header="Insert image" Command="{Binding InsertImageCommand}" IconData="{pia:IconGeometry Icon=image}" />
@@ -501,6 +541,26 @@
                                 <ComboBox HorizontalAlignment="Stretch"
                                           ItemsSource="{x:Static vm:InspectorViewModel.AlignmentOptions}"
                                           SelectedItem="{Binding Inspector.Alignment, Mode=TwoWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="Status markers" Opacity="0.7" />
+                                <ItemsControl ItemsSource="{Binding Inspector.MarkerToggles}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:MarkerToggleViewModel">
+                                            <ToggleButton IsChecked="{Binding IsSet, Mode=TwoWay}"
+                                                          ToolTip.Tip="{Binding Label}"
+                                                          Margin="0,0,4,4" Padding="5">
+                                                <PathIcon Data="{Binding Icon}" Foreground="{Binding Brush}"
+                                                          Width="16" Height="16" />
+                                            </ToggleButton>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </StackPanel>
 

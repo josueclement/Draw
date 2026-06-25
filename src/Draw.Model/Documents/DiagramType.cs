@@ -10,4 +10,5 @@ public enum DiagramType
     Class = 1,
     UseCase = 2,
     Er = 3,
+    MindMap = 4,
 }

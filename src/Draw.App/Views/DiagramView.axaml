@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Draw.App.ViewModels"
              xmlns:nodes="using:Draw.Model.Nodes"
+             xmlns:rendering="using:Draw.App.Rendering"
              xmlns:views="using:Draw.App.Views"
              xmlns:pia="using:PhosphorIconsAvalonia.Markup"
              x:Class="Draw.App.Views.DiagramView"
@@ -86,6 +87,26 @@
                 <ItemsControl.DataTemplates>
                     <DataTemplate DataType="vm:ShapeNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Panel.Styles>
+                                <!-- Mind-map '+' buttons: hidden until the topic is hovered. -->
+                                <Style Selector="Button.mindMapAdd">
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                    <Setter Property="Width" Value="20" />
+                                    <Setter Property="Height" Value="20" />
+                                    <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="MinHeight" Value="0" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="CornerRadius" Value="10" />
+                                    <Setter Property="FontSize" Value="13" />
+                                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                                </Style>
+                                <Style Selector="Panel:pointerover Button.mindMapAdd">
+                                    <Setter Property="Opacity" Value="1" />
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                </Style>
+                            </Panel.Styles>
                             <Path Data="{Binding Geometry}"
                                   Fill="{Binding Fill}"
                                   Stroke="{Binding Stroke}"
@@ -110,6 +131,25 @@
                                      TextWrapping="Wrap"
                                      Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
+                            <!-- The '+' buttons sit (almost) fully outside the shape edge so they no longer
+                                 cover the perimeter where connector endpoints attach; a 2px overlap keeps
+                                 the hover unbroken as the pointer crosses from the topic onto the button. -->
+                            <Button Classes="mindMapAdd" Content="+" Tag="Top" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-18,0,0"
+                                    ToolTip.Tip="Add child topic" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Right" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-18,0"
+                                    ToolTip.Tip="Add child topic" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Bottom" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-18"
+                                    ToolTip.Tip="Add child topic" />
+                            <Button Classes="mindMapAdd" Content="+" Tag="Left" Click="OnCreateChildClick"
+                                    IsVisible="{Binding ShowChildButtons}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-18,0,0,0"
+                                    ToolTip.Tip="Add child topic" />
                         </Panel>
                     </DataTemplate>
 
@@ -312,6 +352,110 @@
                                      IsVisible="{Binding IsEditing}" />
                         </Panel>
                     </DataTemplate>
+
+                    <DataTemplate DataType="vm:PackageNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Grid RowDefinitions="Auto,*">
+                                <Border Grid.Row="0"
+                                        Background="{Binding Fill}"
+                                        BorderBrush="{Binding Stroke}"
+                                        BorderThickness="{Binding BorderThickness}"
+                                        HorizontalAlignment="Left"
+                                        Width="{Binding TabWidth}"
+                                        Height="{Binding TabHeight}" />
+                                <Border Grid.Row="1"
+                                        Background="{Binding Fill}"
+                                        BorderBrush="{Binding Stroke}"
+                                        BorderThickness="{Binding BorderThickness}" />
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding Title}"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="{Binding FontFamily}"
+                                           FontSize="{Binding FontSize}"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Margin="8"
+                                           IsVisible="{Binding !IsEditing}" />
+                                <TextBox Grid.Row="1"
+                                         Text="{Binding Label, Mode=TwoWay}"
+                                         FontSize="{Binding FontSize}"
+                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalAlignment="Center" Background="Transparent"
+                                         IsVisible="{Binding IsEditing}" />
+                            </Grid>
+                        </Panel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:ComponentNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Border Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}" />
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        IsVisible="{Binding !IsEditing}">
+                                <TextBlock Text="«component»"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="{Binding FontFamily}"
+                                           FontSize="{Binding FontSize}"
+                                           FontStyle="Italic"
+                                           TextAlignment="Center" />
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="{Binding Foreground}"
+                                           FontFamily="{Binding FontFamily}"
+                                           FontSize="{Binding FontSize}"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalAlignment="Center" Background="Transparent"
+                                     IsVisible="{Binding IsEditing}" />
+                            <!-- Port tabs straddling the left edge (the world layer has ClipToBounds=False). -->
+                            <Border Width="12" Height="16"
+                                    Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                    Margin="-6,16,0,0" />
+                            <Border Width="12" Height="16"
+                                    Background="{Binding Fill}"
+                                    BorderBrush="{Binding Stroke}"
+                                    BorderThickness="{Binding BorderThickness}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                                    Margin="-6,44,0,0" />
+                        </Panel>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:DeploymentNodeViewModel">
+                        <Panel Width="{Binding Width}" Height="{Binding Height}">
+                            <Path Data="{Binding Geometry}"
+                                  Fill="{Binding Fill}"
+                                  Stroke="{Binding Stroke}"
+                                  StrokeThickness="{Binding StrokeThickness}" />
+                            <TextBlock Text="{Binding Name}"
+                                       Foreground="{Binding Foreground}"
+                                       FontFamily="{Binding FontFamily}"
+                                       FontSize="{Binding FontSize}"
+                                       FontWeight="Bold"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Margin="{Binding FrontFacePadding}"
+                                       IsVisible="{Binding !IsEditing}" />
+                            <TextBox Text="{Binding Label, Mode=TwoWay}"
+                                     FontSize="{Binding FontSize}"
+                                     AcceptsReturn="True" TextWrapping="Wrap"
+                                     VerticalAlignment="Center" Background="Transparent"
+                                     Margin="{Binding FrontFacePadding}"
+                                     IsVisible="{Binding IsEditing}" />
+                        </Panel>
+                    </DataTemplate>
                 </ItemsControl.DataTemplates>
             </ItemsControl>
 
@@ -328,13 +472,27 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ConnectorViewModel">
                         <Canvas>
+                            <!-- Selection halo: stroked centerline for ordinary connectors; a ribbon
+                                 outline for mind-map branches (drawn under the filled ribbon). -->
                             <Path Data="{Binding Geometry}" Stretch="None"
                                   Stroke="{x:Static views:DiagramView.SelectionHaloBrush}" StrokeThickness="6"
-                                  IsVisible="{Binding IsSelected}" />
+                                  IsVisible="{Binding ShowLineHalo}" />
+                            <Path Data="{Binding BranchGeometry}" Stretch="None"
+                                  Stroke="{x:Static views:DiagramView.SelectionHaloBrush}" StrokeThickness="4"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  IsVisible="{Binding ShowBranchHalo}" />
+                            <!-- Mind-map branch: a filled, depth-scaled tapered ribbon. The polygon edge is
+                                 also stroked in the same colour with round joins/caps so the faceting of the
+                                 sampled outline reads as a smooth, rounded ribbon even when thick at the root. -->
+                            <Path Data="{Binding BranchGeometry}" Stretch="None"
+                                  Fill="{Binding Stroke}" Stroke="{Binding Stroke}" StrokeThickness="1"
+                                  StrokeLineCap="Round" StrokeJoin="Round"
+                                  IsVisible="{Binding IsMindMapBranch}" />
                             <Path Data="{Binding Geometry}" Stretch="None"
                                   Stroke="{Binding Stroke}"
                                   StrokeThickness="{Binding StrokeThickness}"
-                                  StrokeDashArray="{Binding StrokeDashArray}" />
+                                  StrokeDashArray="{Binding StrokeDashArray}"
+                                  IsVisible="{Binding !IsMindMapBranch}" />
                             <Path Data="{Binding SourceDecoration}" Stretch="None"
                                   Stroke="{Binding Stroke}"
                                   StrokeThickness="{Binding StrokeThickness}"
@@ -356,6 +514,48 @@
                                        Canvas.Left="{Binding TargetLabelX}" Canvas.Top="{Binding TargetLabelY}"
                                        IsVisible="{Binding HasTargetLabel}" />
                         </Canvas>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Status-marker badges: a decorative, non-interactive layer over the nodes/connectors. One
+                 item per node, positioned at the node's top-left like NodesLayer; the badge row floats just
+                 outside the top edge, right-aligned to the node's width. Markers are edited via the
+                 right-click "Markers" menu and the inspector, so this layer never takes hit-tests. -->
+            <ItemsControl x:Name="MarkersLayer" ItemsSource="{Binding Nodes}" IsHitTestVisible="False" ClipToBounds="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.Styles>
+                    <Style Selector="ContentPresenter">
+                        <Setter Property="Canvas.Left" Value="{ReflectionBinding X}" />
+                        <Setter Property="Canvas.Top" Value="{ReflectionBinding Y}" />
+                    </Style>
+                </ItemsControl.Styles>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:NodeViewModelBase">
+                        <Panel Width="{Binding Width}" IsVisible="{Binding HasAnyMarker}">
+                            <ItemsControl ItemsSource="{Binding MarkerBadges}"
+                                          HorizontalAlignment="Right" VerticalAlignment="Top"
+                                          Margin="0,-20,2,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="2" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="rendering:NodeMarkerVisual">
+                                        <Border Background="{DynamicResource CanvasBackgroundBrush}"
+                                                CornerRadius="3" Padding="1" ToolTip.Tip="{Binding Label}">
+                                            <PathIcon Data="{Binding Icon}" Foreground="{Binding Brush}"
+                                                      Width="14" Height="14" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Panel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

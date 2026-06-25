@@ -186,10 +186,14 @@ public partial class MainWindow : Window
     private void WireToolDropdowns(ToolboxViewModel toolbox)
     {
         WireDropdown(ShapesDropDown, toolbox.SelectShapeToolCommand);
+        WireDropdown(FlowchartDropDown, toolbox.SelectShapeToolCommand);
+        WireDropdown(ArrowsDropDown, toolbox.SelectShapeToolCommand);
         WireDropdown(CommonConnectorsDropDown, toolbox.SelectConnectorToolCommand);
         WireDropdown(UmlConnectorsDropDown, toolbox.SelectConnectorToolCommand);
         WireDropdown(ClassDropDown, toolbox.SelectClassNodeToolCommand);
         WireDropdown(UseCaseDropDown, toolbox.SelectUseCaseToolCommand);
+        WireDropdown(StructureDropDown, toolbox.SelectUmlToolCommand);
+        WireDropdown(MindMapDropDown, toolbox.SelectShapeToolCommand);
     }
 
     // Carbon doesn't close the popup when a RibbonMenuItem is clicked (it dismisses only on an outside
@@ -266,6 +270,7 @@ public partial class MainWindow : Window
         RelationshipKind => toolbox.SelectConnectorToolCommand,
         ClassNodeKind => toolbox.SelectClassNodeToolCommand,
         UseCaseNodeKind => toolbox.SelectUseCaseToolCommand,
+        UmlNodeKind => toolbox.SelectUmlToolCommand,
         _ when (item.Tag as string) == "entity" => toolbox.SelectEntityToolCommand,
         _ => item.Command,
     };

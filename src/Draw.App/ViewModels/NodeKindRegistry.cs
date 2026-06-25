@@ -34,6 +34,12 @@ public sealed class NodeKindRegistry
                 (m, _, t) => new SystemBoundaryNodeViewModel((SystemBoundaryNode)m, t)),
             new(typeof(ImageNode), 200d, 200d, NodeZBand.Ordinary,
                 (m, _, t) => new ImageNodeViewModel((ImageNode)m, t)),
+            new(typeof(PackageNode), 160d, 110d, NodeZBand.Ordinary,
+                (m, _, t) => new PackageNodeViewModel((PackageNode)m, t)),
+            new(typeof(ComponentNode), 160d, 90d, NodeZBand.Ordinary,
+                (m, _, t) => new ComponentNodeViewModel((ComponentNode)m, t)),
+            new(typeof(DeploymentNode), 150d, 120d, NodeZBand.Ordinary,
+                (m, _, t) => new DeploymentNodeViewModel((DeploymentNode)m, t)),
         };
 
         _byModelType = descriptors.ToDictionary(d => d.ModelType);

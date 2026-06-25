@@ -104,13 +104,29 @@ public static class DiagramSvgRenderer
             case ClassNodeViewModel:
             case EntityNodeViewModel:
             case SystemBoundaryNodeViewModel:
-                sb.Append("<rect x=\"").Append(Num(x)).Append("\" y=\"").Append(Num(y))
-                  .Append("\" width=\"").Append(Num(w)).Append("\" height=\"").Append(Num(h)).Append("\" ")
-                  .Append(Paint("fill", node.Fill)).Append(' ').Append(Paint("stroke", node.Stroke))
-                  .Append(" stroke-width=\"").Append(Num(thickness)).Append("\"/>\n");
+                EmitRect(sb, x, y, w, h, node, thickness);
+                break;
+            case PackageNodeViewModel package:
+                EmitRect(sb, x, y, package.TabWidth, package.TabHeight, node, thickness);
+                EmitRect(sb, x, y + package.TabHeight, w, h - package.TabHeight, node, thickness);
+                break;
+            case ComponentNodeViewModel:
+                // Body plus the two port tabs straddling the left edge (matches the data template).
+                EmitRect(sb, x, y, w, h, node, thickness);
+                EmitRect(sb, x - 6d, y + 16d, 12d, 16d, node, thickness);
+                EmitRect(sb, x - 6d, y + 44d, 12d, 16d, node, thickness);
+                break;
+            case DeploymentNodeViewModel:
+                EmitShape(sb, UmlNodeGeometry.DeploymentSvg(w, h), x, y, node, thickness);
                 break;
         }
     }
+
+    private static void EmitRect(StringBuilder sb, double x, double y, double w, double h, NodeViewModelBase node, double thickness)
+        => sb.Append("<rect x=\"").Append(Num(x)).Append("\" y=\"").Append(Num(y))
+             .Append("\" width=\"").Append(Num(w)).Append("\" height=\"").Append(Num(h)).Append("\" ")
+             .Append(Paint("fill", node.Fill)).Append(' ').Append(Paint("stroke", node.Stroke))
+             .Append(" stroke-width=\"").Append(Num(thickness)).Append("\"/>\n");
 
     private static void EmitShape(StringBuilder sb, SvgShape shape, double x, double y, NodeViewModelBase node, double thickness)
     {
@@ -170,6 +186,23 @@ public static class DiagramSvgRenderer
 
     private static void EmitConnector(StringBuilder sb, ConnectorViewModel connector)
     {
+        // Mind-map branch: a filled tapered ribbon (matching the on-canvas fill), no decorations.
+        if (connector.IsMindMapBranch)
+        {
+            IReadOnlyList<ModelPoint> outline = connector.GetBranchOutline();
+            if (outline.Count >= 3)
+            {
+                sb.Append("<polygon points=\"")
+                  .Append(string.Join(" ", outline.Select(p => $"{Num(p.X)},{Num(p.Y)}")))
+                  .Append("\" ").Append(Paint("fill", connector.Stroke)).Append(" stroke=\"none\"/>\n");
+            }
+
+            EmitConnectorLabel(sb, connector.CenterLabelText, connector.HasCenterLabel, connector.CenterLabelX, connector.CenterLabelY, connector.LabelForeground);
+            EmitConnectorLabel(sb, connector.SourceLabelText, connector.HasSourceLabel, connector.SourceLabelX, connector.SourceLabelY, connector.LabelForeground);
+            EmitConnectorLabel(sb, connector.TargetLabelText, connector.HasTargetLabel, connector.TargetLabelX, connector.TargetLabelY, connector.LabelForeground);
+            return;
+        }
+
         string points = string.Join(" ", connector.GetFlattenedPoints().Select(p => $"{Num(p.X)},{Num(p.Y)}"));
         double thickness = connector.StrokeThickness;
         sb.Append("<polyline points=\"").Append(points).Append("\" fill=\"none\" ")

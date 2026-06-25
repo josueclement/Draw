@@ -18,6 +18,7 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
+using Draw.App.Rendering;
 using Draw.App.ViewModels;
 using Draw.App.Views.Interaction;
 using Draw.Diagramming.Geometry;
@@ -456,6 +457,14 @@ public partial class DiagramView : UserControl
             return true;
         }
 
+        // UML structural-node placement.
+        if (toolbox?.SelectedUmlNode is { } umlTool)
+        {
+            vm.AddUmlNode(umlTool.Kind, new Point2D(world.X, world.Y));
+            toolbox.ActivateSelectTool();
+            return true;
+        }
+
         // ER table placement.
         if (toolbox is { SelectedEntity: not null })
         {
@@ -791,6 +800,21 @@ public partial class DiagramView : UserControl
         order.Items.Add(ArrangeItem("Send backward", vm.OrderCommand, ZOrderOperation.SendBackward, ToolGeometry("ToolIcon.SendBackward")));
         order.Items.Add(ArrangeItem("Send to back", vm.OrderCommand, ZOrderOperation.SendToBack, ToolGeometry("ToolIcon.SendToBack")));
 
+        // Status markers: a checkable item per marker, toggled across the whole node selection.
+        MenuItem markers = new() { Header = "Markers", IsEnabled = vm.HasNodeSelection };
+        foreach (NodeMarker marker in NodeMarkerVisuals.Order)
+        {
+            NodeMarker captured = marker;
+            MenuItem item = new()
+            {
+                Header = NodeMarkerVisuals.For(marker).Label,
+                ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = vm.SelectionHasMarker(marker),
+            };
+            item.Click += (_, _) => vm.ToggleNodeMarker(captured);
+            markers.Items.Add(item);
+        }
+
         ContextMenu menu = new();
         // Dim icons of disabled items so they read as disabled: Fluent grays the item's text but
         // leaves the icon presenter's PathIcon at full colour. Opacity (not Foreground) because the
@@ -798,6 +822,8 @@ public partial class DiagramView : UserControl
         Style disabledIcon = new(selector => selector.OfType<PathIcon>().Class(":disabled"));
         disabledIcon.Setters.Add(new Setter(Visual.OpacityProperty, 0.4));
         menu.Styles.Add(disabledIcon);
+        menu.Items.Add(markers);
+        menu.Items.Add(new Separator());
         menu.Items.Add(align);
         menu.Items.Add(order);
         menu.Items.Add(new Separator());
@@ -1174,6 +1200,31 @@ public partial class DiagramView : UserControl
         {
             AddMemberAndEdit(node, MemberKind.Operation, index: -1);
         }
+    }
+
+    // The hover '+' on a mind-map topic: spawn a linked child on the clicked side and open it for typing.
+    private void OnCreateChildClick(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is null || (sender as Control)?.DataContext is not ShapeNodeViewModel parent)
+        {
+            return;
+        }
+
+        BoxSide side = ((sender as Control)?.Tag as string) switch
+        {
+            "Top" => BoxSide.Top,
+            "Bottom" => BoxSide.Bottom,
+            "Left" => BoxSide.Left,
+            _ => BoxSide.Right,
+        };
+
+        if (_vm.CreateChildNode(parent, side) is { } child)
+        {
+            child.IsEditing = true;
+            FocusEditorFor(child, selectAll: true);
+        }
+
+        e.Handled = true;
     }
 
     private void OnInsertBelowClick(object? sender, RoutedEventArgs e)

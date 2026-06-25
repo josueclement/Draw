@@ -32,6 +32,14 @@ public class ShapeBoundaryTests
         => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Note, Unit, new Point2D(500, 50)));
 
     [Fact]
+    public void MindMapTopic_AttachesAsPlainRectangle()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.MindMapTopic, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void MindMapTopicRounded_AttachesAsPlainRectangle()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.MindMapTopicRounded, Unit, new Point2D(500, 50)));
+
+    [Fact]
     public void Ellipse_ExitsAtRightmostPoint_ForHorizontalRay()
         => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Ellipse, Unit, new Point2D(500, 50)));
 
@@ -58,6 +66,87 @@ public class ShapeBoundaryTests
         Rect2D wide = new(0, 0, 200, 100);
         AssertPoint(150, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Circle, wide, new Point2D(500, 50)));
     }
+
+    [Fact]
+    public void Hexagon_ExitsAtRightVertex_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Hexagon, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Pentagon_ExitsAtApex_ForUpwardRay()
+        => AssertPoint(50, 0, ShapeBoundary.IntersectFromCenter(ShapeKind.Pentagon, Unit, new Point2D(50, -500)));
+
+    [Fact]
+    public void Octagon_ExitsAtRightFlatEdge_ForHorizontalRay()
+        // Flat-top octagon (start 22.5°): the right edge sits at x = 50 + 50·cos 22.5° ≈ 96.194.
+        => AssertPoint(96.194, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Octagon, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Star_ExitsAtApex_ForUpwardRay()
+        => AssertPoint(50, 0, ShapeBoundary.IntersectFromCenter(ShapeKind.Star, Unit, new Point2D(50, -500)));
+
+    [Fact]
+    public void Cross_ExitsAtRightArmEdge_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Cross, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Callout_ExitsAtBodyRightEdge_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Callout, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Cloud_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Cloud, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Terminator_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Terminator, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Cylinder_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Cylinder, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Document_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Document, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void PredefinedProcess_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.PredefinedProcess, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Display_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Display, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void Delay_AttachesAsBoundingRectangle_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.Delay, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void ManualInput_ExitsBottomEdge_ForDownwardRay()
+        => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.ManualInput, Unit, new Point2D(50, 500)));
+
+    [Fact]
+    public void OffPageConnector_ExitsBottomPoint_ForDownwardRay()
+        => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.OffPageConnector, Unit, new Point2D(50, 500)));
+
+    [Fact]
+    public void ArrowRight_ExitsAtTip_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowRight, Unit, new Point2D(500, 50)));
+
+    [Fact]
+    public void ArrowLeft_ExitsAtTip_ForLeftwardRay()
+        => AssertPoint(0, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowLeft, Unit, new Point2D(-500, 50)));
+
+    [Fact]
+    public void ArrowUp_ExitsAtTip_ForUpwardRay()
+        => AssertPoint(50, 0, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowUp, Unit, new Point2D(50, -500)));
+
+    [Fact]
+    public void ArrowDown_ExitsAtTip_ForDownwardRay()
+        => AssertPoint(50, 100, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowDown, Unit, new Point2D(50, 500)));
+
+    [Fact]
+    public void ArrowDouble_ExitsAtRightTip_ForHorizontalRay()
+        => AssertPoint(100, 50, ShapeBoundary.IntersectFromCenter(ShapeKind.ArrowDouble, Unit, new Point2D(500, 50)));
 
     [Fact]
     public void DegenerateDirection_ReturnsCenter()

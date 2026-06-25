@@ -19,4 +19,10 @@ public enum RelationshipKind
     /// <summary>A plain ER relationship line. Its crow's-foot end symbols come from the connector's
     /// per-end <see cref="Cardinality"/>, not from this kind.</summary>
     Relationship = 9,
+
+    /// <summary>A mind-map branch: rendered as a filled, depth-scaled tapered ribbon (thick near the
+    /// central topic, thinner toward the leaves) with no end decorations. Its width is derived from the
+    /// source node's depth from the root (see <c>MindMapHierarchy</c>/<c>MindMapBranchStyle</c>), so it
+    /// must be attached source = parent, target = child.</summary>
+    MindMapBranch = 10,
 }

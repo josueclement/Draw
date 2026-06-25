@@ -24,6 +24,9 @@ public sealed record UseCaseToolItem(string Name, UseCaseNodeKind Kind) : ToolIt
 /// <summary>The ER table tool. There is a single entity kind, so it carries only a display name.</summary>
 public sealed record EntityToolItem(string Name) : ToolItem(Name);
 
+/// <summary>A selectable UML structural-node entry in the toolbox palette.</summary>
+public sealed record UmlToolItem(string Name, UmlNodeKind Kind) : ToolItem(Name);
+
 /// <summary>
 /// Tracks the active drawing tool as a single <see cref="ArmedTool"/> (null = the select tool). The
 /// per-category <c>Selected*</c> properties are typed projections over it, so mutual exclusion is
@@ -42,6 +45,28 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ShapeToolItem("Parallelogram", ShapeKind.Parallelogram),
         new ShapeToolItem("Trapezoid", ShapeKind.Trapezoid),
         new ShapeToolItem("Triangle", ShapeKind.Triangle),
+        new ShapeToolItem("Hexagon", ShapeKind.Hexagon),
+        new ShapeToolItem("Pentagon", ShapeKind.Pentagon),
+        new ShapeToolItem("Octagon", ShapeKind.Octagon),
+        new ShapeToolItem("Star", ShapeKind.Star),
+        new ShapeToolItem("Cross", ShapeKind.Cross),
+        new ShapeToolItem("Cloud", ShapeKind.Cloud),
+        new ShapeToolItem("Callout", ShapeKind.Callout),
+        new ShapeToolItem("Terminator", ShapeKind.Terminator),
+        new ShapeToolItem("Cylinder", ShapeKind.Cylinder),
+        new ShapeToolItem("Document", ShapeKind.Document),
+        new ShapeToolItem("Predefined process", ShapeKind.PredefinedProcess),
+        new ShapeToolItem("Manual input", ShapeKind.ManualInput),
+        new ShapeToolItem("Off-page connector", ShapeKind.OffPageConnector),
+        new ShapeToolItem("Display", ShapeKind.Display),
+        new ShapeToolItem("Delay", ShapeKind.Delay),
+        new ShapeToolItem("Arrow right", ShapeKind.ArrowRight),
+        new ShapeToolItem("Arrow left", ShapeKind.ArrowLeft),
+        new ShapeToolItem("Arrow up", ShapeKind.ArrowUp),
+        new ShapeToolItem("Arrow down", ShapeKind.ArrowDown),
+        new ShapeToolItem("Bidirectional", ShapeKind.ArrowDouble),
+        new ShapeToolItem("Topic", ShapeKind.MindMapTopic),
+        new ShapeToolItem("Rounded topic", ShapeKind.MindMapTopicRounded),
         // Armed by the standalone UML-group "Note" button; intentionally absent from the Shapes dropdown.
         new ShapeToolItem("Note", ShapeKind.Note),
     };
@@ -58,6 +83,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         new ConnectorToolItem("Include", RelationshipKind.Include),
         new ConnectorToolItem("Extend", RelationshipKind.Extend),
         new ConnectorToolItem("Relationship", RelationshipKind.Relationship),
+        new ConnectorToolItem("Mind-map branch", RelationshipKind.MindMapBranch),
     };
 
     public ObservableCollection<ClassNodeToolItem> ClassNodes { get; } = new()
@@ -74,6 +100,13 @@ public sealed class ToolboxViewModel : ViewModelBase
         new UseCaseToolItem("System boundary", UseCaseNodeKind.SystemBoundary),
     };
 
+    public ObservableCollection<UmlToolItem> UmlNodes { get; } = new()
+    {
+        new UmlToolItem("Package", UmlNodeKind.Package),
+        new UmlToolItem("Component", UmlNodeKind.Component),
+        new UmlToolItem("Deployment", UmlNodeKind.Deployment),
+    };
+
     /// <summary>The single ER table tool, armed by the ER ribbon button.</summary>
     public EntityToolItem Entity { get; } = new("Table");
 
@@ -84,6 +117,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         SelectConnectorToolCommand = new RelayCommand<RelationshipKind>(kind => SelectedConnector = Connectors.First(c => c.Kind == kind));
         SelectClassNodeToolCommand = new RelayCommand<ClassNodeKind>(kind => SelectedClassNode = ClassNodes.First(c => c.Kind == kind));
         SelectUseCaseToolCommand = new RelayCommand<UseCaseNodeKind>(kind => SelectedUseCaseNode = UseCaseNodes.First(u => u.Kind == kind));
+        SelectUmlToolCommand = new RelayCommand<UmlNodeKind>(kind => SelectedUmlNode = UmlNodes.First(u => u.Kind == kind));
         SelectEntityToolCommand = new RelayCommand(() => SelectedEntity = Entity);
     }
 
@@ -94,6 +128,8 @@ public sealed class ToolboxViewModel : ViewModelBase
     public RelayCommand<ClassNodeKind> SelectClassNodeToolCommand { get; }
 
     public RelayCommand<UseCaseNodeKind> SelectUseCaseToolCommand { get; }
+
+    public RelayCommand<UmlNodeKind> SelectUmlToolCommand { get; }
 
     public RelayCommand SelectEntityToolCommand { get; }
 
@@ -137,6 +173,12 @@ public sealed class ToolboxViewModel : ViewModelBase
         set => Arm(value, () => ArmedTool is UseCaseToolItem);
     }
 
+    public UmlToolItem? SelectedUmlNode
+    {
+        get => ArmedTool as UmlToolItem;
+        set => Arm(value, () => ArmedTool is UmlToolItem);
+    }
+
     public EntityToolItem? SelectedEntity
     {
         get => ArmedTool as EntityToolItem;
@@ -151,12 +193,46 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public bool IsUseCaseNodeMode => ArmedTool is UseCaseToolItem;
 
+    public bool IsUmlNodeMode => ArmedTool is UmlToolItem;
+
     public bool IsEntityNodeMode => ArmedTool is EntityToolItem;
 
     public bool IsShapeMode => ArmedTool is ShapeToolItem;
 
+    // One armed shape feeds several dropdowns (Shapes/Flowchart/Arrows); each shows the pick only when the
+    // armed kind belongs to its category, else its own label. Note has its own button, so no header claims it.
+    private enum ShapeCategory
+    {
+        Basic,
+        Flowchart,
+        Arrow,
+        MindMap,
+        Other,
+    }
+
+    private static ShapeCategory CategoryOf(ShapeKind kind) => kind switch
+    {
+        ShapeKind.Terminator or ShapeKind.Cylinder or ShapeKind.Document or ShapeKind.PredefinedProcess
+            or ShapeKind.ManualInput or ShapeKind.OffPageConnector or ShapeKind.Display or ShapeKind.Delay
+            => ShapeCategory.Flowchart,
+        ShapeKind.ArrowRight or ShapeKind.ArrowLeft or ShapeKind.ArrowUp or ShapeKind.ArrowDown or ShapeKind.ArrowDouble
+            => ShapeCategory.Arrow,
+        ShapeKind.MindMapTopic or ShapeKind.MindMapTopicRounded => ShapeCategory.MindMap,
+        ShapeKind.Note => ShapeCategory.Other,
+        _ => ShapeCategory.Basic,
+    };
+
+    private string HeaderFor(ShapeCategory category, string label) =>
+        ArmedTool is ShapeToolItem shape && CategoryOf(shape.Kind) == category ? shape.Name : label;
+
     /// <summary>Dropdown-button captions: the active pick's name, or the category label when nothing is armed.</summary>
-    public string ShapesHeader => (ArmedTool as ShapeToolItem)?.Name ?? "Shapes";
+    public string ShapesHeader => HeaderFor(ShapeCategory.Basic, "Shapes");
+
+    public string FlowchartHeader => HeaderFor(ShapeCategory.Flowchart, "Flowchart");
+
+    public string ArrowsHeader => HeaderFor(ShapeCategory.Arrow, "Arrows");
+
+    public string MindMapHeader => HeaderFor(ShapeCategory.MindMap, "Mind map");
 
     // One armed connector feeds two dropdowns; each shows the pick only when it owns that kind,
     // else its category label. ER "Relationship" lives in the ER group, so neither claims it.
@@ -164,7 +240,8 @@ public sealed class ToolboxViewModel : ViewModelBase
         ArmedTool is ConnectorToolItem c && IsCommonConnector(c.Kind) ? c.Name : "Connector";
 
     public string UmlConnectorsHeader =>
-        ArmedTool is ConnectorToolItem c && !IsCommonConnector(c.Kind) && c.Kind != RelationshipKind.Relationship
+        ArmedTool is ConnectorToolItem c && !IsCommonConnector(c.Kind)
+            && c.Kind != RelationshipKind.Relationship && c.Kind != RelationshipKind.MindMapBranch
             ? c.Name : "Relationship";
 
     private static bool IsCommonConnector(RelationshipKind kind) =>
@@ -174,6 +251,8 @@ public sealed class ToolboxViewModel : ViewModelBase
 
     public string UseCaseHeader => (ArmedTool as UseCaseToolItem)?.Name ?? "Use case";
 
+    public string StructureHeader => (ArmedTool as UmlToolItem)?.Name ?? "Structure";
+
     /// <summary>
     /// Status-bar hint describing how to use the armed tool; <c>null</c> when the select tool is active.
     /// </summary>
@@ -182,6 +261,7 @@ public sealed class ToolboxViewModel : ViewModelBase
         ShapeToolItem shape => $"Click on the canvas to place {shape.Name}.",
         ClassNodeToolItem classNode => $"Click on the canvas to place {classNode.Name}.",
         UseCaseToolItem useCaseNode => $"Click on the canvas to place {useCaseNode.Name}.",
+        UmlToolItem umlNode => $"Click on the canvas to place {umlNode.Name}.",
         EntityToolItem entity => $"Click on the canvas to place {entity.Name}.",
         ConnectorToolItem connector => $"Drag from one node to another to draw {connector.Name}.",
         _ => null,
@@ -209,18 +289,24 @@ public sealed class ToolboxViewModel : ViewModelBase
         OnPropertyChanged(nameof(SelectedConnector));
         OnPropertyChanged(nameof(SelectedClassNode));
         OnPropertyChanged(nameof(SelectedUseCaseNode));
+        OnPropertyChanged(nameof(SelectedUmlNode));
         OnPropertyChanged(nameof(SelectedEntity));
         OnPropertyChanged(nameof(IsSelectTool));
         OnPropertyChanged(nameof(IsShapeMode));
         OnPropertyChanged(nameof(IsConnectorMode));
         OnPropertyChanged(nameof(IsClassNodeMode));
         OnPropertyChanged(nameof(IsUseCaseNodeMode));
+        OnPropertyChanged(nameof(IsUmlNodeMode));
         OnPropertyChanged(nameof(IsEntityNodeMode));
         OnPropertyChanged(nameof(ShapesHeader));
+        OnPropertyChanged(nameof(FlowchartHeader));
+        OnPropertyChanged(nameof(ArrowsHeader));
+        OnPropertyChanged(nameof(MindMapHeader));
         OnPropertyChanged(nameof(CommonConnectorsHeader));
         OnPropertyChanged(nameof(UmlConnectorsHeader));
         OnPropertyChanged(nameof(ClassHeader));
         OnPropertyChanged(nameof(UseCaseHeader));
+        OnPropertyChanged(nameof(StructureHeader));
         OnPropertyChanged(nameof(ActiveToolHint));
     }
 }

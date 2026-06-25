@@ -36,6 +36,70 @@
             <MenuItem Header="Tr_iangle" CommandParameter="{x:Static nodes:ShapeKind.Triangle}">
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=triangle}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
+            <MenuItem Header="_Hexagon" CommandParameter="{x:Static nodes:ShapeKind.Hexagon}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Hexagon}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Pentagon" CommandParameter="{x:Static nodes:ShapeKind.Pentagon}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Pentagon}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Octagon" CommandParameter="{x:Static nodes:ShapeKind.Octagon}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Octagon}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Star" CommandParameter="{x:Static nodes:ShapeKind.Star}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Star}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="C_ross" CommandParameter="{x:Static nodes:ShapeKind.Cross}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Cross}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Clou_d" CommandParameter="{x:Static nodes:ShapeKind.Cloud}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Cloud}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Cal_lout" CommandParameter="{x:Static nodes:ShapeKind.Callout}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Callout}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
+        <MenuItem Header="_Flowchart">
+            <MenuItem Header="_Terminator" CommandParameter="{x:Static nodes:ShapeKind.Terminator}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Terminator}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Cylinder" CommandParameter="{x:Static nodes:ShapeKind.Cylinder}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Cylinder}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Document" CommandParameter="{x:Static nodes:ShapeKind.Document}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Document}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Predefined process" CommandParameter="{x:Static nodes:ShapeKind.PredefinedProcess}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.PredefinedProcess}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Manual input" CommandParameter="{x:Static nodes:ShapeKind.ManualInput}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ManualInput}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Off-page connector" CommandParameter="{x:Static nodes:ShapeKind.OffPageConnector}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.OffPageConnector}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="D_isplay" CommandParameter="{x:Static nodes:ShapeKind.Display}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Display}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Dela_y" CommandParameter="{x:Static nodes:ShapeKind.Delay}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Delay}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
+        <MenuItem Header="_Arrows">
+            <MenuItem Header="Arrow _right" CommandParameter="{x:Static nodes:ShapeKind.ArrowRight}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowRight}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Arrow _left" CommandParameter="{x:Static nodes:ShapeKind.ArrowLeft}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowLeft}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Arrow _up" CommandParameter="{x:Static nodes:ShapeKind.ArrowUp}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowUp}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Arrow _down" CommandParameter="{x:Static nodes:ShapeKind.ArrowDown}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowDown}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Bidirectional" CommandParameter="{x:Static nodes:ShapeKind.ArrowDouble}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.ArrowDouble}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         <MenuItem Header="_UML">
             <MenuItem Header="_Note" CommandParameter="{x:Static nodes:ShapeKind.Note}">
@@ -59,10 +123,27 @@
             <MenuItem Header="_System boundary" CommandParameter="{x:Static vm:UseCaseNodeKind.SystemBoundary}">
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=bounding_box}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
+            <MenuItem Header="_Package" CommandParameter="{x:Static vm:UmlNodeKind.Package}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Package}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="C_omponent" CommandParameter="{x:Static vm:UmlNodeKind.Component}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Component}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="De_ployment" CommandParameter="{x:Static vm:UmlNodeKind.Deployment}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.Deployment}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
         </MenuItem>
         <MenuItem Header="_ER">
             <MenuItem Header="_Table" Tag="entity">
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=table}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
+        <MenuItem Header="_Mind map">
+            <MenuItem Header="_Topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopic}">
+                <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=rectangle}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="_Rounded topic" CommandParameter="{x:Static nodes:ShapeKind.MindMapTopicRounded}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.RoundedRectangle}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
         </MenuItem>
     </ContextMenu>
@@ -102,6 +183,11 @@
         <MenuItem Header="_ER">
             <MenuItem Header="_Relationship" CommandParameter="{x:Static rel:RelationshipKind.Relationship}">
                 <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=line_segment}" Width="16" Height="16" /></MenuItem.Icon>
+            </MenuItem>
+        </MenuItem>
+        <MenuItem Header="_Mind map">
+            <MenuItem Header="_Branch" CommandParameter="{x:Static rel:RelationshipKind.MindMapBranch}">
+                <MenuItem.Icon><PathIcon Data="{StaticResource ToolIcon.MindMapBranch}" Width="16" Height="16" /></MenuItem.Icon>
             </MenuItem>
         </MenuItem>
     </ContextMenu>

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.Input;
+using Draw.App.Rendering;
 using Draw.Model.Connectors;
 using Draw.Model.Nodes;
 using ModelStyle = Draw.Model.Styling;
@@ -96,6 +98,10 @@ public sealed class InspectorViewModel : ViewModelBase
     }
 
     public bool HasNoSelection => SelectionKind == InspectorSelection.None;
+
+    /// <summary>The status-marker toggles shown for a node selection (one per <see cref="NodeMarker"/>).
+    /// Built once; their checked state is refreshed from the selection in <see cref="LoadFromSelection"/>.</summary>
+    public IReadOnlyList<MarkerToggleViewModel> MarkerToggles { get; }
 
     // --- Shape properties ---
 
@@ -243,6 +249,30 @@ public sealed class InspectorViewModel : ViewModelBase
         RemoveColumnCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.RemoveColumn(c); });
         MoveColumnUpCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.MoveColumn(c, -1); });
         MoveColumnDownCommand = new RelayCommand<EntityColumnViewModel>(c => { if (c is not null) SelectedEntityNode?.MoveColumn(c, +1); });
+
+        MarkerToggles = NodeMarkerVisuals.Order
+            .Select(marker => new MarkerToggleViewModel(this, NodeMarkerVisuals.For(marker)))
+            .ToList();
+    }
+
+    /// <summary>Applies a marker toggle to the whole node selection (one undo step) when the user flips it.</summary>
+    internal void OnMarkerToggleChanged(MarkerToggleViewModel toggle)
+    {
+        if (_loading || _target is null)
+        {
+            return;
+        }
+
+        _target.ToggleNodeMarker(toggle.Marker);
+        RefreshMarkerToggles();
+    }
+
+    private void RefreshMarkerToggles()
+    {
+        foreach (MarkerToggleViewModel toggle in MarkerToggles)
+        {
+            toggle.Refresh(_target?.SelectionHasMarker(toggle.Marker) ?? false);
+        }
     }
 
     public void SetTarget(DiagramDocumentViewModel? target)
@@ -321,6 +351,8 @@ public sealed class InspectorViewModel : ViewModelBase
                     Text = node.Label;
                 }
             }
+
+            RefreshMarkerToggles();
         }
         finally
         {
@@ -423,4 +455,53 @@ public sealed class InspectorViewModel : ViewModelBase
     }
 
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;
+}
+
+/// <summary>One status-marker toggle in the inspector: its icon/colour/label plus a two-way checked state
+/// that, when flipped by the user, applies the marker to the whole node selection via the owning inspector.</summary>
+public sealed class MarkerToggleViewModel : ViewModelBase
+{
+    private readonly InspectorViewModel _owner;
+    private bool _isSet;
+
+    public MarkerToggleViewModel(InspectorViewModel owner, NodeMarkerVisual visual)
+    {
+        _owner = owner;
+        Marker = visual.Marker;
+        Icon = visual.Icon;
+        Brush = visual.Brush;
+        Label = visual.Label;
+    }
+
+    public NodeMarker Marker { get; }
+
+    public Geometry Icon { get; }
+
+    public IBrush Brush { get; }
+
+    public string Label { get; }
+
+    public bool IsSet
+    {
+        get => _isSet;
+        set
+        {
+            if (_isSet != value)
+            {
+                _isSet = value;
+                OnPropertyChanged();
+                _owner.OnMarkerToggleChanged(this);
+            }
+        }
+    }
+
+    /// <summary>Sets the displayed checked state from the current selection without re-applying to the model.</summary>
+    public void Refresh(bool value)
+    {
+        if (_isSet != value)
+        {
+            _isSet = value;
+            OnPropertyChanged(nameof(IsSet));
+        }
+    }
 }
