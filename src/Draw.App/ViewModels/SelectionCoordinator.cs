@@ -51,6 +51,19 @@ public sealed class SelectionCoordinator
         }
     }
 
+    public void SelectAll()
+    {
+        foreach (NodeViewModelBase n in _context.Nodes)
+        {
+            n.IsSelected = true;
+        }
+
+        foreach (ConnectorViewModel c in _context.Connectors)
+        {
+            c.IsSelected = true;
+        }
+    }
+
     public void SelectInRect(Rect2D rect, bool additive)
     {
         foreach (NodeViewModelBase n in _context.Nodes)

@@ -23,6 +23,7 @@ public static class DefaultKeymap
         { "keys": "Ctrl+X", "action": "edit.cut" },
         { "keys": "Ctrl+V", "action": "edit.paste" },
         { "keys": "Ctrl+D", "action": "edit.duplicate" },
+        { "keys": "Ctrl+A", "action": "edit.selectAll" },
         { "keys": "Delete", "action": "edit.delete" },
 
         { "keys": "Ctrl+Shift+F", "action": "view.fitToContent" },
@@ -49,12 +50,14 @@ public static class DefaultKeymap
         { "keys": "a c", "action": "tool.classNode.class" },
         { "keys": "a i", "action": "tool.classNode.interface" },
         { "keys": "a t", "action": "tool.entity" },
+        { "keys": "a b", "action": "tool.connector.mindMapBranch" },
 
         { "keys": "z i", "action": "view.zoomIn" },
         { "keys": "z o", "action": "view.zoomOut" },
         { "keys": "z r", "action": "view.zoomReset" },
         { "keys": "g f", "action": "view.fitToContent" },
         { "keys": "t t", "action": "view.toggleTheme" },
+        { "keys": "t p", "action": "view.toggleInspector" },
         { "keys": "x i", "action": "export.image" },
         { "keys": "x s", "action": "export.svg" },
         { "keys": "x c", "action": "export.copyImage" }
@@ -86,17 +89,17 @@ public static class DefaultKeymap
     //   tool.select
     //   tool.shape.{rectangle|roundedRectangle|ellipse|circle|diamond|parallelogram|trapezoid|triangle|note}
     //   tool.connector.{association|directedAssociation|aggregation|composition|generalization|
-    //                   realization|dependency|include|extend|relationship}
+    //                   realization|dependency|include|extend|relationship|mindMapBranch}
     //   tool.classNode.{class|interface|enum}
     //   tool.useCase.{actor|useCase|systemBoundary}
     //   tool.entity
     //   menu.shapes, menu.connectors   (open a category-grouped tool menu at the cursor; default Shift+S / Shift+C)
     //   file.{new|open|save|saveAs|close}
-    //   edit.{undo|redo|copy|cut|paste|duplicate|delete|insertImage|spaceConnections|mergeConnections}
+    //   edit.{undo|redo|copy|cut|paste|duplicate|delete|selectAll|insertImage|spaceConnections|mergeConnections}
     //   align.{left|centerHorizontal|right|top|centerVertical|bottom}
     //   distribute.{horizontal|vertical}
     //   zorder.{bringToFront|bringForward|sendBackward|sendToBack}
-    //   view.{zoomIn|zoomOut|zoomReset|fitToContent|toggleTheme}
+    //   view.{zoomIn|zoomOut|zoomReset|fitToContent|toggleTheme|toggleInspector}
     //   export.{image|svg|copyImage}
     //
     // Examples:
