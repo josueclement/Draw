@@ -34,6 +34,7 @@ public sealed class ShellViewModel : ViewModelBase
         IThemeService theme,
         IOptions<EditorOptions> editorOptions,
         ToolboxViewModel toolbox,
+        ToolPaletteViewModel toolPalette,
         InspectorViewModel inspector,
         StylePaletteViewModel stylePalette,
         KeymapStatusViewModel keymapStatus,
@@ -47,6 +48,7 @@ public sealed class ShellViewModel : ViewModelBase
         _theme = theme;
         _editorOptions = editorOptions.Value;
         Toolbox = toolbox;
+        ToolPalette = toolPalette;
         Inspector = inspector;
         StylePalette = stylePalette;
         KeymapStatus = keymapStatus;
@@ -76,7 +78,7 @@ public sealed class ShellViewModel : ViewModelBase
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
         ToggleInspectorCommand = new RelayCommand(() => IsInspectorOpen = !IsInspectorOpen);
         ShowToolMenuCommand = new RelayCommand<ToolMenuFamily>(
-            family => ToolMenuRequested?.Invoke(this, family),
+            family => ToolPalette.Open(family),
             _ => HasActiveDocument);
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
@@ -93,6 +95,9 @@ public sealed class ShellViewModel : ViewModelBase
     public ObservableCollection<string> RecentFiles { get; } = new();
 
     public ToolboxViewModel Toolbox { get; }
+
+    /// <summary>The keyboard tool palette (Shift+S / Shift+C); opened via <see cref="ShowToolMenuCommand"/>.</summary>
+    public ToolPaletteViewModel ToolPalette { get; }
 
     public InspectorViewModel Inspector { get; }
 
@@ -134,9 +139,6 @@ public sealed class ShellViewModel : ViewModelBase
     public event EventHandler? ExportSvgRequested;
 
     public event EventHandler? CopyImageRequested;
-
-    /// <summary>Raised when a keymap action requests a category tool menu (handled by the window).</summary>
-    public event EventHandler<ToolMenuFamily>? ToolMenuRequested;
 
     public bool HasActiveDocument => ActiveDocument is not null;
 

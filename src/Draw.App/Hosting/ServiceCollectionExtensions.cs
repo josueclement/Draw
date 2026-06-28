@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
 
         // View models.
         services.AddSingleton<ToolboxViewModel>();
+        services.AddSingleton<ToolPaletteViewModel>();
         services.AddSingleton<InspectorViewModel>();
         services.AddSingleton<StylePaletteViewModel>();
         services.AddSingleton<ShellViewModel>();

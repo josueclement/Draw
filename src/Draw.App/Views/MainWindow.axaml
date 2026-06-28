@@ -18,18 +18,10 @@
         WindowStartupLocation="CenterScreen">
 
     <!-- Keyboard shortcuts are not declared here: all gestures and multi-key chords come from the
-         JSON keymap, dispatched at the window level in code-behind (see ChordInputDispatcher). -->
+         JSON keymap, dispatched at the window level in code-behind (see ChordInputDispatcher). The
+         Shift+S / Shift+C tool palette is a full-window overlay (ToolPaletteView) added to the Grid below. -->
 
-    <Window.Resources>
-        <!-- Category tool menus (Shift+S / Shift+C) live in their own dictionary; see ToolMenus.axaml. -->
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://Draw.App/Resources/ToolMenus.axaml" />
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Window.Resources>
-
-    <!-- Grid wrapper hosts the full-window ContentDialog overlay above the editor chrome. -->
+    <!-- Grid wrapper hosts the full-window overlays (ContentDialog + tool palette) above the editor chrome. -->
     <Grid>
     <DockPanel>
 
@@ -829,5 +821,8 @@
 
         <!-- Registered with IContentDialogService at construction; driven by DialogService. -->
         <dialog:ContentDialog x:Name="DialogHost" />
+
+        <!-- Neovim-style tool palette (Shift+S / Shift+C). Collapsed unless ToolPalette.IsOpen. -->
+        <v:ToolPaletteView DataContext="{Binding ToolPalette}" />
     </Grid>
 </Window>

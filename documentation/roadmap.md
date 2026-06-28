@@ -334,3 +334,17 @@ menu builder (`DiagramView.BuildArrangeMenu`) now also takes the `ShellViewModel
 view's window DataContext, since theme/inspector/snap/styles live on the shell. Pure XAML/markup +
 view-layer wiring; no model, VM-pattern, or package changes. See
 `documentation/plans/2026-06-25-ribbon-tabs-and-context-menus.md`.
+
+## Tool palette overlay (Shift+S / Shift+C) 🚧 (pending visual verification)
+
+Replaces the static hierarchical `Shift+S`/`Shift+C` context menus with a **neovim-style centered
+overlay**: a two-step **letter drill-down** — categories, then the chosen category's items (mnemonic
+letter + icon + name) in a multi-column grid over a dim backdrop — that arms the existing toolbox tool
+on pick (the arm/place/drag flow is unchanged). Letters are auto-derived per screen
+(`Draw.Diagramming/Mnemonics/MnemonicAssigner.cs`, the only unit-tested piece); the catalog is a cached,
+icon-resolving transcription of the retired `ToolMenus.axaml` (`App/Rendering/ToolPaletteCatalog.cs`)
+that a control-free `ToolPaletteViewModel` drives. `ShowToolMenuCommand` now opens the palette directly;
+keys are owned by the window (`MainWindow.OnGlobalKeyDown` — Esc backs out/closes, unmodified letters
+navigate, and `Shift+S`/`Shift+C` while open switch family via the normal action path). The old
+`ContextMenu` resource and its `WireToolMenus`/`ArmCommandFor`/`OnToolMenuRequested`/`OpenToolMenu` wiring
+are removed. See `documentation/plans/2026-06-28-tool-palette-overlay.md`.
