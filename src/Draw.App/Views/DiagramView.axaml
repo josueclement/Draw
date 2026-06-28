@@ -88,22 +88,29 @@
                     <DataTemplate DataType="vm:ShapeNodeViewModel">
                         <Panel Width="{Binding Width}" Height="{Binding Height}">
                             <Panel.Styles>
-                                <!-- Mind-map '+' buttons: hidden until the topic is hovered. -->
+                                <!-- Mind-map '+' buttons + their invisible hover-bridges: hidden until the topic is hovered. -->
                                 <Style Selector="Button.mindMapAdd">
                                     <Setter Property="Opacity" Value="0" />
                                     <Setter Property="IsHitTestVisible" Value="False" />
-                                    <Setter Property="Width" Value="20" />
-                                    <Setter Property="Height" Value="20" />
+                                    <Setter Property="Width" Value="28" />
+                                    <Setter Property="Height" Value="28" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="MinHeight" Value="0" />
                                     <Setter Property="Padding" Value="0" />
-                                    <Setter Property="CornerRadius" Value="10" />
-                                    <Setter Property="FontSize" Value="13" />
+                                    <Setter Property="CornerRadius" Value="14" />
+                                    <Setter Property="FontSize" Value="18" />
                                     <Setter Property="HorizontalContentAlignment" Value="Center" />
                                     <Setter Property="VerticalContentAlignment" Value="Center" />
                                 </Style>
+                                <Style Selector="Panel.mindMapAddZone">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                </Style>
                                 <Style Selector="Panel:pointerover Button.mindMapAdd">
                                     <Setter Property="Opacity" Value="1" />
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                </Style>
+                                <Style Selector="Panel:pointerover Panel.mindMapAddZone">
                                     <Setter Property="IsHitTestVisible" Value="True" />
                                 </Style>
                             </Panel.Styles>
@@ -131,25 +138,38 @@
                                      TextWrapping="Wrap"
                                      Background="Transparent"
                                      IsVisible="{Binding IsEditing}" />
-                            <!-- The '+' buttons sit (almost) fully outside the shape edge so they no longer
-                                 cover the perimeter where connector endpoints attach; a 2px overlap keeps
-                                 the hover unbroken as the pointer crosses from the topic onto the button. -->
-                            <Button Classes="mindMapAdd" Content="+" Tag="Top" Click="OnCreateChildClick"
-                                    IsVisible="{Binding ShowChildButtons}"
-                                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,-18,0,0"
-                                    ToolTip.Tip="Add child topic" />
-                            <Button Classes="mindMapAdd" Content="+" Tag="Right" Click="OnCreateChildClick"
-                                    IsVisible="{Binding ShowChildButtons}"
-                                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-18,0"
-                                    ToolTip.Tip="Add child topic" />
-                            <Button Classes="mindMapAdd" Content="+" Tag="Bottom" Click="OnCreateChildClick"
-                                    IsVisible="{Binding ShowChildButtons}"
-                                    HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-18"
-                                    ToolTip.Tip="Add child topic" />
-                            <Button Classes="mindMapAdd" Content="+" Tag="Left" Click="OnCreateChildClick"
-                                    IsVisible="{Binding ShowChildButtons}"
-                                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-18,0,0,0"
-                                    ToolTip.Tip="Add child topic" />
+                            <!-- Each '+' lives at the far end of an invisible, hit-testable bridge that overlaps
+                                 the shape edge by 2px. The bridge keeps the hover unbroken as the pointer travels
+                                 from the topic out to the button, so the button can sit fully clear of the resize
+                                 handles. -->
+                            <Panel Classes="mindMapAddZone" IsVisible="{Binding ShowChildButtons}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Top"
+                                   Width="28" Height="40" Margin="0,-38,0,0">
+                                <Button Classes="mindMapAdd" Content="+" Tag="Top" Click="OnCreateChildClick"
+                                        VerticalAlignment="Top" HorizontalAlignment="Center"
+                                        ToolTip.Tip="Add child topic" />
+                            </Panel>
+                            <Panel Classes="mindMapAddZone" IsVisible="{Binding ShowChildButtons}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Width="40" Height="28" Margin="0,0,-38,0">
+                                <Button Classes="mindMapAdd" Content="+" Tag="Right" Click="OnCreateChildClick"
+                                        VerticalAlignment="Center" HorizontalAlignment="Right"
+                                        ToolTip.Tip="Add child topic" />
+                            </Panel>
+                            <Panel Classes="mindMapAddZone" IsVisible="{Binding ShowChildButtons}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                                   Width="28" Height="40" Margin="0,0,0,-38">
+                                <Button Classes="mindMapAdd" Content="+" Tag="Bottom" Click="OnCreateChildClick"
+                                        VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                        ToolTip.Tip="Add child topic" />
+                            </Panel>
+                            <Panel Classes="mindMapAddZone" IsVisible="{Binding ShowChildButtons}"
+                                   HorizontalAlignment="Left" VerticalAlignment="Center"
+                                   Width="40" Height="28" Margin="-38,0,0,0">
+                                <Button Classes="mindMapAdd" Content="+" Tag="Left" Click="OnCreateChildClick"
+                                        VerticalAlignment="Center" HorizontalAlignment="Left"
+                                        ToolTip.Tip="Add child topic" />
+                            </Panel>
                         </Panel>
                     </DataTemplate>
 
