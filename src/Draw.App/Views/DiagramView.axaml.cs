@@ -979,11 +979,6 @@ public partial class DiagramView : UserControl
     private static Geometry? ToolGeometry(string key)
         => Application.Current!.TryGetResource(key, null, out object? value) ? value as Geometry : null;
 
-    /// <summary>Opens a prebuilt tool menu (Shift+S / Shift+C) at the pointer over this canvas.</summary>
-    public void OpenToolMenu(ContextMenu menu)
-        // Defer so any in-flight pointer capture is released before the popup opens (matches the arrange menu).
-        => Dispatcher.UIThread.Post(() => menu.Open(Viewport));
-
     private void OnPointerWheel(object? sender, PointerWheelEventArgs e)
     {
         if (_vm is null)
