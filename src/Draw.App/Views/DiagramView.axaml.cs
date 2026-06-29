@@ -1137,10 +1137,10 @@ public partial class DiagramView : UserControl
             return;
         }
 
-        // One node selected (and nothing else): Enter opens its inline label editor, mirroring
-        // double-click (OnDoubleTapped). Class/Entity nodes have no inline label
+        // One node selected (and nothing else): Enter or F2 opens its inline label editor,
+        // mirroring double-click (OnDoubleTapped). Class/Entity nodes have no inline label
         // (HasInlineLabel == false) and are intentionally left untouched.
-        if (e.Key == Key.Enter
+        if (e.Key is Key.Enter or Key.F2
             && _vm is not null
             && !_vm.HasConnectorSelection
             && _vm.SelectedNodes.Count() == 1
