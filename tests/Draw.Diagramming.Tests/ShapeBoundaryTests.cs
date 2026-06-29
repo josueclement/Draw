@@ -185,4 +185,34 @@ public class ShapeBoundaryTests
     [Fact]
     public void ResolveAnchor_Center_ReturnsCenter()
         => AssertPoint(50, 50, ShapeBoundary.ResolveAnchor(ShapeKind.Rectangle, Unit, new Point2D(0.5, 0.5)));
+
+    [Fact]
+    public void OutwardNormalAt_RectangleRightEdge_PointsRight()
+        => AssertPoint(1, 0, ShapeBoundary.OutwardNormalAt(ShapeKind.Rectangle, Unit, new Point2D(100, 50)));
+
+    [Fact]
+    public void OutwardNormalAt_RectangleTopEdge_PointsUp()
+        => AssertPoint(0, -1, ShapeBoundary.OutwardNormalAt(ShapeKind.Rectangle, Unit, new Point2D(50, 0)));
+
+    [Fact]
+    public void OutwardNormalAt_RectangleLeftEdge_PointsLeft()
+        => AssertPoint(-1, 0, ShapeBoundary.OutwardNormalAt(ShapeKind.Rectangle, Unit, new Point2D(0, 50)));
+
+    [Fact]
+    public void OutwardNormalAt_RectangleBottomEdge_PointsDown()
+        => AssertPoint(0, 1, ShapeBoundary.OutwardNormalAt(ShapeKind.Rectangle, Unit, new Point2D(50, 100)));
+
+    [Fact]
+    public void OutwardNormalAt_OffCentreRightEdgePoint_StillPointsRight()
+        // The "Space connections" case: a fanned anchor lands above the edge midpoint, but the
+        // edge normal is still the cardinal (1,0) — so the ribbon base squares flush to the edge.
+        => AssertPoint(1, 0, ShapeBoundary.OutwardNormalAt(ShapeKind.Rectangle, Unit, new Point2D(100, 25)));
+
+    [Fact]
+    public void OutwardNormalAt_EllipseRightmost_PointsRight()
+        => AssertPoint(1, 0, ShapeBoundary.OutwardNormalAt(ShapeKind.Ellipse, Unit, new Point2D(100, 50)));
+
+    [Fact]
+    public void OutwardNormalAt_EllipseTopmost_PointsUp()
+        => AssertPoint(0, -1, ShapeBoundary.OutwardNormalAt(ShapeKind.Ellipse, Unit, new Point2D(50, 0)));
 }

@@ -76,6 +76,12 @@ root render smooth (denser sampling + a round-joined ribbon edge); and connector
 **default to gray** (`ConnectorStyle.DefaultStrokeColor`, node outlines stay blue). See
 `documentation/plans/2026-06-25-mind-map-improvements.md`.
 
+Later fix: a branch's thick base now sits **flush against the parent edge** (squared to the node's
+boundary normal, like the child end) instead of being cut at the angle the curve happened to leave —
+the slant was visible once a child was moved off-axis or its branches were fanned out via *Space
+connections*. New `ShapeBoundary.OutwardNormalAt` + optional endpoint tangents on
+`TaperedStroke.BuildOutline`. See `documentation/plans/2026-06-29-mind-map-branch-flush-cap.md`.
+
 ## Connector editing — forced anchors, waypoints, movable labels ✅ (cross-cutting)
 
 Direct in-canvas control over connector geometry on top of Phase 2: pin either endpoint anywhere on

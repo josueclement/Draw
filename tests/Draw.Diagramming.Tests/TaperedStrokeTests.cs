@@ -55,4 +55,44 @@ public class TaperedStrokeTests
         Assert.Equal(startWidth, startSpan, 6);
         Assert.Equal(endWidth, endSpan, 6);
     }
+
+    // A bending centerline: the default endpoint tangents would slant the caps. The explicit-tangent
+    // overrides below must square each cap to the supplied direction regardless of the curve.
+    private static readonly IReadOnlyList<Point2D> Bending =
+        new[] { new Point2D(0, 0), new Point2D(10, 10), new Point2D(20, 30) };
+
+    [Fact]
+    public void StartTangent_SquaresStartCapToTheGivenDirection()
+    {
+        IReadOnlyList<Point2D> outline = TaperedStroke.BuildOutline(Bending, 8, 4, startTangent: new Point2D(1, 0));
+        int n = Bending.Count;
+
+        // Start cap = left[0] (outline[0]) − right[0] (outline[2n-1]); ⟂ (1,0) ⇒ vertical, span = startWidth.
+        Point2D cap = outline[0] - outline[(2 * n) - 1];
+        Assert.Equal(0d, cap.X, 6);
+        Assert.Equal(8d, System.Math.Abs(cap.Y), 6);
+    }
+
+    [Fact]
+    public void EndTangent_SquaresEndCapToTheGivenDirection()
+    {
+        IReadOnlyList<Point2D> outline = TaperedStroke.BuildOutline(Bending, 8, 4, endTangent: new Point2D(0, 1));
+        int n = Bending.Count;
+
+        // End cap = left[n-1] (outline[n-1]) − right[n-1] (outline[n]); ⟂ (0,1) ⇒ horizontal, span = endWidth.
+        Point2D cap = outline[n - 1] - outline[n];
+        Assert.Equal(0d, cap.Y, 6);
+        Assert.Equal(4d, System.Math.Abs(cap.X), 6);
+    }
+
+    [Fact]
+    public void OmittedTangents_KeepFiniteDifferenceCaps()
+    {
+        // Without overrides the start cap follows the (1,1) opening segment, so it is not axis-aligned —
+        // the slanted base this fix is meant to override.
+        IReadOnlyList<Point2D> outline = TaperedStroke.BuildOutline(Bending, 8, 4);
+        int n = Bending.Count;
+        Point2D cap = outline[0] - outline[(2 * n) - 1];
+        Assert.True(System.Math.Abs(cap.X) > 1d);
+    }
 }
