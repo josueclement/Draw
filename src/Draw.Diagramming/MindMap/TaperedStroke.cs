@@ -18,9 +18,17 @@ public static class TaperedStroke
     /// and <paramref name="endWidth"/> are full stroke widths (the polygon spans ±width/2 about the
     /// centerline). Returns an empty list for a degenerate centerline (fewer than two points or zero
     /// total length). The returned outline has exactly <c>2 × centerline.Count</c> points.
+    /// <para>
+    /// <paramref name="startTangent"/>/<paramref name="endTangent"/>, when supplied, override the
+    /// finite-difference tangent at the first/last sample — pass each end's forward direction (out of
+    /// the source, into the target) so that end's flat cap squares to that direction (e.g. flush with
+    /// a node edge) instead of to the bending curve. Each must point the same way the centerline
+    /// travels there, or the offset would flip sides and pinch the ribbon end.
+    /// </para>
     /// </summary>
     public static IReadOnlyList<Point2D> BuildOutline(
-        IReadOnlyList<Point2D> centerline, double startWidth, double endWidth)
+        IReadOnlyList<Point2D> centerline, double startWidth, double endWidth,
+        Point2D? startTangent = null, Point2D? endTangent = null)
     {
         ArgumentNullException.ThrowIfNull(centerline);
         if (centerline.Count < 2)
@@ -43,11 +51,12 @@ public static class TaperedStroke
         double halfStart = Math.Max(0d, startWidth) / 2d;
         double halfEnd = Math.Max(0d, endWidth) / 2d;
 
+        int last = centerline.Count - 1;
         Point2D[] left = new Point2D[centerline.Count];
         Point2D[] right = new Point2D[centerline.Count];
         for (int i = 0; i < centerline.Count; i++)
         {
-            Point2D tangent = Tangent(centerline, i);
+            Point2D tangent = EndpointOrSampled(centerline, i, last, startTangent, endTangent);
             // Left normal in y-down screen space (rotate the tangent +90°).
             Point2D normal = new(-tangent.Y, tangent.X);
             double t = cumulative[i] / total;
@@ -68,6 +77,25 @@ public static class TaperedStroke
         }
 
         return outline;
+    }
+
+    // The caller-supplied endpoint tangent (so a ribbon end can square to a node edge rather than to
+    // the bending curve), falling back to the finite-difference tangent when none is given or it is
+    // degenerate.
+    private static Point2D EndpointOrSampled(
+        IReadOnlyList<Point2D> points, int i, int last, Point2D? startTangent, Point2D? endTangent)
+    {
+        Point2D? forced = i == 0 ? startTangent : i == last ? endTangent : null;
+        if (forced is { } tangent)
+        {
+            Point2D unit = tangent.Normalized();
+            if (unit.Length > Point2D.ZeroLengthTolerance)
+            {
+                return unit;
+            }
+        }
+
+        return Tangent(points, i);
     }
 
     // Unit tangent at sample i via central (one-sided at the ends) finite differences.

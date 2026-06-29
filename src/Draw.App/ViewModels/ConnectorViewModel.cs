@@ -404,7 +404,14 @@ public sealed class ConnectorViewModel : ViewModelBase
 
         double startWidth = MindMapBranchStyle.WidthAt(_branchDepth);
         double endWidth = MindMapBranchStyle.WidthAt(_branchDepth + 1);
-        return TaperedStroke.BuildOutline(GetFlattenedPoints(), startWidth, endWidth);
+
+        // Square each ribbon end to the node edge it attaches to (the boundary outward normal) so the
+        // thick parent base sits flush against the edge, like the child end, instead of being cut at
+        // whatever angle the curve leaves at. The start tangent runs out of the source; the end tangent
+        // into the target (the centerline's forward direction at each end).
+        ModelPoint startTangent = ShapeBoundary.OutwardNormalAt(Source.BoundaryKind, Source.Bounds, _route.Start);
+        ModelPoint endTangent = ShapeBoundary.OutwardNormalAt(Target.BoundaryKind, Target.Bounds, _route.End) * -1d;
+        return TaperedStroke.BuildOutline(GetFlattenedPoints(), startWidth, endWidth, startTangent, endTangent);
     }
 
     private Geometry? BuildBranchGeometry()

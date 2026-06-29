@@ -60,6 +60,41 @@ public static class ShapeBoundary
         return IntersectFromCenter(kind, bounds, toward);
     }
 
+    /// <summary>
+    /// The unit outward normal of the shape outline at the boundary point nearest
+    /// <paramref name="point"/>: the surface gradient for an elliptical shape, the nearest edge's
+    /// outward normal for a polygonal one. Falls back to the radial direction from the centre, then
+    /// +X, for degenerate input. Used to square an attachment to the edge it lands on (e.g. a
+    /// mind-map branch's flat base sits flush against the node rather than slanted to the curve).
+    /// </summary>
+    public static Point2D OutwardNormalAt(ShapeKind kind, Rect2D bounds, Point2D point)
+    {
+        Point2D center = bounds.Center;
+
+        if (ShapeOutline.IsElliptical(kind))
+        {
+            Rect2D ellipse = ShapeOutline.EllipseBounds(kind, bounds);
+            double rx = ellipse.Width / 2;
+            double ry = ellipse.Height / 2;
+            if (rx > double.Epsilon && ry > double.Epsilon)
+            {
+                Point2D ec = ellipse.Center;
+                // Gradient of (x/rx)^2 + (y/ry)^2 points along the outward surface normal.
+                Point2D gradient = new((point.X - ec.X) / (rx * rx), (point.Y - ec.Y) / (ry * ry));
+                Point2D unit = gradient.Normalized();
+                if (unit.Length >= 0.5d)
+                {
+                    return unit;
+                }
+            }
+
+            return Radial(center, point);
+        }
+
+        IReadOnlyList<Point2D> polygon = ShapeOutline.GetPolygon(kind, bounds);
+        return NearestEdgeOutwardNormal(polygon, center, point) ?? Radial(center, point);
+    }
+
     private static Point2D IntersectEllipse(Rect2D ellipse, Point2D center, Point2D direction)
     {
         double rx = ellipse.Width / 2;
@@ -146,6 +181,60 @@ public static class ShapeBoundary
 
         hit = new Point2D(origin.X + (t * direction.X), origin.Y + (t * direction.Y));
         return true;
+    }
+
+    // The outward unit normal of the polygon edge nearest `point`, or null for a degenerate polygon.
+    // The normal is sign-flipped so it points away from `center` (the shape interior).
+    private static Point2D? NearestEdgeOutwardNormal(IReadOnlyList<Point2D> polygon, Point2D center, Point2D point)
+    {
+        if (polygon.Count < 2)
+        {
+            return null;
+        }
+
+        double bestDistanceSq = double.PositiveInfinity;
+        Point2D? best = null;
+
+        for (int i = 0; i < polygon.Count; i++)
+        {
+            Point2D a = polygon[i];
+            Point2D b = polygon[(i + 1) % polygon.Count];
+            Point2D edge = b - a;
+            double edgeLengthSq = (edge.X * edge.X) + (edge.Y * edge.Y);
+            if (edgeLengthSq <= double.Epsilon)
+            {
+                continue;
+            }
+
+            // Closest point on segment a..b to `point` (clamp the projection to the segment).
+            double s = Math.Clamp((((point.X - a.X) * edge.X) + ((point.Y - a.Y) * edge.Y)) / edgeLengthSq, 0d, 1d);
+            Point2D closest = new(a.X + (s * edge.X), a.Y + (s * edge.Y));
+            double dx = point.X - closest.X;
+            double dy = point.Y - closest.Y;
+            double distanceSq = (dx * dx) + (dy * dy);
+            if (distanceSq >= bestDistanceSq)
+            {
+                continue;
+            }
+
+            bestDistanceSq = distanceSq;
+            Point2D normal = new(-edge.Y, edge.X);
+            Point2D midpoint = new(a.X + (edge.X / 2), a.Y + (edge.Y / 2));
+            if (((midpoint.X - center.X) * normal.X) + ((midpoint.Y - center.Y) * normal.Y) < 0)
+            {
+                normal = new Point2D(-normal.X, -normal.Y);
+            }
+
+            best = normal.Normalized();
+        }
+
+        return best is { } b2 && b2.Length >= 0.5d ? b2 : null;
+    }
+
+    private static Point2D Radial(Point2D center, Point2D point)
+    {
+        Point2D unit = (point - center).Normalized();
+        return unit.Length >= 0.5d ? unit : new Point2D(1, 0);
     }
 
     private static double Cross(Point2D u, Point2D v) => (u.X * v.Y) - (u.Y * v.X);
