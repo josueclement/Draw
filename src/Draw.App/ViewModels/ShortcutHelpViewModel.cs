@@ -30,6 +30,13 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
     /// <summary>Click on the dim backdrop (closes the overlay).</summary>
     public RelayCommand DismissCommand { get; }
 
+    /// <summary>Product + version (e.g. <c>Draw 1.0.0</c>), read once from the assembly so there is
+    /// no duplicated literal. Immutable, so it needs no change notification.</summary>
+    public string VersionLabel { get; } =
+        typeof(ShortcutHelpViewModel).Assembly.GetName().Version is { } version
+            ? $"Draw {version.ToString(3)}"
+            : "Draw";
+
     /// <summary>The shortcut groups, rebuilt each time the overlay opens.</summary>
     public IReadOnlyList<ShortcutHelpGroup> Groups
     {

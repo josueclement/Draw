@@ -415,26 +415,35 @@ public class JsonDocumentSerializerTests
     }
 
     [Fact]
-    public void RoundTrip_PreservesShowGrid_WhenHidden()
+    public void NewDocument_DefaultsToGridHidden()
     {
-        JsonDocumentSerializer serializer = new();
-        DiagramDocument doc = new() { ShowGrid = false };
-
-        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
-
-        Assert.False(back.ShowGrid);
+        Assert.False(new DiagramDocument().ShowGrid);
+        Assert.False(DiagramDocument.CreateEmpty(DiagramType.Freeform).ShowGrid);
     }
 
     [Fact]
-    public void Deserialize_DocumentWithoutShowGrid_DefaultsToGridShown()
+    public void RoundTrip_PreservesShowGrid_WhenShown()
     {
-        // Files written before the per-document grid toggle existed omit the key; the property
-        // initializer (true) must stand so they open with the grid visible.
+        // The meaningful persistence check: an explicitly-shown grid must survive a round-trip even
+        // though the default is hidden.
+        JsonDocumentSerializer serializer = new();
+        DiagramDocument doc = new() { ShowGrid = true };
+
+        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
+
+        Assert.True(back.ShowGrid);
+    }
+
+    [Fact]
+    public void Deserialize_DocumentWithoutShowGrid_DefaultsToGridHidden()
+    {
+        // Files written before the per-document grid toggle existed omit the key; the default (hidden)
+        // must stand so they open without the grid.
         JsonDocumentSerializer serializer = new();
 
         DiagramDocument doc = serializer.Deserialize("{}");
 
-        Assert.True(doc.ShowGrid);
+        Assert.False(doc.ShowGrid);
     }
 
     [Fact]

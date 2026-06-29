@@ -67,6 +67,12 @@ public partial class MainWindow : Window
         WireOrderDropdown(OrderDropDown, op => _shell?.ActiveDocument?.ReorderSelected(op));
         shell.PropertyChanged += OnShellPropertyChanged;
 
+        // Match the inspector column to the shell's initial IsInspectorOpen (closed by default): the XAML
+        // column width is the open width, so without this an initially-closed inspector would hide its
+        // content yet leave the column at full width. ActualWidth is 0 pre-layout, so the closed branch
+        // keeps the remembered reopen width rather than overwriting it.
+        ApplyInspectorState();
+
         // Global keyboard shortcuts (single gestures + multi-key chords) come from the JSON keymap.
         // Tunnel so plain letters reach the dispatcher before a focused control consumes them; a chord
         // mid-flight is reset when the window loses focus. Text-entry surfaces are skipped (see handler).
@@ -96,7 +102,7 @@ public partial class MainWindow : Window
     private void ApplyInspectorState()
     {
         ColumnDefinition column = EditorGrid.ColumnDefinitions[2];
-        if (_shell?.IsInspectorOpen ?? true)
+        if (_shell?.IsInspectorOpen ?? false)
         {
             column.MinWidth = 220;
             column.Width = new GridLength(_inspectorWidth);

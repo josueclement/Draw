@@ -16,7 +16,8 @@ flag), grid visibility is:
 
 - **Per-document** — each open diagram has its own state.
 - **Serialized into the `.draw` file** — reopening a document restores whether the grid was shown.
-- Default **shown** (`true`) for new and pre-existing documents.
+- Default **hidden** (`false`): new diagrams start grid-less, and pre-existing files (which never stored
+  the key) also open without the grid.
 
 The source of truth is therefore `DiagramDocument.ShowGrid` in `Draw.Model`. The ribbon/menu bind
 through a thin `ShellViewModel` proxy onto the active document, and the canvas repaints by reacting to
@@ -24,14 +25,14 @@ the document VM's `ShowGrid` property change — the same mechanism it already u
 
 ## Files touched
 
-1. **`src/Draw.Model/Documents/DiagramDocument.cs`** — add `public bool ShowGrid { get; set; } = true;`.
-   Reflection-based `System.Text.Json` serializes it as `showGrid`. **No schema bump**: it is additive
-   with a sensible default, so a pre-feature file omits the key and the initializer (`true`) stands —
-   it opens with the grid shown. Forward-compatible too (an older build ignores the unknown key;
-   `SchemaVersion` stays `2`).
+1. **`src/Draw.Model/Documents/DiagramDocument.cs`** — add `public bool ShowGrid { get; set; }` (default
+   `false` = hidden). Reflection-based `System.Text.Json` serializes it as `showGrid`. **No schema bump**:
+   it is additive, so a pre-feature file omits the key and the default (hidden) stands — it opens without
+   the grid. Forward-compatible too (an older build ignores the unknown key; `SchemaVersion` stays `2`).
 
-2. **`tests/Draw.Model.Tests/JsonDocumentSerializerTests.cs`** — two cases: a hidden-grid document
-   round-trips to `false`; a document deserialized from `"{}"` (no `showGrid`) defaults to `true`.
+2. **`tests/Draw.Model.Tests/JsonDocumentSerializerTests.cs`** — three cases: a new document (`new()` and
+   `CreateEmpty`) defaults to grid hidden; an explicitly-shown grid round-trips to `true`; a document
+   deserialized from `"{}"` (no `showGrid`) defaults to `false`.
 
 3. **`src/Draw.App/ViewModels/DiagramDocumentViewModel.cs`** — `ShowGrid` get/set over `_document`
    (raises `OnPropertyChanged` + `MarkModified` so Ctrl+S persists it; **not** undo-captured — a
@@ -64,5 +65,5 @@ the document VM's `ShowGrid` property change — the same mechanism it already u
 - Because grid state now lives in the memento-captured document, undoing a *later* gesture can revert
   an intervening grid toggle. Inherent to whole-document snapshots; accepted.
 - Verified: `dotnet build Draw.slnx` clean (confirms the `grid_nine` icon member resolves) and
-  `dotnet test --solution Draw.slnx` green (379 tests). GUI behaviour pending visual verification on
+  `dotnet test --solution Draw.slnx` green (380 tests). GUI behaviour pending visual verification on
   Windows/macOS (WSL2 can't render).

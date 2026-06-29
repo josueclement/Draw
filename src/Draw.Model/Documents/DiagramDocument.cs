@@ -14,9 +14,10 @@ public sealed class DiagramDocument
 
     public string? Title { get; set; }
 
-    /// <summary>Whether the canvas grid is drawn for this diagram. Per-document and persisted; a file
-    /// written before this field existed omits the key and so opens with the grid shown (the default).</summary>
-    public bool ShowGrid { get; set; } = true;
+    /// <summary>Whether the canvas grid is drawn for this diagram. Per-document and persisted. The default
+    /// is hidden, so new diagrams start grid-less; files written before this field existed omit the key
+    /// and therefore also open without the grid.</summary>
+    public bool ShowGrid { get; set; }
 
     public List<NodeBase> Nodes { get; set; } = new();
 
