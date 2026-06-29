@@ -45,3 +45,7 @@ Windows and macOS need no extra native packages.
 C# 14, nullable-as-error, no implicit usings, no MVVM source generators
 (`field` + `SetProperty`, explicit `RelayCommand`s), `.slnx` solution, central package
 management. See [`documentation/architecture.md`](documentation/architecture.md).
+
+## License
+
+Released under the [MIT License](LICENSE) — Copyright © 2026 Josué Clément.

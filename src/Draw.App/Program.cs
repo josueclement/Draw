@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Draw.App.Hosting;
+using Draw.App.Services;
 using Microsoft.Extensions.Hosting;
 
 namespace Draw.App;
@@ -12,6 +13,10 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Wire the crash safety net first, so failures anywhere after this are logged (and UI-thread
+        // ones surface a dialog). Anything that escapes Main reaches AppDomain.UnhandledException.
+        CrashHandler.Register();
+
         using IHost host = CreateHost(args);
         host.Start();
         try

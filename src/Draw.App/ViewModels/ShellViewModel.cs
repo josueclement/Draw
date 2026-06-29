@@ -200,7 +200,7 @@ public sealed class ShellViewModel : ViewModelBase
                 OnPropertyChanged(nameof(IsInspectorCollapsed));
             }
         }
-    } = true;
+    }
 
     public bool IsInspectorCollapsed => !IsInspectorOpen;
 
@@ -224,7 +224,7 @@ public sealed class ShellViewModel : ViewModelBase
     /// it is kept in sync as the active document changes and as that document's own value flips.</summary>
     public bool ShowGrid
     {
-        get => ActiveDocument?.ShowGrid ?? true;
+        get => ActiveDocument?.ShowGrid ?? false;
         set
         {
             if (ActiveDocument is { } document)

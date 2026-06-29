@@ -17,9 +17,13 @@
                 BoxShadow="0 12 32 0 #50000000">
             <StackPanel Spacing="14">
 
-                <!-- Heading + usage hint. -->
+                <!-- Heading + usage hint; the product version sits top-right of the title. -->
                 <StackPanel Spacing="2">
-                    <TextBlock Text="Keyboard shortcuts" FontSize="16" FontWeight="SemiBold" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="Keyboard shortcuts" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="{Binding VersionLabel}"
+                                   VerticalAlignment="Center" Opacity="0.5" FontSize="12" />
+                    </Grid>
                     <TextBlock Opacity="0.6" FontSize="12" Text="Esc to close" />
                 </StackPanel>
 

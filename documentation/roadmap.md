@@ -354,8 +354,26 @@ are removed. See `documentation/plans/2026-06-28-tool-palette-overlay.md`.
 Lets the user hide/show the canvas grid from a **ribbon toggle** (View ▸ Appearance), an **Appearance**
 context-menu checkbox, and a **`t g`** keyboard chord (listed in the Shift+H help overlay). Unlike the
 app-wide, session-only "Snap to grid" flag, grid visibility is **per-document and persisted**: the
-source of truth is a new `DiagramDocument.ShowGrid` (serialized as `showGrid`, additive with a `true`
-default so pre-feature files open with the grid shown — no schema bump). The ribbon/menu bind through a
+source of truth is a new `DiagramDocument.ShowGrid` (serialized as `showGrid`, additive and defaulting to
+hidden, so new diagrams start grid-less and pre-feature files open without the grid — no schema bump). The ribbon/menu bind through a
 `ShellViewModel.ShowGrid` proxy onto the active document; the canvas repaints by reacting to the
-document VM's `ShowGrid` change (the Zoom/Pan mechanism). Build clean + 379 tests green; GUI behaviour
+document VM's `ShowGrid` change (the Zoom/Pan mechanism). Build clean + 380 tests green; GUI behaviour
 pending visual verification. See `documentation/plans/2026-06-29-toggle-grid-visibility.md`.
+
+## Release 1.0.0 ✅ (cross-cutting)
+
+First-release prep. An explicit `1.0.0` version + product metadata (Product/Company/Authors/
+Copyright/Description) in `Directory.Build.props` — a single source of truth for the whole solution
+(the libraries ship with the app); previously the build relied on MSBuild's implicit `1.0.0.0`.
+The version is surfaced in-app, top-right of the **Shift+H** help overlay (`ShortcutHelpViewModel.
+VersionLabel`, read from the assembly). Adds an MIT **`LICENSE`**, a user-facing **`CHANGELOG.md`**,
+and a global **crash handler** (`App/Services/CrashHandler.cs`, wired in `Program.Main`): unhandled
+exceptions on any thread are written to a timestamped log under `%APPDATA%/Draw/logs/` (reusing the
+`RecentFilesService` APPDATA/Draw convention), and UI-thread crashes additionally show a dialog
+before exiting. See `documentation/plans/2026-06-29-release-1.0.0.md`.
+
+## Distribution & CI 🚧 (planned, public-release blocker)
+
+The remaining gap for a public release: a GitHub Actions workflow that publishes self-contained
+Windows / Linux / macOS builds on tag and attaches them to GitHub Releases — today the only way to
+obtain the app is `dotnet run` from source. Not yet started; deferred out of the 1.0.0 prep above.
