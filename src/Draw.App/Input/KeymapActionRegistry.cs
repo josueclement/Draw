@@ -113,9 +113,12 @@ public sealed class KeymapActionRegistry
         Add("export.svg", false, () => (_shell.ExportSvgCommand, null));
         Add("export.copyImage", false, () => (_shell.CopyImageCommand, null));
 
-        // Category tool menus (open a keyboard-driven, category-grouped context menu that arms a tool).
+        // Keyboard overlays (centered, letter-driven cards).
         Add("menu.shapes", false, () => (_shell.ShowToolMenuCommand, ToolMenuFamily.Shapes));
         Add("menu.connectors", false, () => (_shell.ShowToolMenuCommand, ToolMenuFamily.Connectors));
+        Add("menu.icons", false, () => (_shell.ShowIconPaletteCommand, null));
+        Add("menu.styles", false, () => (_shell.ShowStylePickerCommand, null));
+        Add("menu.help", false, () => (_shell.ShowHelpCommand, null));
     }
 
     private void Arm(string id, Func<(ICommand Command, object? Parameter)> resolve)

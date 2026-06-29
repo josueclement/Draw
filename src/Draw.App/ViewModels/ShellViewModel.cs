@@ -25,6 +25,9 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly IThemeService _theme;
     private readonly EditorOptions _editorOptions;
 
+    /// <summary>Every keyboard overlay, so opening one can close the rest (at most one open at a time).</summary>
+    private readonly IOverlayPalette[] _overlays;
+
     public ShellViewModel(
         IDiagramDocumentViewModelFactory factory,
         IDocumentFileService files,
@@ -38,7 +41,10 @@ public sealed class ShellViewModel : ViewModelBase
         InspectorViewModel inspector,
         StylePaletteViewModel stylePalette,
         KeymapStatusViewModel keymapStatus,
-        ShortcutHintsViewModel shortcutHints)
+        ShortcutHintsViewModel shortcutHints,
+        IconPaletteViewModel iconPalette,
+        StylePickerViewModel stylePicker,
+        ShortcutHelpViewModel shortcutHelp)
     {
         _factory = factory;
         _files = files;
@@ -53,6 +59,10 @@ public sealed class ShellViewModel : ViewModelBase
         StylePalette = stylePalette;
         KeymapStatus = keymapStatus;
         ShortcutHints = shortcutHints;
+        IconPalette = iconPalette;
+        StylePicker = stylePicker;
+        ShortcutHelp = shortcutHelp;
+        _overlays = [ToolPalette, IconPalette, StylePicker, ShortcutHelp];
 
         // The armed-tool state lives on the toolbox; refresh the context hints when it changes.
         Toolbox.PropertyChanged += OnToolboxPropertyChanged;
@@ -78,8 +88,17 @@ public sealed class ShellViewModel : ViewModelBase
         ToggleThemeCommand = new RelayCommand(OnToggleTheme);
         ToggleInspectorCommand = new RelayCommand(() => IsInspectorOpen = !IsInspectorOpen);
         ShowToolMenuCommand = new RelayCommand<ToolMenuFamily>(
-            family => ToolPalette.Open(family),
+            family => OpenExclusive(ToolPalette, () => ToolPalette.Open(family)),
             _ => HasActiveDocument);
+        ShowIconPaletteCommand = new RelayCommand(
+            () => OpenExclusive(IconPalette, IconPalette.Open),
+            () => ActiveDocument?.HasNodeSelection ?? false);
+        ShowStylePickerCommand = new RelayCommand(
+            () => OpenExclusive(StylePicker, StylePicker.Open),
+            () => ActiveDocument?.HasSelection ?? false);
+        ShowHelpCommand = new RelayCommand(
+            () => OpenExclusive(ShortcutHelp, ShortcutHelp.Open),
+            () => HasActiveDocument);
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
         RefreshRecentFiles();
@@ -102,6 +121,15 @@ public sealed class ShellViewModel : ViewModelBase
     public InspectorViewModel Inspector { get; }
 
     public StylePaletteViewModel StylePalette { get; }
+
+    /// <summary>The Shift+I icon (status-marker) palette overlay.</summary>
+    public IconPaletteViewModel IconPalette { get; }
+
+    /// <summary>The Shift+Y style picker overlay.</summary>
+    public StylePickerViewModel StylePicker { get; }
+
+    /// <summary>The Shift+H keyboard-shortcut help overlay.</summary>
+    public ShortcutHelpViewModel ShortcutHelp { get; }
 
     /// <summary>Status-bar feedback for the keyboard-shortcut dispatcher (pending chord / messages).</summary>
     public KeymapStatusViewModel KeymapStatus { get; }
@@ -133,6 +161,23 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand ToggleInspectorCommand { get; }
 
     public RelayCommand<ToolMenuFamily> ShowToolMenuCommand { get; }
+
+    /// <summary>Opens the Shift+I icon palette for the node selection.</summary>
+    public RelayCommand ShowIconPaletteCommand { get; }
+
+    /// <summary>Opens the Shift+Y style picker for the selection.</summary>
+    public RelayCommand ShowStylePickerCommand { get; }
+
+    /// <summary>Opens the Shift+H keyboard-shortcut help overlay.</summary>
+    public RelayCommand ShowHelpCommand { get; }
+
+    /// <summary>The overlay currently open (at most one), or null — the window routes Esc/letters to it.</summary>
+    public IOverlayPalette? ActiveOverlay =>
+        ToolPalette.IsOpen ? ToolPalette
+        : IconPalette.IsOpen ? IconPalette
+        : StylePicker.IsOpen ? StylePicker
+        : ShortcutHelp.IsOpen ? ShortcutHelp
+        : null;
 
     public event EventHandler? ExportImageRequested;
 
@@ -198,6 +243,8 @@ public sealed class ShellViewModel : ViewModelBase
 
                 Inspector.SetTarget(field);
                 StylePalette.SetActiveDocument(field);
+                IconPalette.SetActiveDocument(field);
+                StylePicker.SetActiveDocument(field);
                 ShortcutHints.Refresh(field, Toolbox);
                 OnPropertyChanged(nameof(HasActiveDocument));
                 OnPropertyChanged(nameof(Title));
@@ -414,7 +461,23 @@ public sealed class ShellViewModel : ViewModelBase
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         DuplicateCommand.NotifyCanExecuteChanged();
+        ShowIconPaletteCommand.NotifyCanExecuteChanged();
+        ShowStylePickerCommand.NotifyCanExecuteChanged();
         ShortcutHints.Refresh(ActiveDocument, Toolbox);
+    }
+
+    /// <summary>Opens one overlay and closes the others, so at most one is ever open.</summary>
+    private void OpenExclusive(IOverlayPalette target, Action open)
+    {
+        foreach (IOverlayPalette overlay in _overlays)
+        {
+            if (!ReferenceEquals(overlay, target))
+            {
+                overlay.Close();
+            }
+        }
+
+        open();
     }
 
     private void OnToolboxPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -449,6 +512,10 @@ public sealed class ShellViewModel : ViewModelBase
         ExportImageCommand.NotifyCanExecuteChanged();
         ExportSvgCommand.NotifyCanExecuteChanged();
         CopyImageCommand.NotifyCanExecuteChanged();
+        ShowToolMenuCommand.NotifyCanExecuteChanged();
+        ShowIconPaletteCommand.NotifyCanExecuteChanged();
+        ShowStylePickerCommand.NotifyCanExecuteChanged();
+        ShowHelpCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshRecentFiles()

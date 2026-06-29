@@ -147,22 +147,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        // While the tool palette is open it owns the keyboard: Esc backs out one level (then closes) and
-        // an unmodified letter drills into a category or arms an item. Modified chords still fall through
-        // to the dispatcher, so Shift+S / Shift+C re-open / switch family via the normal action path and
-        // a stray plain letter never starts a chord.
-        if (_shell?.ToolPalette is { IsOpen: true } palette)
+        // While any overlay is open (tool palette / icons / styles / help) it owns the keyboard: Esc backs
+        // out one level (then closes) and an unmodified letter is routed to the overlay (drill/arm/toggle).
+        // Modified chords still fall through to the dispatcher, so Shift+S / Shift+C / Shift+I / Shift+Y /
+        // Shift+H re-open or switch overlay via the normal action path, and a stray plain letter never
+        // starts a chord behind the overlay.
+        if (_shell?.ActiveOverlay is { IsOpen: true } overlay)
         {
             if (e.Key == Key.Escape)
             {
-                palette.Back();
+                overlay.Back();
                 e.Handled = true;
                 return;
             }
 
             if (e.KeyModifiers == KeyModifiers.None && e.Key is >= Key.A and <= Key.Z)
             {
-                palette.HandleLetter((char)('a' + (e.Key - Key.A)));
+                overlay.HandleLetter((char)('a' + (e.Key - Key.A)));
                 e.Handled = true;
                 return;
             }

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Draw.App.ViewModels"
+             x:Class="Draw.App.Views.IconPaletteView"
+             x:DataType="vm:IconPaletteViewModel"
+             IsVisible="{Binding IsOpen}">
+
+    <!-- Full-window dim backdrop; a press anywhere on it dismisses the palette. When IsOpen is false the
+         whole control is collapsed, so it never blocks the editor. Mirrors ToolPaletteView's chrome. -->
+    <Border Background="#80000000" PointerPressed="OnBackdropPressed">
+
+        <!-- Centered card. The ItemsPanel is a UniformGrid (not a Canvas), so the Avalonia-12
+             ItemsControl+Canvas ClipToBounds trap does not apply here. -->
+        <Border PointerPressed="OnPanelPressed"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MinWidth="520" MaxWidth="760" Padding="18"
+                CornerRadius="10" BorderThickness="1"
+                Background="{DynamicResource CarbonSurfaceBrush}"
+                BorderBrush="{DynamicResource CarbonBorderBrush}"
+                BoxShadow="0 12 32 0 #50000000">
+            <StackPanel Spacing="14">
+
+                <!-- Heading + usage hint. -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Opacity="0.6" FontSize="12"
+                               Text="Press a letter to toggle · Esc to close" />
+                </StackPanel>
+
+                <!-- Marker tiles: letter chip + tinted glyph + label, with a check when the whole selection has it. -->
+                <ItemsControl ItemsSource="{Binding Entries}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="3" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:IconPaletteEntry">
+                            <Button Click="OnEntryClick" Margin="4" Padding="8"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="✓" FontWeight="Bold"
+                                               VerticalAlignment="Center" Margin="8,0,0,0"
+                                               IsVisible="{Binding IsActive}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Border Width="20" Height="20" CornerRadius="4" VerticalAlignment="Center"
+                                                Background="{DynamicResource CarbonBackgroundBrush}">
+                                            <TextBlock Text="{Binding LetterText}" FontWeight="Bold" FontSize="11"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <PathIcon Data="{Binding Icon}" Foreground="{Binding Brush}"
+                                                  Width="16" Height="16" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>
