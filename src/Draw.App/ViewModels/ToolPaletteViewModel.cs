@@ -38,7 +38,7 @@ public sealed record PaletteItemEntry(char Letter, string Name, Geometry Icon, T
 /// types — so the keyboard is translated to its semantic <see cref="Back"/> / <see cref="HandleLetter"/>
 /// methods by the window.
 /// </summary>
-public sealed class ToolPaletteViewModel : ViewModelBase
+public sealed class ToolPaletteViewModel : ViewModelBase, IOverlayPalette
 {
     private readonly ToolboxViewModel _toolbox;
     private readonly Func<ToolMenuFamily, ToolCatalogFamily> _catalogFor;

@@ -44,6 +44,9 @@ public static class DefaultKeymap
 
         { "keys": "Shift+S", "action": "menu.shapes" },
         { "keys": "Shift+C", "action": "menu.connectors" },
+        { "keys": "Shift+I", "action": "menu.icons" },
+        { "keys": "Shift+Y", "action": "menu.styles" },
+        { "keys": "Shift+H", "action": "menu.help" },
 
         { "keys": "a r", "action": "tool.shape.rectangle" },
         { "keys": "a a", "action": "tool.connector.association" },
@@ -93,7 +96,10 @@ public static class DefaultKeymap
     //   tool.classNode.{class|interface|enum}
     //   tool.useCase.{actor|useCase|systemBoundary}
     //   tool.entity
-    //   menu.shapes, menu.connectors   (open a category-grouped tool menu at the cursor; default Shift+S / Shift+C)
+    //   menu.shapes, menu.connectors   (open a category-grouped tool menu; default Shift+S / Shift+C)
+    //   menu.icons                     (toggle status-marker icons on the selection; default Shift+I)
+    //   menu.styles                    (apply a style to the selection; default Shift+Y)
+    //   menu.help                      (show the keyboard-shortcut help overlay; default Shift+H)
     //   file.{new|open|save|saveAs|close}
     //   edit.{undo|redo|copy|cut|paste|duplicate|delete|selectAll|insertImage|spaceConnections|mergeConnections}
     //   align.{left|centerHorizontal|right|top|centerVertical|bottom}

@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Draw.App.ViewModels"
+             x:Class="Draw.App.Views.ShortcutHelpView"
+             x:DataType="vm:ShortcutHelpViewModel"
+             IsVisible="{Binding IsOpen}">
+
+    <!-- Full-window dim backdrop; a press anywhere on it closes the overlay. Mirrors ToolPaletteView. -->
+    <Border Background="#80000000" PointerPressed="OnBackdropPressed">
+
+        <Border PointerPressed="OnPanelPressed"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MinWidth="560" MaxWidth="760" Padding="18"
+                CornerRadius="10" BorderThickness="1"
+                Background="{DynamicResource CarbonSurfaceBrush}"
+                BorderBrush="{DynamicResource CarbonBorderBrush}"
+                BoxShadow="0 12 32 0 #50000000">
+            <StackPanel Spacing="14">
+
+                <!-- Heading + usage hint. -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Keyboard shortcuts" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Opacity="0.6" FontSize="12" Text="Esc to close" />
+                </StackPanel>
+
+                <!-- Groups flow into columns; each group is a header + gesture/label rows. -->
+                <ScrollViewer MaxHeight="560" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShortcutHelpGroup">
+                                <StackPanel Width="215" Margin="0,0,18,14" Spacing="4">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Opacity="0.7" />
+                                    <ItemsControl ItemsSource="{Binding Rows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ShortcutHelpRow">
+                                                <Grid ColumnDefinitions="96,*" Margin="0,1">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Gesture}" FontWeight="SemiBold" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Label}" Opacity="0.8"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>

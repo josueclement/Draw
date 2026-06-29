@@ -11,12 +11,10 @@ namespace Draw.App.Input;
 public sealed record ShortcutHint(string Gesture, string Label, bool ShowSeparator);
 
 /// <summary>
-/// Status-bar surface that lists the shortcuts relevant to the current state — placement tool armed,
-/// a connector selected, node(s) selected, or idle — so the otherwise-undiscoverable mouse gestures
-/// (Ctrl+Click to add a connector point, Alt+Click to remove one, wheel zoom/pan) are taught in
-/// context. Keyboard shortcuts that live in the keymap are looked up live (so the label tracks any
-/// user rebind and disappears when unbound); mouse and arrow gestures, which are hard-coded in the
-/// view, use fixed labels.
+/// Status-bar surface that points the user at the keyboard-shortcut help overlay. It surfaces a single
+/// hint — "Shift+H Help" — whose gesture is looked up live from the keymap (so it tracks a user rebind and
+/// disappears if unbound). The full, context-sensitive shortcut list now lives in that help overlay
+/// (<see cref="Draw.App.ViewModels.ShortcutHelpViewModel"/>), keeping the status bar uncluttered.
 /// </summary>
 public sealed class ShortcutHintsViewModel : ViewModelBase
 {
@@ -62,56 +60,11 @@ public sealed class ShortcutHintsViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// The decision table mapping current state to the shortcuts worth surfacing. First match wins;
-    /// each row is capped to keep the single-line status bar from overflowing.
+    /// The single hint surfaced while a document is open: a pointer to the keyboard-shortcut help overlay.
+    /// (Everything else moved into that overlay.) Empty when no document is open.
     /// </summary>
     private static IReadOnlyList<HintSpec> SelectSpecs(DiagramDocumentViewModel? document, ToolboxViewModel toolbox)
-    {
-        if (document is null)
-        {
-            return [];
-        }
-
-        if (!toolbox.IsSelectTool)
-        {
-            // A placement tool is armed; ActiveToolHint already explains the click/drag to place it.
-            return [HintSpec.Keymap("tool.select", "Cancel")];
-        }
-
-        if (document.HasConnectorSelection && !document.HasNodeSelection)
-        {
-            return
-            [
-                HintSpec.Mouse("Ctrl+Click", "Add point"),
-                HintSpec.Mouse("Alt+Click", "Remove point"),
-                HintSpec.Keymap("edit.delete", "Delete"),
-            ];
-        }
-
-        if (document.HasNodeSelection)
-        {
-            return
-            [
-                HintSpec.Mouse("↑↓←→", "Nudge"),
-                HintSpec.Mouse("Shift+↑↓←→", "Fine nudge"),
-                HintSpec.Keymap("edit.delete", "Delete"),
-            ];
-        }
-
-        // Idle: a document is open, the select tool is active, nothing is selected. Surface the
-        // shape/connector menus (Shift+S/Shift+C) first, then the quick-add tool chords. (Wheel
-        // zoom/pan still works, just unshown.)
-        return
-        [
-            HintSpec.Keymap("menu.shapes", "Shapes"),
-            HintSpec.Keymap("menu.connectors", "Connectors"),
-            HintSpec.Keymap("tool.shape.rectangle", "Rectangle"),
-            HintSpec.Keymap("tool.connector.association", "Association"),
-            HintSpec.Keymap("tool.classNode.class", "Class"),
-            HintSpec.Keymap("tool.classNode.interface", "Interface"),
-            HintSpec.Keymap("tool.entity", "Table"),
-        ];
-    }
+        => document is null ? [] : [HintSpec.Keymap("menu.help", "Help")];
 
     /// <summary>The display string of the first keymap binding for <paramref name="actionId"/>, or null if unbound.</summary>
     private string? GestureFor(string actionId)
@@ -131,7 +84,5 @@ public sealed class ShortcutHintsViewModel : ViewModelBase
     private readonly record struct HintSpec(string? ActionId, string? Literal, string Label)
     {
         public static HintSpec Keymap(string actionId, string label) => new(actionId, null, label);
-
-        public static HintSpec Mouse(string literal, string label) => new(null, literal, label);
     }
 }
