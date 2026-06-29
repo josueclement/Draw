@@ -107,6 +107,7 @@ public sealed class KeymapActionRegistry
         AddDoc("view.fitToContent", d => (d.FitToContentCommand, null));
         Add("view.toggleTheme", false, () => (_shell.ToggleThemeCommand, null));
         Add("view.toggleInspector", false, () => (_shell.ToggleInspectorCommand, null));
+        AddDoc("view.toggleGrid", d => (d.ToggleGridCommand, null));
 
         // Export.
         Add("export.image", false, () => (_shell.ExportImageCommand, null));

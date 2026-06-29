@@ -197,6 +197,10 @@ public partial class DiagramView : UserControl
         {
             UpdateTransform();
         }
+        else if (e.PropertyName is nameof(DiagramDocumentViewModel.ShowGrid))
+        {
+            UpdateGrid();
+        }
     }
 
     private void OnVmSelectionChanged(object? sender, EventArgs e) => RebuildOverlay();
@@ -289,7 +293,7 @@ public partial class DiagramView : UserControl
     private void UpdateGrid()
     {
         double cell = _vm?.GridSize ?? 10d;
-        if (cell <= 0)
+        if (_vm is null || !_vm.ShowGrid || cell <= 0)
         {
             GridBackground.Fill = null;
             return;
@@ -952,6 +956,16 @@ public partial class DiagramView : UserControl
         };
         snap.Click += (_, _) => shell.SnapToGrid = !shell.SnapToGrid;
         appearance.Items.Add(snap);
+
+        MenuItem grid = new()
+        {
+            Header = "Show grid",
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = shell.ShowGrid,
+            Icon = MenuIcon(Phosphor(Icon.grid_nine)),
+        };
+        grid.Click += (_, _) => shell.ShowGrid = !shell.ShowGrid;
+        appearance.Items.Add(grid);
         return appearance;
     }
 

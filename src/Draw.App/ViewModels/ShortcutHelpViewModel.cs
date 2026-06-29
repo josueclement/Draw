@@ -94,7 +94,8 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
                 Key("view.zoomReset", "Reset zoom"),
                 Key("view.fitToContent", "Fit to content"),
                 Key("view.toggleTheme", "Toggle theme"),
-                Key("view.toggleInspector", "Toggle inspector")),
+                Key("view.toggleInspector", "Toggle inspector"),
+                Key("view.toggleGrid", "Toggle grid")),
             Group(
                 "Arrange",
                 Key("align.left", "Align left"),

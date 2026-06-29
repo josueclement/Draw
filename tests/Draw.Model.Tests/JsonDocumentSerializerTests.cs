@@ -415,6 +415,29 @@ public class JsonDocumentSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_PreservesShowGrid_WhenHidden()
+    {
+        JsonDocumentSerializer serializer = new();
+        DiagramDocument doc = new() { ShowGrid = false };
+
+        DiagramDocument back = serializer.Deserialize(serializer.Serialize(doc));
+
+        Assert.False(back.ShowGrid);
+    }
+
+    [Fact]
+    public void Deserialize_DocumentWithoutShowGrid_DefaultsToGridShown()
+    {
+        // Files written before the per-document grid toggle existed omit the key; the property
+        // initializer (true) must stand so they open with the grid visible.
+        JsonDocumentSerializer serializer = new();
+
+        DiagramDocument doc = serializer.Deserialize("{}");
+
+        Assert.True(doc.ShowGrid);
+    }
+
+    [Fact]
     public void Clone_IsDeepAndIndependent()
     {
         JsonDocumentSerializer serializer = new();

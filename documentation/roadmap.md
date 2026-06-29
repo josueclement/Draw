@@ -348,3 +348,14 @@ keys are owned by the window (`MainWindow.OnGlobalKeyDown` — Esc backs out/clo
 navigate, and `Shift+S`/`Shift+C` while open switch family via the normal action path). The old
 `ContextMenu` resource and its `WireToolMenus`/`ArmCommandFor`/`OnToolMenuRequested`/`OpenToolMenu` wiring
 are removed. See `documentation/plans/2026-06-28-tool-palette-overlay.md`.
+
+## Toggle grid visibility 🚧 (pending visual verification)
+
+Lets the user hide/show the canvas grid from a **ribbon toggle** (View ▸ Appearance), an **Appearance**
+context-menu checkbox, and a **`t g`** keyboard chord (listed in the Shift+H help overlay). Unlike the
+app-wide, session-only "Snap to grid" flag, grid visibility is **per-document and persisted**: the
+source of truth is a new `DiagramDocument.ShowGrid` (serialized as `showGrid`, additive with a `true`
+default so pre-feature files open with the grid shown — no schema bump). The ribbon/menu bind through a
+`ShellViewModel.ShowGrid` proxy onto the active document; the canvas repaints by reacting to the
+document VM's `ShowGrid` change (the Zoom/Pan mechanism). Build clean + 379 tests green; GUI behaviour
+pending visual verification. See `documentation/plans/2026-06-29-toggle-grid-visibility.md`.

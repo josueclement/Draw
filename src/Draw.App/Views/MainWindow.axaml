@@ -382,6 +382,12 @@
                     <ribbon:RibbonToggleButton Header="Snap to grid"
                                                IconData="{pia:IconGeometry Icon=grid_four}"
                                                IsChecked="{Binding SnapToGrid, Mode=TwoWay}" />
+                    <!-- Grid visibility is per-document (stored on the active document), so it disables
+                         when no document is open; the proxy on the shell keeps IsChecked in sync. -->
+                    <ribbon:RibbonToggleButton Header="Show grid"
+                                               IconData="{pia:IconGeometry Icon=grid_nine}"
+                                               IsChecked="{Binding ShowGrid, Mode=TwoWay}"
+                                               IsEnabled="{Binding HasActiveDocument}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>
 

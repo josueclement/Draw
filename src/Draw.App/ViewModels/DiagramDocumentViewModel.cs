@@ -100,6 +100,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         ZoomInCommand = new RelayCommand(_viewportCoordinator.ZoomIn);
         ZoomOutCommand = new RelayCommand(_viewportCoordinator.ZoomOut);
         ZoomResetCommand = new RelayCommand(_viewportCoordinator.ZoomReset);
+        ToggleGridCommand = new RelayCommand(() => ShowGrid = !ShowGrid);
         SelectAllCommand = new RelayCommand(SelectAll);
     }
 
@@ -114,6 +115,22 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public double GridSize => _options.GridSize;
 
     public bool SnapEnabled => _options.SnapToGrid;
+
+    /// <summary>Whether the canvas grid is drawn. Per-document and persisted in the model, so toggling it
+    /// marks the document modified; it is a display preference, so it is not captured for undo.</summary>
+    public bool ShowGrid
+    {
+        get => _document.ShowGrid;
+        set
+        {
+            if (_document.ShowGrid != value)
+            {
+                _document.ShowGrid = value;
+                OnPropertyChanged();
+                MarkModified();
+            }
+        }
+    }
 
     /// <summary>Minimum zoom factor, from <see cref="EditorOptions"/> — the single source shared with
     /// the Ctrl+wheel clamp in <c>DiagramView</c>.</summary>
@@ -166,6 +183,9 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public RelayCommand ZoomOutCommand { get; }
 
     public RelayCommand ZoomResetCommand { get; }
+
+    /// <summary>Toggles the canvas grid's visibility for this document (the <c>t g</c> chord).</summary>
+    public RelayCommand ToggleGridCommand { get; }
 
     /// <summary>Selects every node and connector in the active document (Ctrl+A).</summary>
     public RelayCommand SelectAllCommand { get; }

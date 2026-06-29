@@ -219,6 +219,21 @@ public sealed class ShellViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Bindable proxy for the ribbon/context-menu grid toggle. Grid visibility is per-document
+    /// (stored on the active document and persisted), so this forwards to <see cref="ActiveDocument"/>;
+    /// it is kept in sync as the active document changes and as that document's own value flips.</summary>
+    public bool ShowGrid
+    {
+        get => ActiveDocument?.ShowGrid ?? true;
+        set
+        {
+            if (ActiveDocument is { } document)
+            {
+                document.ShowGrid = value;
+            }
+        }
+    }
+
     public DiagramDocumentViewModel? ActiveDocument
     {
         get;
@@ -248,6 +263,7 @@ public sealed class ShellViewModel : ViewModelBase
                 ShortcutHints.Refresh(field, Toolbox);
                 OnPropertyChanged(nameof(HasActiveDocument));
                 OnPropertyChanged(nameof(Title));
+                OnPropertyChanged(nameof(ShowGrid));
                 NotifyDocumentCommands();
             }
         }
@@ -494,6 +510,10 @@ public sealed class ShellViewModel : ViewModelBase
         if (e.PropertyName == nameof(DiagramDocumentViewModel.DisplayName))
         {
             OnPropertyChanged(nameof(Title));
+        }
+        else if (e.PropertyName == nameof(DiagramDocumentViewModel.ShowGrid))
+        {
+            OnPropertyChanged(nameof(ShowGrid));
         }
     }
 

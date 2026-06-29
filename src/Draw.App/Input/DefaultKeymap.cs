@@ -61,6 +61,7 @@ public static class DefaultKeymap
         { "keys": "g f", "action": "view.fitToContent" },
         { "keys": "t t", "action": "view.toggleTheme" },
         { "keys": "t p", "action": "view.toggleInspector" },
+        { "keys": "t g", "action": "view.toggleGrid" },
         { "keys": "x i", "action": "export.image" },
         { "keys": "x s", "action": "export.svg" },
         { "keys": "x c", "action": "export.copyImage" }
@@ -105,7 +106,7 @@ public static class DefaultKeymap
     //   align.{left|centerHorizontal|right|top|centerVertical|bottom}
     //   distribute.{horizontal|vertical}
     //   zorder.{bringToFront|bringForward|sendBackward|sendToBack}
-    //   view.{zoomIn|zoomOut|zoomReset|fitToContent|toggleTheme|toggleInspector}
+    //   view.{zoomIn|zoomOut|zoomReset|fitToContent|toggleTheme|toggleInspector|toggleGrid}
     //   export.{image|svg|copyImage}
     //
     // Examples:

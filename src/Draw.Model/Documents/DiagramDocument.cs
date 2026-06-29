@@ -14,6 +14,10 @@ public sealed class DiagramDocument
 
     public string? Title { get; set; }
 
+    /// <summary>Whether the canvas grid is drawn for this diagram. Per-document and persisted; a file
+    /// written before this field existed omits the key and so opens with the grid shown (the default).</summary>
+    public bool ShowGrid { get; set; } = true;
+
     public List<NodeBase> Nodes { get; set; } = new();
 
     public List<Connector> Connectors { get; set; } = new();
