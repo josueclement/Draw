@@ -378,6 +378,22 @@ exceptions on any thread are written to a timestamped log under `%APPDATA%/Draw/
 `RecentFilesService` APPDATA/Draw convention), and UI-thread crashes additionally show a dialog
 before exiting. See `documentation/plans/2026-06-29-release-1.0.0.md`.
 
+## Open files from launch arguments 🚧 (pending visual verification)
+
+Lets a `.draw` file opened from outside the app land in a tab. The entry point previously **dropped**
+its command-line `args` (Avalonia stashed them on `desktop.Args`, but nothing read them); now
+`App.OnFrameworkInitializationCompleted` opens every existing path it was launched with —
+Windows/Linux receive it as an argument, macOS through the `IActivatableLifetime` file-activation event
+(it never arrives via argv). Each path flows through a new public `ShellViewModel.OpenFilesAsync`, a thin
+wrapper over the existing `OpenPathAsync`, so load/dedupe/recents/error-dialog behaviour is shared with
+File ▸ Open. Multiple paths open as multiple tabs; an already-open file just re-activates; a corrupt file
+surfaces the usual error dialog. The app also **no longer auto-opens a blank tab on startup** — the
+`ShellViewModel` constructor's `OnNew()` call is removed, so a bare launch shows an empty window and a
+launch-with-file shows only that file (the zero-document state was already reachable by closing all
+tabs). Scope is **in-app only**: the OS-level `.draw` association (Windows registry / Linux `.desktop` /
+macOS `Info.plist` document type) is left to the user, and double-clicking a file while the app is open
+starts a new instance. See `documentation/plans/2026-06-29-open-file-from-args.md`.
+
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
 The remaining gap for a public release: a GitHub Actions workflow that publishes self-contained

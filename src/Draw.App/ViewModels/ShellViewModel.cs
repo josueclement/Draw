@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -102,8 +103,6 @@ public sealed class ShellViewModel : ViewModelBase
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
         RefreshRecentFiles();
-
-        OnNew();
     }
 
     public ObservableCollection<DiagramDocumentViewModel> Documents { get; } = new();
@@ -310,6 +309,17 @@ public sealed class ShellViewModel : ViewModelBase
         {
             await _dialogs.ShowErrorAsync("Could not open file", ex.Message);
             _recent.Remove(path);
+        }
+    }
+
+    /// <summary>Opens each path as a tab — used for files passed at launch / by the OS. Reuses the
+    /// Open command's load/dedupe/recents/error-dialog path: a corrupt file surfaces an error dialog,
+    /// an already-open file just re-activates, and the last one opened becomes active.</summary>
+    public async Task OpenFilesAsync(IReadOnlyList<string> paths)
+    {
+        foreach (string path in paths)
+        {
+            await OpenPathAsync(path);
         }
     }
 
