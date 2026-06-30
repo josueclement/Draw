@@ -480,6 +480,42 @@
                 </TabControl.ContentTemplate>
             </TabControl>
 
+            <!-- Empty state: shown only when no document is open. Centered call-to-action in the
+                 canvas region (the Properties panel keeps column 2). Shares column 0 with the
+                 TabControl; declared later so it draws on top, and it collapses (IsVisible=false)
+                 when a tab is active so it never intercepts input. -->
+            <Panel Grid.Column="0"
+                   IsVisible="{Binding !HasActiveDocument}"
+                   Background="{DynamicResource CarbonBackgroundBrush}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Spacing="16" MaxWidth="440">
+                    <TextBlock Text="No document open"
+                               FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock Text="Create a new document or open an existing file to get started."
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Opacity="0.7" HorizontalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <Button Command="{Binding NewCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{pia:IconGeometry Icon=file_plus}" Width="14" Height="14" />
+                                <TextBlock Text="New document" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding OpenCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{pia:IconGeometry Icon=folder_open}" Width="14" Height="14" />
+                                <TextBlock Text="Open…" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <TextBlock TextAlignment="Center" Opacity="0.6" HorizontalAlignment="Center">
+                        <Run Text="Press" />
+                        <Run Text="Shift+H" FontWeight="SemiBold" />
+                        <Run Text="to view keyboard shortcuts" />
+                    </TextBlock>
+                </StackPanel>
+            </Panel>
+
             <!-- Drag handle between canvas and inspector. Sits in the Auto column and doubles
                  as the divider, so the inspector border drops its left edge below. Hidden when the
                  inspector is collapsed — resizing a strip is meaningless. -->
