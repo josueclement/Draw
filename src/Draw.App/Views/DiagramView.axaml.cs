@@ -1157,6 +1157,62 @@ public partial class DiagramView : UserControl
         {
             NudgeSelection(e.Key, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
             e.Handled = true;
+            return;
+        }
+
+        bool noMods = e.KeyModifiers == KeyModifiers.None;
+        bool ctrlOnly = e.KeyModifiers == KeyModifiers.Control;
+
+        // Vim h/j/k/l move the selection to the nearest shape in that direction; Ctrl grows the selection
+        // (a moving cursor that adds each node it lands on). These keys are unbound in the keymap, so they
+        // bubble past the suppressed-while-typing chord dispatcher to here, like the arrow nudge above.
+        if (_vm is not null && (noMods || ctrlOnly) && TryVimDirection(e.Key, out MoveDirection direction))
+        {
+            _vm.SelectNearestInDirection(direction, extend: ctrlOnly);
+            RepositionOverlay();
+            e.Handled = true;
+            return;
+        }
+
+        // Vim u / U (Shift+U) undo / redo, mirroring Ctrl+Z / Ctrl+Y.
+        if (_vm is not null && e.Key == Key.U && (noMods || e.KeyModifiers == KeyModifiers.Shift))
+        {
+            if (e.KeyModifiers == KeyModifiers.Shift)
+            {
+                if (_vm.CanRedo)
+                {
+                    _vm.Redo();
+                }
+            }
+            else if (_vm.CanUndo)
+            {
+                _vm.Undo();
+            }
+
+            RepositionOverlay();
+            e.Handled = true;
+        }
+    }
+
+    private static bool TryVimDirection(Key key, out MoveDirection direction)
+    {
+        switch (key)
+        {
+            case Key.H:
+                direction = MoveDirection.Left;
+                return true;
+            case Key.J:
+                direction = MoveDirection.Down;
+                return true;
+            case Key.K:
+                direction = MoveDirection.Up;
+                return true;
+            case Key.L:
+                direction = MoveDirection.Right;
+                return true;
+            default:
+                direction = MoveDirection.Left;
+                return false;
         }
     }
 

@@ -136,6 +136,9 @@ public sealed class ShellViewModel : ViewModelBase
     /// <summary>Status-bar list of shortcuts relevant to the current selection / armed tool.</summary>
     public ShortcutHintsViewModel ShortcutHints { get; }
 
+    /// <summary>State for the vim <c>:</c> command line (open/close + typed text); driven by the window.</summary>
+    public CommandLineViewModel CommandLine { get; } = new();
+
     public RelayCommand NewCommand { get; }
     public RelayCommand NewMindMapCommand { get; }
     public AsyncRelayCommand OpenCommand { get; }
@@ -366,6 +369,11 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
+        RemoveDocument(document);
+    }
+
+    private void RemoveDocument(DiagramDocumentViewModel document)
+    {
         int index = Documents.IndexOf(document);
         Documents.Remove(document);
         if (ReferenceEquals(ActiveDocument, document))
@@ -374,6 +382,34 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         document.Dispose();
+    }
+
+    /// <summary>
+    /// Saves the active document (prompting for a path if untitled). Returns false when there is no active
+    /// document or the save was cancelled / failed. Backs the <c>:w</c> / <c>:wq</c> command line.
+    /// </summary>
+    public Task<bool> SaveActiveDocumentAsync()
+        => ActiveDocument is null ? Task.FromResult(false) : SaveAsync(ActiveDocument, ActiveDocument.FilePath);
+
+    /// <summary>
+    /// Closes the active tab. With <paramref name="force"/> false this is the normal close (prompting to
+    /// save if modified, <c>:q</c>); with true the document is discarded without prompting (<c>:q!</c>).
+    /// </summary>
+    public async Task CloseActiveDocumentAsync(bool force)
+    {
+        if (ActiveDocument is not { } document)
+        {
+            return;
+        }
+
+        if (force)
+        {
+            RemoveDocument(document);
+        }
+        else
+        {
+            await OnCloseDocumentAsync(document);
+        }
     }
 
     /// <summary>

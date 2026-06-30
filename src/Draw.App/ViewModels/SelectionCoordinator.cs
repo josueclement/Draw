@@ -112,6 +112,14 @@ public sealed class SelectionCoordinator
 
     public void ToggleSelectUnified(NodeViewModelBase node) => node.IsSelected = !node.IsSelected;
 
+    /// <summary>Adds one node to the selection (vim Ctrl+h/j/k/l grow), clearing only the connector
+    /// selection. Unlike <see cref="ToggleSelect"/> it never deselects — navigation only ever grows.</summary>
+    public void Select(NodeViewModelBase vm)
+    {
+        ClearConnectorSelection();
+        vm.IsSelected = true;
+    }
+
     private void ClearConnectorSelection()
     {
         foreach (ConnectorViewModel c in _context.Connectors)

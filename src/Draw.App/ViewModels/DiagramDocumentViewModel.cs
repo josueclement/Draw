@@ -848,6 +848,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public void SelectOnly(NodeViewModelBase vm)
     {
         _selectionCoordinator.SelectOnly(vm);
+        ActiveNode = vm;
         RaiseSelectionChanged();
     }
 
@@ -867,6 +868,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public void ClearSelection()
     {
         _selectionCoordinator.ClearSelection();
+        ActiveNode = null;
         RaiseSelectionChanged();
     }
 
@@ -904,6 +906,100 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     {
         _selectionCoordinator.ToggleSelectUnified(node);
         RaiseSelectionChanged();
+    }
+
+    // --- Vim h/j/k/l keyboard navigation ---------------------------------------------------------
+
+    /// <summary>
+    /// The keyboard-navigation cursor for vim h/j/k/l: the node a directional move grows from. Seeded by a
+    /// plain click / single selection and advanced by each move. Transient (not part of the document, not
+    /// undone); a stale reference (after a rebuild or delete) is ignored because it is no longer in
+    /// <see cref="Nodes"/>.
+    /// </summary>
+    public NodeViewModelBase? ActiveNode { get; private set; }
+
+    /// <summary>
+    /// Moves the selection to the nearest node in <paramref name="direction"/> (vim h/j/k/l). With
+    /// <paramref name="extend"/> (Ctrl) the target is added to the selection and the cursor advances onto it
+    /// (a growing chain); otherwise it becomes the sole selection. With nothing selected, the first move just
+    /// selects the node nearest the viewport centre as a starting anchor.
+    /// </summary>
+    public void SelectNearestInDirection(MoveDirection direction, bool extend)
+    {
+        if (Nodes.Count == 0)
+        {
+            return;
+        }
+
+        NodeViewModelBase? anchor = ActiveNode is { } current && Nodes.Contains(current) ? current : null;
+        if (anchor is null && !SelectedNodes.Any())
+        {
+            SelectOnly(NearestNodeTo(WorldViewportCenter())); // Seed the cursor; ignore direction this once.
+            return;
+        }
+
+        Point2D reference = anchor?.Bounds.Center ?? SelectionBoundsCenter();
+        List<Rect2D> bounds = new(Nodes.Count);
+        foreach (NodeViewModelBase node in Nodes)
+        {
+            bounds.Add(node.Bounds);
+        }
+
+        int? index = DirectionalNavigator.FindNearest(reference, bounds, direction);
+        if (index is null)
+        {
+            return; // Nothing in that direction.
+        }
+
+        NodeViewModelBase target = Nodes[index.Value];
+        if (extend)
+        {
+            _selectionCoordinator.Select(target);
+            RaiseSelectionChanged();
+        }
+        else
+        {
+            _selectionCoordinator.SelectOnly(target);
+            RaiseSelectionChanged();
+        }
+
+        ActiveNode = target;
+    }
+
+    private NodeViewModelBase NearestNodeTo(Point2D point)
+    {
+        NodeViewModelBase best = Nodes[0];
+        double bestDistance = double.MaxValue;
+        foreach (NodeViewModelBase node in Nodes)
+        {
+            double distance = node.Bounds.Center.DistanceTo(point);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = node;
+            }
+        }
+
+        return best;
+    }
+
+    private Point2D SelectionBoundsCenter()
+    {
+        Rect2D box = Rect2D.Empty;
+        bool any = false;
+        foreach (NodeViewModelBase node in SelectedNodes)
+        {
+            box = any ? box.Union(node.Bounds) : node.Bounds;
+            any = true;
+        }
+
+        return any ? box.Center : WorldViewportCenter();
+    }
+
+    private Point2D WorldViewportCenter()
+    {
+        double zoom = Zoom <= 0 ? 1d : Zoom;
+        return new Point2D(((ViewportWidth / 2) - PanX) / zoom, ((ViewportHeight / 2) - PanY) / zoom);
     }
 
     public ConnectorViewModel? HitTestConnector(Point2D world, double tolerance)
