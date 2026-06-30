@@ -5,6 +5,19 @@ All notable changes to Draw are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-30
+
+### Changed
+- **Duplicating a shape now duplicates its connectors** — **Duplicate** (`Ctrl+D`) now also clones any
+  connector with *either* end touching the selection (previously only connectors with **both** ends in
+  the selection were carried). Endpoints are resolved per-connector: ends on duplicated nodes map to the
+  clones, ends on shapes left in place stay attached to the originals, and a connector with no resolvable
+  end is dropped. Copy / paste is unchanged (still both-ends-only).
+- **Space connections now avoids crossings** — the **Space connections** action orders the spaced
+  connectors on each side by the position of the shape at their far end (rather than their current
+  position order), so fanned-out connectors follow the shapes they point to and stop crossing. Ties keep
+  their current order; connectors keep the side they land on, and **Merge connections** is unchanged.
+
 ## [1.1.0] - 2026-06-30
 
 ### Added

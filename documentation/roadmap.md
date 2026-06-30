@@ -204,6 +204,12 @@ access goes through `IClipboardService` (Avalonia 12 typed `DataFormat`); keyboa
 in `DiagramView` so they don't hijack text editing. See
 `documentation/plans/2026-06-04-copy-paste-and-images.md`.
 
+**Duplicate** now goes further than copy/paste: it carries any connector with **either** end touching
+the selection (not just both-ends), so duplicating a shape also reproduces its links. `CloneArranger`
+resolves each end — ends on duplicated nodes map to their clones, ends on shapes left in place stay on
+the originals, and a connector with no resolvable end is dropped; copy/paste keeps the stricter
+both-ends rule. (Shipped without a separate plan doc.)
+
 ## Shape stacking order (Z-order) ✅ (cross-cutting)
 
 Control the front-to-back order of overlapping shapes: **Bring to Front / Bring Forward / Send
@@ -433,6 +439,16 @@ branch flush-cap fix. Documentation brought in line with reality (README status 
 this roadmap's pending-visual-verification markers resolved). Distribution & CI remains the
 outstanding public-release blocker (below). See `documentation/plans/2026-06-30-release-1.1.0.md` and
 `CHANGELOG.md`.
+
+## Release 1.2.0 ✅ (cross-cutting)
+
+Third release. Bumps the solution version to **1.2.0** (`Directory.Build.props` + `app.manifest`),
+surfaced in-app via the **Shift+H** overlay (read from the assembly, no duplicated literal). Ships the
+two connector refinements merged since `1.1.0`: duplicating a shape now also duplicates the connectors
+touching it (either-end, via `CloneArranger`; copy/paste still both-ends), and **Space connections** now
+orders each side by the far shape's position so fanned-out connectors stop crossing. Documentation +
+metadata only — no publish/CI machinery; Distribution & CI (below) remains the public-release blocker.
+See `documentation/plans/2026-06-30-release-1.2.0.md` and `CHANGELOG.md`.
 
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
