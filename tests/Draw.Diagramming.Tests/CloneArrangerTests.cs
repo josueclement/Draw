@@ -105,11 +105,12 @@ public class CloneArrangerTests
     }
 
     [Fact]
-    public void Clone_DropsConnectorWhoseEndpointIsNotCloned()
+    public void Clone_DropsConnectorWhoseEndpointIsUnknown()
     {
         ShapeNode a = Shape("A", 0);
         ShapeNode b = Shape("B", 1);
         Connector kept = new() { SourceNodeId = a.Id, TargetNodeId = b.Id };
+        // Target is neither a cloned node nor an existing document node -> a true orphan.
         Connector dangling = new() { SourceNodeId = a.Id, TargetNodeId = Guid.NewGuid() };
 
         CloneArranger.ClonedGraph g = CloneArranger.Clone(
@@ -117,6 +118,63 @@ public class CloneArrangerTests
             Array.Empty<NodeBase>(), new Point2D(0, 0), null);
 
         Assert.Single(g.Connectors); // the dangling connector is dropped
+    }
+
+    [Fact]
+    public void Clone_KeepsBoundaryConnector_ToExistingNonClonedNode()
+    {
+        // Only A is duplicated; B stays put but still exists in the document. The connector to B
+        // must survive, its duplicated end repointed at the clone and its loose end left on B.
+        ShapeNode a = Shape("A", 0);
+        ShapeNode b = Shape("B", 1, 100);
+        Connector boundary = new() { SourceNodeId = a.Id, TargetNodeId = b.Id };
+
+        CloneArranger.ClonedGraph g = CloneArranger.Clone(
+            new NodeBase[] { a }, new[] { boundary },
+            new NodeBase[] { a, b }, new Point2D(5, 5), null);
+
+        ShapeNode ca = Assert.Single(g.Nodes.OfType<ShapeNode>());
+        Assert.NotEqual(a.Id, ca.Id);
+
+        Connector cc = Assert.Single(g.Connectors);
+        Assert.NotEqual(boundary.Id, cc.Id);
+        Assert.Equal(ca.Id, cc.SourceNodeId); // duplicated end -> the clone
+        Assert.Equal(b.Id, cc.TargetNodeId);  // loose end -> original neighbour, unchanged
+    }
+
+    [Fact]
+    public void Clone_KeepsBoundaryConnector_WhenExistingNodeIsTheSource()
+    {
+        // Same as above but the existing (non-cloned) node is the connector's source end.
+        ShapeNode a = Shape("A", 0);
+        ShapeNode b = Shape("B", 1, 100);
+        Connector boundary = new() { SourceNodeId = b.Id, TargetNodeId = a.Id };
+
+        CloneArranger.ClonedGraph g = CloneArranger.Clone(
+            new NodeBase[] { a }, new[] { boundary },
+            new NodeBase[] { a, b }, new Point2D(5, 5), null);
+
+        ShapeNode ca = Assert.Single(g.Nodes.OfType<ShapeNode>());
+        Connector cc = Assert.Single(g.Connectors);
+        Assert.Equal(b.Id, cc.SourceNodeId);  // loose end -> original neighbour, unchanged
+        Assert.Equal(ca.Id, cc.TargetNodeId); // duplicated end -> the clone
+    }
+
+    [Fact]
+    public void Clone_DropsConnector_TouchingNoClone()
+    {
+        // A is duplicated; the connector links two other existing nodes that are not part of the
+        // duplication, so it is not ours to clone.
+        ShapeNode a = Shape("A", 0);
+        ShapeNode b = Shape("B", 1, 100);
+        ShapeNode c = Shape("C", 2, 200);
+        Connector unrelated = new() { SourceNodeId = b.Id, TargetNodeId = c.Id };
+
+        CloneArranger.ClonedGraph g = CloneArranger.Clone(
+            new NodeBase[] { a }, new[] { unrelated },
+            new NodeBase[] { a, b, c }, new Point2D(5, 5), null);
+
+        Assert.Empty(g.Connectors);
     }
 
     [Fact]

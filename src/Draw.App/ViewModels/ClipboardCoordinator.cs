@@ -115,7 +115,9 @@ public sealed class ClipboardCoordinator
         }
     }
 
-    /// <summary>Clones the selection in place with a small offset (no clipboard). One undo step.</summary>
+    /// <summary>Clones the selection in place with a small offset (no clipboard). One undo step. Any
+    /// connector touching the selection is duplicated too: one between two selected shapes reconnects to
+    /// both clones, while a "boundary" connector to a non-selected shape keeps that original neighbour.</summary>
     public void DuplicateSelection()
     {
         List<NodeViewModelBase> selected = _context.SelectedNodes.ToList();
@@ -127,7 +129,7 @@ public sealed class ClipboardCoordinator
         HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
         List<NodeBase> nodes = selected.Select(n => n.Model).ToList();
         List<Connector> connectors = _context.Document.Connectors
-            .Where(c => ids.Contains(c.SourceNodeId) && ids.Contains(c.TargetNodeId))
+            .Where(c => ids.Contains(c.SourceNodeId) || ids.Contains(c.TargetNodeId))
             .ToList();
 
         double offset = _context.GridSize > 0 ? _context.GridSize : 16d;
@@ -172,8 +174,9 @@ public sealed class ClipboardCoordinator
         => AddImageNode(_context.ViewportCenterWorld(), data, format);
 
     // Clones the given source nodes + connectors into the document with fresh ids, translated by
-    // <paramref name="delta"/>, and makes the result the selection. One undo step. Connectors keep
-    // their endpoints (remapped to the new node ids); any connector whose endpoint is missing is skipped.
+    // <paramref name="delta"/>, and makes the result the selection. One undo step. Connector endpoints are
+    // repointed at their clone, or kept on the original node when it isn't part of the batch (see
+    // CloneArranger); a connector resolving to neither is skipped.
     private void PlaceClones(IReadOnlyList<NodeBase> sourceNodes, IReadOnlyList<Connector> sourceConnectors, Point2D delta)
     {
         if (sourceNodes.Count == 0)

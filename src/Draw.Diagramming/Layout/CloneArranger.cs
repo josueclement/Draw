@@ -25,8 +25,11 @@ public static class CloneArranger
     /// <paramref name="snapGridSize"/> when that is non-null). Clones are restacked relative to
     /// <paramref name="existingNodes"/>: ordinary clones rise above everything (matching new-shape
     /// placement) and <see cref="SystemBoundaryNode"/> clones sink into their reserved band below, each
-    /// batch keeping its internal front/back order. Connectors keep their endpoints remapped to the cloned
-    /// node ids; a connector whose endpoint is not among the cloned nodes is dropped.
+    /// batch keeping its internal front/back order. Each connector endpoint is repointed at its clone when
+    /// that node was cloned, or kept on the original node when that node still exists in
+    /// <paramref name="existingNodes"/> (a "boundary" connector to a non-duplicated shape). A connector is
+    /// duplicated only when it touches at least one cloned node and both endpoints resolve that way; one
+    /// resolving to neither a clone nor an existing node (a true orphan) is dropped.
     /// </summary>
     public static ClonedGraph Clone(
         IReadOnlyList<NodeBase> sourceNodes,
@@ -67,11 +70,20 @@ public static class CloneArranger
             clonedNodes.Add(clone);
         }
 
+        HashSet<Guid> existingIds = existingNodes.Select(n => n.Id).ToHashSet();
         List<Connector> clonedConnectors = new(sourceConnectors.Count);
         foreach (Connector source in sourceConnectors)
         {
-            if (!idMap.TryGetValue(source.SourceNodeId, out Guid newSource)
-                || !idMap.TryGetValue(source.TargetNodeId, out Guid newTarget))
+            // Only duplicate connectors that touch the clone batch; one resting entirely on
+            // non-duplicated nodes is not ours to copy (the caller already filters to these, but the
+            // guard keeps this method self-consistent for any caller).
+            if (!idMap.ContainsKey(source.SourceNodeId) && !idMap.ContainsKey(source.TargetNodeId))
+            {
+                continue;
+            }
+
+            if (!TryResolveEndpoint(source.SourceNodeId, idMap, existingIds, out Guid newSource)
+                || !TryResolveEndpoint(source.TargetNodeId, idMap, existingIds, out Guid newTarget))
             {
                 continue;
             }
@@ -84,5 +96,24 @@ public static class CloneArranger
         }
 
         return new ClonedGraph(clonedNodes, clonedConnectors);
+    }
+
+    // Resolves a connector endpoint: a cloned node repoints to its clone; a node that still exists in the
+    // document keeps its id (boundary connector to a non-duplicated shape); anything else is an orphan.
+    private static bool TryResolveEndpoint(Guid nodeId, Dictionary<Guid, Guid> idMap, HashSet<Guid> existingIds, out Guid resolved)
+    {
+        if (idMap.TryGetValue(nodeId, out resolved))
+        {
+            return true;
+        }
+
+        if (existingIds.Contains(nodeId))
+        {
+            resolved = nodeId;
+            return true;
+        }
+
+        resolved = Guid.Empty;
+        return false;
     }
 }
