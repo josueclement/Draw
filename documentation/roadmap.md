@@ -394,6 +394,22 @@ tabs). Scope is **in-app only**: the OS-level `.draw` association (Windows regis
 macOS `Info.plist` document type) is left to the user, and double-clicking a file while the app is open
 starts a new instance. See `documentation/plans/2026-06-29-open-file-from-args.md`.
 
+## Vim-style shortcuts (`:` command line + h/j/k/l) 🚧 (pending visual verification)
+
+Makes the keyboard-forward editor feel more like neovim, on top of the existing chord input layer. A
+bottom **`:` command line** (a normally-collapsed `TextBox` in `MainWindow`, opened on the typed `:`
+character via a window `TextInput` handler so it is keyboard-layout-independent) runs **`:w`** (save),
+**`:q`** (close the active tab, prompting if modified), **`:q!`** (discard + close), **`:wq`** (save then
+close), **`:qa`** / **`:qa!`** (quit the app, prompting per tab / discarding all) — all reusing existing
+`ShellViewModel` save/close commands and the window-close path; parsing is the pure
+`Draw.App/Input/VimExCommand`. **`h`/`j`/`k`/`l`** move the selection to the nearest shape in that direction
+(an active-node cursor seeded by click/selection, falling back to the viewport centre), **Ctrl** grows the
+selection as a chain, and **`u`/`U`** undo/redo — handled in `DiagramView.OnKeyDown` beside the arrow nudge
+(unbound keys bubble past the suppressed-while-typing chord dispatcher). The "nearest shape in a direction"
+rule is pure, headless-tested geometry (`Draw.Diagramming/Geometry/DirectionalNavigator`, distance-along-axis
++ weighted cross-axis penalty). Build clean + 396 tests green; GUI behaviour pending visual verification. See
+`documentation/plans/2026-06-30-vim-mode-shortcuts.md`.
+
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
 The remaining gap for a public release: a GitHub Actions workflow that publishes self-contained

@@ -174,7 +174,8 @@ public sealed class ChordInputDispatcher
         }
     }
 
-    private void Flash(string message)
+    /// <summary>Shows a short-lived status-bar message that auto-clears after the transient timeout.</summary>
+    public void Flash(string message)
     {
         _status.TransientMessage = message;
         _messageTimer.Stop();

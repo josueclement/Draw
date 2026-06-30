@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Carbon.Avalonia.Desktop.Controls.Ribbon;
 using IContentDialogService = Carbon.Avalonia.Desktop.Services.IContentDialogService;
@@ -77,7 +78,11 @@ public partial class MainWindow : Window
         // Tunnel so plain letters reach the dispatcher before a focused control consumes them; a chord
         // mid-flight is reset when the window loses focus. Text-entry surfaces are skipped (see handler).
         AddHandler(InputElement.KeyDownEvent, OnGlobalKeyDown, RoutingStrategies.Tunnel);
+        // The vim ':' is matched on the typed character (layout-independent) rather than a physical key,
+        // since ':' sits on different keys across keyboard layouts.
+        AddHandler(InputElement.TextInputEvent, OnGlobalTextInput, RoutingStrategies.Tunnel);
         Deactivated += OnWindowDeactivated;
+        CommandLineBox.KeyDown += OnCommandLineKeyDown;
 
         // Open on the Insert (tools) tab. This must be set here, not as a literal SelectedIndex in XAML:
         // the XAML attribute is applied while Ribbon.Tabs is still empty, so Ribbon never syncs SelectedTab
@@ -202,6 +207,114 @@ public partial class MainWindow : Window
             && (visual.FindAncestorOfType<TextBox>() is not null
                 || visual.FindAncestorOfType<AutoCompleteBox>() is not null
                 || visual.FindAncestorOfType<ComboBox>() is not null);
+    }
+
+    // --- Vim ':' command line ----------------------------------------------------------------------
+
+    // Opens the command line when ':' is typed outside any text field / overlay. Matching the character
+    // (not a physical key) keeps it working regardless of where ':' sits on the user's keyboard layout.
+    private void OnGlobalTextInput(object? sender, TextInputEventArgs e)
+    {
+        if (_shell is null || IsTextEntryFocused() || _shell.CommandLine.IsActive)
+        {
+            return;
+        }
+
+        if (e.Text == ":" && _shell.ActiveOverlay is not { IsOpen: true })
+        {
+            BeginCommandLine();
+            e.Handled = true;
+        }
+    }
+
+    private void BeginCommandLine()
+    {
+        if (_shell is null)
+        {
+            return;
+        }
+
+        _shell.CommandLine.Begin();
+        // The box was just made visible; defer focus until after the layout pass so it can take focus.
+        Dispatcher.UIThread.Post(() =>
+        {
+            CommandLineBox.Focus();
+            CommandLineBox.CaretIndex = CommandLineBox.Text?.Length ?? 0;
+        });
+    }
+
+    private void OnCommandLineKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_shell is null || !_shell.CommandLine.IsActive)
+        {
+            return;
+        }
+
+        if (e.Key == Key.Enter)
+        {
+            string text = _shell.CommandLine.Text;
+            EndCommandLine();
+            e.Handled = true;
+            _ = ExecuteCommandLineAsync(text);
+        }
+        else if (e.Key == Key.Escape)
+        {
+            EndCommandLine();
+            e.Handled = true;
+        }
+    }
+
+    private void EndCommandLine()
+    {
+        _shell?.CommandLine.End();
+        this.FindDescendantOfType<DiagramView>()?.Focus();
+    }
+
+    private async Task ExecuteCommandLineAsync(string text)
+    {
+        if (_shell is null)
+        {
+            return;
+        }
+
+        if (VimExCommand.Parse(text) is not { } command)
+        {
+            _dispatcher?.Flash($"Not an editor command: {text.Trim()}");
+            return;
+        }
+
+        switch (command.Kind)
+        {
+            case VimExKind.Write:
+                await _shell.SaveActiveDocumentAsync();
+                break;
+            case VimExKind.Quit:
+                await _shell.CloseActiveDocumentAsync(command.Bang);
+                break;
+            case VimExKind.WriteQuit:
+                if (await _shell.SaveActiveDocumentAsync())
+                {
+                    await _shell.CloseActiveDocumentAsync(force: false);
+                }
+
+                break;
+            case VimExKind.QuitAll:
+                await QuitAllAsync(command.Bang);
+                break;
+        }
+    }
+
+    // :qa quits the whole app (prompting per modified tab, reusing the window-close path); :qa! discards all.
+    private async Task QuitAllAsync(bool force)
+    {
+        if (force)
+        {
+            _forceClose = true;
+            Close();
+            return;
+        }
+
+        await ConfirmAndCloseAsync();
     }
 
     // Carbon's RibbonMenuItem is a plain AvaloniaObject (no DataContext), so its Command cannot be data-bound
