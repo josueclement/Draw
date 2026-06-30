@@ -165,6 +165,13 @@ The action now **force-pins every end** touching the selection, not just crowded
 side is centred on that edge so the whole arrangement is locked. See
 `documentation/plans/2026-06-04-force-pin-on-arrange.md`.
 
+Spacing is now **anti-crossing**: instead of keeping each connector's current position order along an
+edge, it orders a side by the **position of the shape at the connector's far end** (the connected
+shape's centre, projected onto the side's varying axis; ties keep current order), so the attachment
+slots follow the connected shapes and the connectors stop crossing. Scope is narrow — connectors keep
+the side they land on (no side migration) and only the manual command is affected; **Merge** is
+unchanged. See `documentation/plans/2026-06-30-connection-spacing-anti-crossing.md`.
+
 ## Image + SVG export ✅ (cross-cutting)
 
 Shareable diagram export, replacing the zoom-and-grid-capturing **Export PNG…** with a **File ▸ Export**

@@ -58,6 +58,15 @@ public static class ConnectionDistributor
     }
 
     /// <summary>
+    /// The sort key that orders connector ends along <paramref name="side"/> by where their far end
+    /// (<paramref name="otherEnd"/>) sits: the coordinate that varies along the side — Y for the vertical
+    /// Left/Right edges, X for the horizontal Top/Bottom edges. Sorting ascending makes the attachment
+    /// slots run in the same order as the connected shapes, so the connectors don't cross.
+    /// </summary>
+    private static double CrossingOrderKey(BoxSide side, Point2D otherEnd)
+        => side is BoxSide.Left or BoxSide.Right ? otherEnd.Y : otherEnd.X;
+
+    /// <summary>
     /// The relative (u,v) anchor in [0,1]² of the bounds for the <paramref name="index"/>-th of
     /// <paramref name="count"/> evenly spaced points on <paramref name="side"/>. Points sit at
     /// <c>(index+1)/(count+1)</c> of the side, so the gap to each corner equals the inter-point gap.
@@ -78,15 +87,19 @@ public static class ConnectionDistributor
     /// A connector end to be (re)pinned. <typeparamref name="TEnd"/> <paramref name="Token"/> identifies
     /// the end to the caller; the rest is a snapshot of where it currently attaches — the shape it touches
     /// (<paramref name="NodeId"/> + <paramref name="NodeBounds"/>), the current route point on that shape,
-    /// and its current relative anchor (<c>null</c> when the end is not pinned yet).
+    /// a reference point for the connector's far end (<paramref name="OtherEnd"/> — the connected shape's
+    /// centre, used to order the ends on a side so they don't cross), and its current relative anchor
+    /// (<c>null</c> when the end is not pinned yet).
     /// </summary>
     public readonly record struct PinningEnd<TEnd>(
-        TEnd Token, Guid NodeId, Rect2D NodeBounds, Point2D RoutePoint, Point2D? CurrentAnchor);
+        TEnd Token, Guid NodeId, Rect2D NodeBounds, Point2D RoutePoint, Point2D OtherEnd, Point2D? CurrentAnchor);
 
     /// <summary>
     /// Plans (re)spaced anchors for a set of connector ends. Ends are grouped by the shape they touch and
-    /// the <see cref="BoxSide"/> they currently land on; within each group they keep their current order
-    /// (by <see cref="FractionAlong"/>) and <paramref name="anchorFor"/> chooses the relative (u,v) for the
+    /// the <see cref="BoxSide"/> they currently land on; within each group they are ordered by where their
+    /// far end (<see cref="PinningEnd{TEnd}.OtherEnd"/>) sits along that side, so the slots run in the same
+    /// order as the connected shapes and the connectors don't cross (ties keep their current order, by
+    /// <see cref="FractionAlong"/>), and <paramref name="anchorFor"/> chooses the relative (u,v) for the
     /// i-th of n. Only ends whose anchor actually changes are returned (an end already at its computed
     /// anchor is omitted), so an empty result means "nothing to do". Pure: reads the snapshot, mutates
     /// nothing — the caller applies the plan and owns undo.
@@ -117,10 +130,15 @@ public static class ConnectionDistributor
         foreach (KeyValuePair<(Guid Node, BoxSide Side), List<(PinningEnd<TEnd> End, double Fraction)>> group in groups)
         {
             List<(PinningEnd<TEnd> End, double Fraction)> list = group.Value;
-            list.Sort((a, b) => a.Fraction.CompareTo(b.Fraction));
+            BoxSide side = group.Key.Side;
+            list.Sort((a, b) =>
+            {
+                int byOther = CrossingOrderKey(side, a.End.OtherEnd).CompareTo(CrossingOrderKey(side, b.End.OtherEnd));
+                return byOther != 0 ? byOther : a.Fraction.CompareTo(b.Fraction);
+            });
             for (int i = 0; i < list.Count; i++)
             {
-                Point2D anchor = anchorFor(group.Key.Side, i, list.Count);
+                Point2D anchor = anchorFor(side, i, list.Count);
                 PinningEnd<TEnd> end = list[i].End;
                 if (end.CurrentAnchor is { } current && current.ApproximatelyEquals(anchor, GeometryTolerance.Distance))
                 {

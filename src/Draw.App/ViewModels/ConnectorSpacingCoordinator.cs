@@ -52,21 +52,22 @@ public sealed class ConnectorSpacingCoordinator
         }
 
         // Snapshot every end touching a selected shape (read the current routes up front — a connector's
-        // route depends only on its own endpoints, so this is order-independent). The pure planner groups
-        // by side, keeps the current order, and returns only the ends whose anchor actually changes.
+        // route depends only on its own endpoints, so this is order-independent). Each end also carries the
+        // far shape's centre so the planner can order a side by the connected shapes' positions (anti-cross).
+        // The pure planner groups by side, orders by that, and returns only the ends whose anchor changes.
         List<ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>> ends = new();
         foreach (ConnectorViewModel connector in _context.Connectors)
         {
             if (selectedIds.Contains(connector.Source.Id))
             {
                 ends.Add(new ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>(
-                    (connector, true), connector.Source.Id, connector.Source.Bounds, connector.RouteStart, connector.SourceAnchor));
+                    (connector, true), connector.Source.Id, connector.Source.Bounds, connector.RouteStart, connector.Target.Bounds.Center, connector.SourceAnchor));
             }
 
             if (selectedIds.Contains(connector.Target.Id))
             {
                 ends.Add(new ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>(
-                    (connector, false), connector.Target.Id, connector.Target.Bounds, connector.RouteEnd, connector.TargetAnchor));
+                    (connector, false), connector.Target.Id, connector.Target.Bounds, connector.RouteEnd, connector.Source.Bounds.Center, connector.TargetAnchor));
             }
         }
 

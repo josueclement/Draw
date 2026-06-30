@@ -52,24 +52,47 @@ public class ConnectionDistributorTests
     }
 
     [Fact]
-    public void PlanPinning_SpreadsEndsOnSameSide_InFractionOrder()
+    public void PlanPinning_OrdersEndsByFarShapePosition_NotCurrentPosition()
     {
         Guid node = Guid.NewGuid();
+        // Three ends on node's LEFT edge. Their CURRENT positions run top->bottom (10,50,90), but the
+        // shapes at their far ends run the OPPOSITE way (token 1's far shape is lowest, token 3's highest).
+        // Spacing must follow the far shapes -> the slots reorder to 3,2,1 so the connectors don't cross.
         List<ConnectionDistributor.PinningEnd<int>> ends = new()
         {
-            End(3, node, new Point2D(0, 90)), // deliberately out of order along the left edge
-            End(1, node, new Point2D(0, 10)),
-            End(2, node, new Point2D(0, 50)),
+            End(1, node, routePoint: new Point2D(0, 10), otherEnd: new Point2D(-100, 90)),
+            End(2, node, routePoint: new Point2D(0, 50), otherEnd: new Point2D(-100, 50)),
+            End(3, node, routePoint: new Point2D(0, 90), otherEnd: new Point2D(-100, 10)),
         };
 
         IReadOnlyList<(int Token, Point2D Anchor)> plan =
             ConnectionDistributor.PlanPinning(ends, ConnectionDistributor.EvenAnchor);
 
-        // Sorted by fraction (10,50,90 -> tokens 1,2,3) and evenly spaced down the left edge.
+        // Sorted by far-shape Y ascending (10,50,90 -> tokens 3,2,1) and evenly spaced down the left edge.
         Assert.Equal(3, plan.Count);
-        Assert.Equal((1, new Point2D(0, 0.25)), plan[0]);
+        Assert.Equal((3, new Point2D(0, 0.25)), plan[0]);
         Assert.Equal((2, new Point2D(0, 0.5)), plan[1]);
-        Assert.Equal((3, new Point2D(0, 0.75)), plan[2]);
+        Assert.Equal((1, new Point2D(0, 0.75)), plan[2]);
+    }
+
+    [Fact]
+    public void PlanPinning_EqualFarShapePosition_KeepsCurrentOrder()
+    {
+        Guid node = Guid.NewGuid();
+        // Two ends to the SAME far position (tie on the order key): fall back to current order along the
+        // edge (token 1 currently above token 2), so token 1 keeps the top slot.
+        List<ConnectionDistributor.PinningEnd<int>> ends = new()
+        {
+            End(2, node, routePoint: new Point2D(0, 70), otherEnd: new Point2D(-100, 50)),
+            End(1, node, routePoint: new Point2D(0, 30), otherEnd: new Point2D(-100, 50)),
+        };
+
+        IReadOnlyList<(int Token, Point2D Anchor)> plan =
+            ConnectionDistributor.PlanPinning(ends, ConnectionDistributor.EvenAnchor);
+
+        Assert.Equal(2, plan.Count);
+        Assert.Equal((1, new Point2D(0, 1d / 3d)), plan[0]);
+        Assert.Equal((2, new Point2D(0, 2d / 3d)), plan[1]);
     }
 
     [Fact]
@@ -79,7 +102,7 @@ public class ConnectionDistributorTests
         // A lone end on the left edge resolves to EvenAnchor(Left,0,1) = (0,0.5); it already sits there.
         List<ConnectionDistributor.PinningEnd<int>> ends = new()
         {
-            new ConnectionDistributor.PinningEnd<int>(1, node, Box, new Point2D(0, 50), new Point2D(0, 0.5)),
+            new ConnectionDistributor.PinningEnd<int>(1, node, Box, new Point2D(0, 50), new Point2D(-100, 50), new Point2D(0, 0.5)),
         };
 
         IReadOnlyList<(int Token, Point2D Anchor)> plan =
@@ -96,7 +119,7 @@ public class ConnectionDistributorTests
         // there" — guards the tolerance compare against the prior exact float == (which would re-pin).
         List<ConnectionDistributor.PinningEnd<int>> ends = new()
         {
-            new ConnectionDistributor.PinningEnd<int>(1, node, Box, new Point2D(0, 50), new Point2D(0, 0.5 + 1e-12)),
+            new ConnectionDistributor.PinningEnd<int>(1, node, Box, new Point2D(0, 50), new Point2D(-100, 50), new Point2D(0, 0.5 + 1e-12)),
         };
 
         IReadOnlyList<(int Token, Point2D Anchor)> plan =
@@ -112,8 +135,8 @@ public class ConnectionDistributorTests
         Guid b = Guid.NewGuid();
         List<ConnectionDistributor.PinningEnd<int>> ends = new()
         {
-            End(1, a, new Point2D(0, 50)), // node a, left edge
-            End(2, b, new Point2D(0, 50)), // node b, left edge -> a separate group
+            End(1, a, new Point2D(0, 50), new Point2D(-100, 50)), // node a, left edge
+            End(2, b, new Point2D(0, 50), new Point2D(-100, 50)), // node b, left edge -> a separate group
         };
 
         IReadOnlyList<(int Token, Point2D Anchor)> plan =
@@ -124,6 +147,6 @@ public class ConnectionDistributorTests
         Assert.All(plan, op => Assert.Equal(new Point2D(0, 0.5), op.Anchor));
     }
 
-    private static ConnectionDistributor.PinningEnd<int> End(int token, Guid node, Point2D routePoint) =>
-        new(token, node, Box, routePoint, null);
+    private static ConnectionDistributor.PinningEnd<int> End(int token, Guid node, Point2D routePoint, Point2D otherEnd) =>
+        new(token, node, Box, routePoint, otherEnd, null);
 }
