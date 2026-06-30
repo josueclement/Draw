@@ -97,9 +97,10 @@ public sealed class ShellViewModel : ViewModelBase
         ShowStylePickerCommand = new RelayCommand(
             () => OpenExclusive(StylePicker, StylePicker.Open),
             () => ActiveDocument?.HasSelection ?? false);
+        // No CanExecute guard: the help overlay is document-independent (it lists keymap bindings),
+        // so Shift+H works even with no tab open — matching NewCommand / OpenCommand.
         ShowHelpCommand = new RelayCommand(
-            () => OpenExclusive(ShortcutHelp, ShortcutHelp.Open),
-            () => HasActiveDocument);
+            () => OpenExclusive(ShortcutHelp, ShortcutHelp.Open));
 
         _recent.Changed += (_, _) => RefreshRecentFiles();
         RefreshRecentFiles();
@@ -581,7 +582,6 @@ public sealed class ShellViewModel : ViewModelBase
         ShowToolMenuCommand.NotifyCanExecuteChanged();
         ShowIconPaletteCommand.NotifyCanExecuteChanged();
         ShowStylePickerCommand.NotifyCanExecuteChanged();
-        ShowHelpCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshRecentFiles()
