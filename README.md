@@ -1,10 +1,10 @@
 # Draw
 
 A cross-platform (Windows / Linux / macOS) desktop application for drawing schemas and
-UML/ER diagrams, built with **Avalonia 12** on **.NET 10**. Diagrams with a semantic
-model (UML class/ER) can generate SQL DDL.
+UML / ER diagrams, built with **Avalonia 12** on **.NET 10**.
 
-> Status: **Phase 2 (connectors)** complete — see [`documentation/roadmap.md`](documentation/roadmap.md).
+> Status: **v1.1.0** — schema, UML class, use-case, ER and mind-map diagrams. See
+> [`CHANGELOG.md`](CHANGELOG.md) and [`documentation/roadmap.md`](documentation/roadmap.md).
 
 ## Solution layout
 
@@ -16,7 +16,8 @@ src/
 documentation/
 ```
 
-`Draw.Sql` (DDL generation) and `Draw.Export` (SVG/PDF) arrive in Phase 5.
+Image export (PNG / JPEG / SVG) has shipped. SQL DDL generation (`Draw.Sql`) and PDF export are
+still planned (Phase 5).
 
 ## Build
 

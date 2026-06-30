@@ -16,7 +16,7 @@
   <!-- Product identity / versioning. Single source of truth for the whole solution (the libraries
        ship with the app, so they share its version). Surfaced in-app via the assembly metadata. -->
   <PropertyGroup>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>Draw</Product>
     <Company>Josué Clément</Company>
     <Authors>Josué Clément</Authors>
