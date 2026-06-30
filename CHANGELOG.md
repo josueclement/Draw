@@ -5,6 +5,23 @@ All notable changes to Draw are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-30
+
+### Added
+- **Open from launch arguments** — `.draw` files passed on the command line (and, on macOS, via the
+  file-activation event) now open in tabs. A bare launch shows an empty window instead of a blank
+  document.
+- **Quick text edit** — press **Enter** or **F2** to edit the selected node's text.
+- **Vim-style shortcuts** — a bottom **`:` command line** with `:w` (save), `:q` / `:q!` (close the
+  active tab, prompting if modified / discarding), `:wq` (save then close), and `:qa` / `:qa!` (quit,
+  prompting per tab / discarding all). **`h` / `j` / `k` / `l`** move the selection to the nearest
+  shape in that direction (hold **Ctrl** to extend the selection); **`u` / `U`** undo / redo.
+
+### Fixed
+- Mind-map branch base now sits **flush against the parent node's edge** — previously it was cut at
+  the angle the curve happened to leave, leaving a visible slant once a child was moved off-axis or
+  branches were fanned out via *Space connections*.
+
 ## [1.0.0] - 2026-06-29
 
 First public release. Draw is a cross-platform (Windows / Linux / macOS) desktop editor for

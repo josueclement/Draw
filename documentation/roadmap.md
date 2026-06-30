@@ -24,7 +24,7 @@ connector rebuild, theme-aware decoration fills, save-state-aware dirty flag).
 Shared compartment/list node (`Class` / `Interface` / `Enum`); member editor (inline +
 inspector) with free-text types + autocomplete; class relationships reuse Phase 2.
 
-## Phase 4 — Use-case diagrams ✅ (current)
+## Phase 4 — Use-case diagrams ✅
 
 Actor, use-case, system boundary; association, include/extend, generalization.
 
@@ -44,7 +44,7 @@ theme-aware styling. A new **Relationship** connector with **per-end crow's-foot
 diagram* entry wiring `DiagramType.Er`. See `documentation/plans/2026-06-04-er-database-shapes.md`.
 **Still pending:** `Draw.Sql` ER→DDL generation and `Draw.Export` SVG/PDF.
 
-## Phase 6 — Mind maps 🚧 (pending visual verification)
+## Phase 6 — Mind maps ✅
 
 A mind-map workflow on top of the existing canvas. Two new shape kinds — **Mind map topic** and
 **Rounded topic** (`ShapeKind.MindMapTopic`/`MindMapTopicRounded`, rendered as plain/rounded
@@ -60,7 +60,7 @@ topic; a **Mind map** ribbon group + Shift+S submenu arm the two tools. Branch t
 (the `MindMapBranch` kind), so ordinary connectors are unaffected. See
 `documentation/plans/2026-06-14-mind-maps.md`.
 
-### Refinement — drawable branch connector, status markers, fixes 🚧 (pending visual verification)
+### Refinement — drawable branch connector, status markers, fixes ✅
 
 Follow-up making mind maps editable beyond the `+` button. The tapered branch is now a **dedicated
 `RelationshipKind.MindMapBranch` connector** (replacing the former `Connector.IsMindMapBranch` bool;
@@ -124,7 +124,7 @@ shortcuts, and a right-click canvas menu (right-drag still pans). Pure geometry 
 `Draw.Diagramming/Layout/ShapeArranger.cs`; one undo step per action; connectors re-route
 automatically. See `documentation/plans/2026-06-04-align-distribute-shapes.md`.
 
-## Align to reference 🚧 (cross-cutting, pending visual verification)
+## Align to reference ✅ (cross-cutting)
 
 Relative alignment, the deferred follow-up to Align & distribute: capture a set of shapes as a fixed
 **reference**, then line a later selection (the **movers**) up against the reference's combined
@@ -139,7 +139,7 @@ and a top-of-canvas banner. Transient, per-tab state on `DiagramDocumentViewMode
 (`ShapeArranger.AlignToReference`); one undo step per align; connectors re-route automatically. See
 `documentation/plans/2026-06-09-align-to-reference.md`.
 
-## Snap-to-grid toggle + group-coherent move 🚧 (cross-cutting, pending visual verification)
+## Snap-to-grid toggle + group-coherent move ✅ (cross-cutting)
 
 Fixes distributed shapes losing their spacing when moved, and makes snapping optional. On
 drag-release the selection now snaps **as a single unit** — one offset derived from the
@@ -165,7 +165,7 @@ The action now **force-pins every end** touching the selection, not just crowded
 side is centred on that edge so the whole arrangement is locked. See
 `documentation/plans/2026-06-04-force-pin-on-arrange.md`.
 
-## Image + SVG export 🚧 (cross-cutting, pending visual verification)
+## Image + SVG export ✅ (cross-cutting)
 
 Shareable diagram export, replacing the zoom-and-grid-capturing **Export PNG…** with a **File ▸ Export**
 submenu — **Export Image…** (PNG/JPEG) and **Export SVG…** — plus an upgraded **Copy as Image**. All
@@ -219,7 +219,7 @@ on theme toggle — generalising the single default-fill sentinel into ~10 named
 data is UI-agnostic in `Draw.Diagramming/Styling/StylePalette.cs`; apply reuses the style-edit memento
 undo. See `documentation/plans/2026-06-04-quick-style-palette.md`.
 
-## JSON-configured keyboard shortcuts (vim/blender chords) 🚧 (cross-cutting, pending visual verification)
+## JSON-configured keyboard shortcuts (vim/blender chords) ✅ (cross-cutting)
 
 Replaces the two hard-coded shortcut sites (the `<Window.KeyBindings>` block and the `OnKeyDown`
 clipboard switch) with a single **data-driven keymap**. One window-level `ChordInputDispatcher` reads a
@@ -233,7 +233,7 @@ suppressed while a text-entry surface has focus, so in-place editing keys are un
 `src/Draw.App/Input/`; reuses the `IOptions<T>`/DI and `RecentFilesService` APPDATA/fallback patterns.
 Rather than one chord per shape/connector, the defaults now bind **Shift+S** / **Shift+C** to open category-grouped tool menus (Standard/UML/Use case/ER submenus, ribbon icons + access keys; picking an item arms the tool) via `menu.shapes`/`menu.connectors`; the granular `tool.*` ids stay bindable. See `documentation/plans/2026-06-08-keyboard-chord-shortcuts.md`.
 
-## Unsaved-changes warning dialog 🚧 (cross-cutting, pending visual verification)
+## Unsaved-changes warning dialog ✅ (cross-cutting)
 
 Stops silent loss of work: a **Save / Don't Save / Cancel** warning (Carbon `Carbon.Avalonia.Desktop`
 **ContentDialog**, an in-window overlay) now guards every path that discards a modified document —
@@ -244,7 +244,7 @@ tab-close command and a new `TryCloseAllAsync()`; `MainWindow.OnClosing` cancels
 dialog host is registered with `IContentDialogService`; `New`/`Open` are unaffected (they open new tabs).
 See `documentation/plans/2026-06-08-unsaved-changes-dialog.md`.
 
-## Canvas scrollbars + fit-to-content 🚧 (cross-cutting, pending visual verification)
+## Canvas scrollbars + fit-to-content ✅ (cross-cutting)
 
 Content-aware **scrollbars** on each document canvas plus a **Fit to content** command, so shapes
 panned off-screen are discoverable and recoverable. Each bar appears only when content overflows that
@@ -256,7 +256,7 @@ reflect it. Scrollbar geometry lives in `DiagramView` code-behind beside the gri
 `DiagramDocumentViewModel.GetContentBounds()`/`FitToContentCommand` back it. See
 `documentation/plans/2026-06-08-canvas-scrollbars.md`.
 
-## Arrow-key nudge 🚧 (pending visual verification)
+## Arrow-key nudge ✅
 
 Move the current selection with the **arrow keys**: plain arrow = one grid cell (`GridSize`),
 **Shift+arrow** = a 1px fine step. Selected nodes move together; a selected connector instead
@@ -267,7 +267,7 @@ Handled in `DiagramView.OnKeyDown` (arrow keys are unbound in the keymap and bub
 suppressed-while-typing chord dispatcher); reuses `MoveSelectedBy`/`CaptureUndo`/`MarkModified` and
 a new `ConnectorViewModel.MoveBendPointsBy`. See `documentation/plans/2026-06-09-arrow-key-nudge.md`.
 
-## Connector marquee selection + multi-select & bulk styling 🚧 (cross-cutting, pending visual verification)
+## Connector marquee selection + multi-select & bulk styling ✅ (cross-cutting)
 
 Connectors are now first-class for selection. The **marquee** grabs connectors whose line the box overlaps
 (`MarqueeGeometry.IntersectsPolyline`, a Liang–Barsky segment/AABB test over the connector's flattened route),
@@ -325,7 +325,7 @@ consistency in `DialogService`, and correctness hardening (signature-parse valid
 deep copy, centralized geometry epsilons, a schema-migration seam). Each item is labelled with effort and
 risk. See `documentation/plans/2026-06-10-code-review-remediation.md`.
 
-## Ribbon tab split + richer shape context menu 🚧 (cross-cutting, pending visual verification)
+## Ribbon tab split + richer shape context menu ✅ (cross-cutting)
 
 Declutters the ribbon for small screens and surfaces common view/style actions on the canvas. The
 ribbon goes from 4 dense tabs to **9 focused ones** — **Export** (was Home ▸ Export) and **UML**,
@@ -341,7 +341,7 @@ view's window DataContext, since theme/inspector/snap/styles live on the shell. 
 view-layer wiring; no model, VM-pattern, or package changes. See
 `documentation/plans/2026-06-25-ribbon-tabs-and-context-menus.md`.
 
-## Tool palette overlay (Shift+S / Shift+C) 🚧 (pending visual verification)
+## Tool palette overlay (Shift+S / Shift+C) ✅
 
 Replaces the static hierarchical `Shift+S`/`Shift+C` context menus with a **neovim-style centered
 overlay**: a two-step **letter drill-down** — categories, then the chosen category's items (mnemonic
@@ -355,7 +355,7 @@ navigate, and `Shift+S`/`Shift+C` while open switch family via the normal action
 `ContextMenu` resource and its `WireToolMenus`/`ArmCommandFor`/`OnToolMenuRequested`/`OpenToolMenu` wiring
 are removed. See `documentation/plans/2026-06-28-tool-palette-overlay.md`.
 
-## Toggle grid visibility 🚧 (pending visual verification)
+## Toggle grid visibility ✅
 
 Lets the user hide/show the canvas grid from a **ribbon toggle** (View ▸ Appearance), an **Appearance**
 context-menu checkbox, and a **`t g`** keyboard chord (listed in the Shift+H help overlay). Unlike the
@@ -363,8 +363,8 @@ app-wide, session-only "Snap to grid" flag, grid visibility is **per-document an
 source of truth is a new `DiagramDocument.ShowGrid` (serialized as `showGrid`, additive and defaulting to
 hidden, so new diagrams start grid-less and pre-feature files open without the grid — no schema bump). The ribbon/menu bind through a
 `ShellViewModel.ShowGrid` proxy onto the active document; the canvas repaints by reacting to the
-document VM's `ShowGrid` change (the Zoom/Pan mechanism). Build clean + 380 tests green; GUI behaviour
-pending visual verification. See `documentation/plans/2026-06-29-toggle-grid-visibility.md`.
+document VM's `ShowGrid` change (the Zoom/Pan mechanism). Build clean + 380 tests green. See
+`documentation/plans/2026-06-29-toggle-grid-visibility.md`.
 
 ## Release 1.0.0 ✅ (cross-cutting)
 
@@ -378,7 +378,7 @@ exceptions on any thread are written to a timestamped log under `%APPDATA%/Draw/
 `RecentFilesService` APPDATA/Draw convention), and UI-thread crashes additionally show a dialog
 before exiting. See `documentation/plans/2026-06-29-release-1.0.0.md`.
 
-## Open files from launch arguments 🚧 (pending visual verification)
+## Open files from launch arguments ✅
 
 Lets a `.draw` file opened from outside the app land in a tab. The entry point previously **dropped**
 its command-line `args` (Avalonia stashed them on `desktop.Args`, but nothing read them); now
@@ -394,7 +394,13 @@ tabs). Scope is **in-app only**: the OS-level `.draw` association (Windows regis
 macOS `Info.plist` document type) is left to the user, and double-clicking a file while the app is open
 starts a new instance. See `documentation/plans/2026-06-29-open-file-from-args.md`.
 
-## Vim-style shortcuts (`:` command line + h/j/k/l) 🚧 (pending visual verification)
+## Quick text edit — Enter / F2 ✅ (cross-cutting)
+
+Pressing **Enter** or **F2** while a single node is selected opens that node's text for inline
+editing, so renaming a shape no longer requires a double-click. (Shipped without a separate plan
+doc.)
+
+## Vim-style shortcuts (`:` command line + h/j/k/l) ✅
 
 Makes the keyboard-forward editor feel more like neovim, on top of the existing chord input layer. A
 bottom **`:` command line** (a normally-collapsed `TextBox` in `MainWindow`, opened on the typed `:`
@@ -407,8 +413,19 @@ close), **`:qa`** / **`:qa!`** (quit the app, prompting per tab / discarding all
 selection as a chain, and **`u`/`U`** undo/redo — handled in `DiagramView.OnKeyDown` beside the arrow nudge
 (unbound keys bubble past the suppressed-while-typing chord dispatcher). The "nearest shape in a direction"
 rule is pure, headless-tested geometry (`Draw.Diagramming/Geometry/DirectionalNavigator`, distance-along-axis
-+ weighted cross-axis penalty). Build clean + 396 tests green; GUI behaviour pending visual verification. See
++ weighted cross-axis penalty). Build clean + 396 tests green. See
 `documentation/plans/2026-06-30-vim-mode-shortcuts.md`.
+
+## Release 1.1.0 ✅ (cross-cutting)
+
+Second release. Bumps the solution version to **1.1.0** (`Directory.Build.props` + `app.manifest`),
+surfaced in-app via the **Shift+H** overlay (read from the assembly, no duplicated literal). Ships the
+work merged since `1.0.0`: opening `.draw` files from launch arguments, Enter/F2 quick text edit, and
+vim-style shortcuts (`:` command line + `h/j/k/l` selection + `u/U` undo/redo), plus the mind-map
+branch flush-cap fix. Documentation brought in line with reality (README status + DDL/export claims;
+this roadmap's pending-visual-verification markers resolved). Distribution & CI remains the
+outstanding public-release blocker (below). See `documentation/plans/2026-06-30-release-1.1.0.md` and
+`CHANGELOG.md`.
 
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
