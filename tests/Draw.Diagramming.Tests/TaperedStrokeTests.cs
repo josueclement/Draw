@@ -95,4 +95,86 @@ public class TaperedStrokeTests
         Point2D cap = outline[0] - outline[(2 * n) - 1];
         Assert.True(System.Math.Abs(cap.X) > 1d);
     }
+
+    [Fact]
+    public void DashedOutlines_FewerThanTwoPoints_ReturnsEmpty()
+        => Assert.Empty(TaperedStroke.BuildDashedOutlines(
+            new[] { new Point2D(0, 0) }, 10, 2, new double[] { 20, 10 }));
+
+    [Fact]
+    public void DashedOutlines_EmptyPattern_ReturnsSingleSolidOutline()
+    {
+        IReadOnlyList<Point2D> centerline = new[] { new Point2D(0, 0), new Point2D(50, 0), new Point2D(100, 0) };
+        IReadOnlyList<Point2D> solid = TaperedStroke.BuildOutline(centerline, 10, 2);
+        IReadOnlyList<IReadOnlyList<Point2D>> dashed =
+            TaperedStroke.BuildDashedOutlines(centerline, 10, 2, System.Array.Empty<double>());
+
+        IReadOnlyList<Point2D> only = Assert.Single(dashed);
+        Assert.Equal(solid.Count, only.Count);
+        for (int i = 0; i < solid.Count; i++)
+        {
+            Assert.True(only[i].ApproximatelyEquals(solid[i], 1e-9));
+        }
+    }
+
+    [Fact]
+    public void DashedOutlines_StraightLine_CutsIntoExpectedOnRuns()
+    {
+        IReadOnlyList<Point2D> centerline = new[] { new Point2D(0, 0), new Point2D(100, 0) };
+        // on/off = 20/10 from the source ⇒ on runs [0,20] [30,50] [60,80] [90,100].
+        IReadOnlyList<IReadOnlyList<Point2D>> dashed =
+            TaperedStroke.BuildDashedOutlines(centerline, 10, 10, new double[] { 20, 10 });
+
+        Assert.Equal(4, dashed.Count);
+        foreach (IReadOnlyList<Point2D> outline in dashed)
+        {
+            Assert.True(outline.Count >= 4);
+            Assert.Equal(0, outline.Count % 2); // a left run followed by its mirrored right run
+            foreach (Point2D p in outline)
+            {
+                Assert.InRange(p.X, -1e-6, 100d + 1e-6);
+                Assert.Equal(5d, System.Math.Abs(p.Y), 6); // uniform half-width
+            }
+        }
+    }
+
+    [Fact]
+    public void DashedOutlines_TotalOnLength_MatchesThePattern()
+    {
+        IReadOnlyList<Point2D> centerline = new[] { new Point2D(0, 0), new Point2D(100, 0) };
+        IReadOnlyList<IReadOnlyList<Point2D>> dashed =
+            TaperedStroke.BuildDashedOutlines(centerline, 10, 10, new double[] { 20, 10 });
+
+        double onLength = 0d;
+        foreach (IReadOnlyList<Point2D> outline in dashed)
+        {
+            double min = double.MaxValue;
+            double max = double.MinValue;
+            foreach (Point2D p in outline)
+            {
+                min = System.Math.Min(min, p.X);
+                max = System.Math.Max(max, p.X);
+            }
+
+            onLength += max - min;
+        }
+
+        Assert.Equal(70d, onLength, 6); // 20 + 20 + 20 + 10
+    }
+
+    [Fact]
+    public void DashedOutlines_SliceWidth_FollowsTheTaperAtEachCut()
+    {
+        IReadOnlyList<Point2D> centerline = new[] { new Point2D(0, 0), new Point2D(100, 0) };
+        // First on-run is [0,30]; the ribbon tapers 20 → 0, so full width at s is 20·(1 − s/100).
+        IReadOnlyList<IReadOnlyList<Point2D>> dashed =
+            TaperedStroke.BuildDashedOutlines(centerline, 20, 0, new double[] { 30, 10 });
+
+        IReadOnlyList<Point2D> first = dashed[0]; // [left(0), left(30), right(30), right(0)]
+        double startSpan = first[0].DistanceTo(first[3]);
+        double endSpan = first[1].DistanceTo(first[2]);
+
+        Assert.Equal(20d, startSpan, 6); // full width at the source
+        Assert.Equal(14d, endSpan, 6);   // 20·(1 − 30/100)
+    }
 }

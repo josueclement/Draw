@@ -393,48 +393,76 @@ public sealed class ConnectorViewModel : ViewModelBase
         return new PolylineGeometry(_route.Points.Select(ToPoint).ToList(), isFilled: false);
     }
 
-    /// <summary>The closed tapered-ribbon outline (world coordinates) for a mind-map branch, or an empty
-    /// list for an ordinary connector. Shared by the on-canvas fill and the SVG export so they agree.</summary>
-    public IReadOnlyList<ModelPoint> GetBranchOutline()
+    /// <summary>The tapered-ribbon outlines for a mind-map branch: one continuous outline when the
+    /// stroke is solid, or one polygon per dash run for a Dash/Dot/DashDot style, so a dashed branch
+    /// reads as the same tapering ribbon cut into gaps. Empty for an ordinary connector. Shared by the
+    /// on-canvas fill and the SVG export so they agree.</summary>
+    public IReadOnlyList<IReadOnlyList<ModelPoint>> GetBranchOutlines()
     {
         if (!IsMindMapBranch)
         {
-            return Array.Empty<ModelPoint>();
+            return Array.Empty<IReadOnlyList<ModelPoint>>();
         }
 
+        (double startWidth, double endWidth, ModelPoint startTangent, ModelPoint endTangent) = BranchTaper();
+        IReadOnlyList<double> pattern = BranchDashPattern.For(_model.Style.Stroke.Dash, startWidth);
+        if (pattern.Count == 0)
+        {
+            IReadOnlyList<ModelPoint> single =
+                TaperedStroke.BuildOutline(GetFlattenedPoints(), startWidth, endWidth, startTangent, endTangent);
+            return single.Count < 3
+                ? Array.Empty<IReadOnlyList<ModelPoint>>()
+                : new IReadOnlyList<ModelPoint>[] { single };
+        }
+
+        return TaperedStroke.BuildDashedOutlines(
+            GetFlattenedPoints(), startWidth, endWidth, pattern, startTangent, endTangent);
+    }
+
+    // The branch's taper widths (thick parent end → thin child end) and the end tangents that square
+    // each ribbon cap to the node edge it attaches to (the boundary outward normal) rather than to the
+    // bending curve, so the thick base sits flush. The start tangent runs out of the source; the end
+    // tangent into the target (the centerline's forward direction at each end).
+    private (double StartWidth, double EndWidth, ModelPoint StartTangent, ModelPoint EndTangent) BranchTaper()
+    {
         double startWidth = MindMapBranchStyle.WidthAt(_branchDepth);
         double endWidth = MindMapBranchStyle.WidthAt(_branchDepth + 1);
-
-        // Square each ribbon end to the node edge it attaches to (the boundary outward normal) so the
-        // thick parent base sits flush against the edge, like the child end, instead of being cut at
-        // whatever angle the curve leaves at. The start tangent runs out of the source; the end tangent
-        // into the target (the centerline's forward direction at each end).
         ModelPoint startTangent = ShapeBoundary.OutwardNormalAt(Source.BoundaryKind, Source.Bounds, _route.Start);
         ModelPoint endTangent = ShapeBoundary.OutwardNormalAt(Target.BoundaryKind, Target.Bounds, _route.End) * -1d;
-        return TaperedStroke.BuildOutline(GetFlattenedPoints(), startWidth, endWidth, startTangent, endTangent);
+        return (startWidth, endWidth, startTangent, endTangent);
     }
 
     private Geometry? BuildBranchGeometry()
     {
-        IReadOnlyList<ModelPoint> outline = GetBranchOutline();
-        if (outline.Count < 3)
+        IReadOnlyList<IReadOnlyList<ModelPoint>> outlines = GetBranchOutlines();
+        if (outlines.Count == 0)
         {
             return null;
         }
 
         StreamGeometry geometry = new();
+        bool anyFigure = false;
         using (StreamGeometryContext ctx = geometry.Open())
         {
-            ctx.BeginFigure(ToPoint(outline[0]), isFilled: true);
-            for (int i = 1; i < outline.Count; i++)
+            foreach (IReadOnlyList<ModelPoint> outline in outlines)
             {
-                ctx.LineTo(ToPoint(outline[i]));
-            }
+                if (outline.Count < 3)
+                {
+                    continue;
+                }
 
-            ctx.EndFigure(true);
+                ctx.BeginFigure(ToPoint(outline[0]), isFilled: true);
+                for (int i = 1; i < outline.Count; i++)
+                {
+                    ctx.LineTo(ToPoint(outline[i]));
+                }
+
+                ctx.EndFigure(true);
+                anyFigure = true;
+            }
         }
 
-        return geometry;
+        return anyFigure ? geometry : null;
     }
 
     private IBrush? DecorationFill(ConnectorEndDecoration decoration)

@@ -186,15 +186,18 @@ public static class DiagramSvgRenderer
 
     private static void EmitConnector(StringBuilder sb, ConnectorViewModel connector)
     {
-        // Mind-map branch: a filled tapered ribbon (matching the on-canvas fill), no decorations.
+        // Mind-map branch: filled tapered ribbon(s) (matching the on-canvas fill), no decorations.
+        // One polygon when solid, one per dash run for a Dash/Dot/DashDot style.
         if (connector.IsMindMapBranch)
         {
-            IReadOnlyList<ModelPoint> outline = connector.GetBranchOutline();
-            if (outline.Count >= 3)
+            foreach (IReadOnlyList<ModelPoint> outline in connector.GetBranchOutlines())
             {
-                sb.Append("<polygon points=\"")
-                  .Append(string.Join(" ", outline.Select(p => $"{Num(p.X)},{Num(p.Y)}")))
-                  .Append("\" ").Append(Paint("fill", connector.Stroke)).Append(" stroke=\"none\"/>\n");
+                if (outline.Count >= 3)
+                {
+                    sb.Append("<polygon points=\"")
+                      .Append(string.Join(" ", outline.Select(p => $"{Num(p.X)},{Num(p.Y)}")))
+                      .Append("\" ").Append(Paint("fill", connector.Stroke)).Append(" stroke=\"none\"/>\n");
+                }
             }
 
             EmitConnectorLabel(sb, connector.CenterLabelText, connector.HasCenterLabel, connector.CenterLabelX, connector.CenterLabelY, connector.LabelForeground);
