@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IconPaletteViewModel>();
         services.AddSingleton<StylePickerViewModel>();
         services.AddSingleton<ShortcutHelpViewModel>();
+        services.AddSingleton<AlignmentPickerViewModel>();
         services.AddSingleton<InspectorViewModel>();
         services.AddSingleton<StylePaletteViewModel>();
         services.AddSingleton<ShellViewModel>();

@@ -987,11 +987,9 @@ public partial class DiagramView : UserControl
     private static PathIcon? MenuIcon(Geometry? geometry)
         => geometry is null ? null : new PathIcon { Data = geometry, Width = 16, Height = 16 };
 
-    private static Geometry Phosphor(Icon icon)
-        => IconService.CreateGeometry(icon, IconType.regular);
+    private static Geometry Phosphor(Icon icon) => IconGeometry.Phosphor(icon);
 
-    private static Geometry? ToolGeometry(string key)
-        => Application.Current!.TryGetResource(key, null, out object? value) ? value as Geometry : null;
+    private static Geometry? ToolGeometry(string key) => IconGeometry.Tool(key);
 
     private void OnPointerWheel(object? sender, PointerWheelEventArgs e)
     {

@@ -27,6 +27,31 @@
                     <TextBlock Opacity="0.6" FontSize="12" Text="Esc to close" />
                 </StackPanel>
 
+                <!-- Emphasized entry-points: the Shift+key palettes, in a distinct callout above the groups. -->
+                <Border Background="{DynamicResource CarbonBackgroundBrush}"
+                        BorderBrush="{DynamicResource CarbonBorderBrush}" BorderThickness="1"
+                        CornerRadius="8" Padding="12,10">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Palettes (Shift + key)" FontWeight="SemiBold" Opacity="0.7" />
+                        <ItemsControl ItemsSource="{Binding PaletteShortcuts}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="2" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ShortcutHelpRow">
+                                    <Grid ColumnDefinitions="88,*" Margin="0,2">
+                                        <TextBlock Grid.Column="0" Text="{Binding Gesture}" FontWeight="Bold" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Label}" Opacity="0.85"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
                 <!-- Groups flow into columns; each group is a header + gesture/label rows. -->
                 <ScrollViewer MaxHeight="560" HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding Groups}">

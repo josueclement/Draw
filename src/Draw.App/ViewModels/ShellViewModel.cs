@@ -45,7 +45,8 @@ public sealed class ShellViewModel : ViewModelBase
         ShortcutHintsViewModel shortcutHints,
         IconPaletteViewModel iconPalette,
         StylePickerViewModel stylePicker,
-        ShortcutHelpViewModel shortcutHelp)
+        ShortcutHelpViewModel shortcutHelp,
+        AlignmentPickerViewModel alignmentPicker)
     {
         _factory = factory;
         _files = files;
@@ -63,7 +64,8 @@ public sealed class ShellViewModel : ViewModelBase
         IconPalette = iconPalette;
         StylePicker = stylePicker;
         ShortcutHelp = shortcutHelp;
-        _overlays = [ToolPalette, IconPalette, StylePicker, ShortcutHelp];
+        AlignmentPicker = alignmentPicker;
+        _overlays = [ToolPalette, IconPalette, StylePicker, ShortcutHelp, AlignmentPicker];
 
         // The armed-tool state lives on the toolbox; refresh the context hints when it changes.
         Toolbox.PropertyChanged += OnToolboxPropertyChanged;
@@ -98,6 +100,9 @@ public sealed class ShellViewModel : ViewModelBase
         ShowStylePickerCommand = new RelayCommand(
             () => OpenExclusive(StylePicker, StylePicker.Open),
             () => ActiveDocument?.HasSelection ?? false);
+        ShowAlignmentPickerCommand = new RelayCommand(
+            () => OpenExclusive(AlignmentPicker, AlignmentPicker.Open),
+            () => ActiveDocument?.HasSelection ?? false);
         // No CanExecute guard: the help overlay is document-independent (it lists keymap bindings),
         // so Shift+H works even with no tab open — matching NewCommand / OpenCommand.
         ShowHelpCommand = new RelayCommand(
@@ -131,6 +136,9 @@ public sealed class ShellViewModel : ViewModelBase
 
     /// <summary>The Shift+H keyboard-shortcut help overlay.</summary>
     public ShortcutHelpViewModel ShortcutHelp { get; }
+
+    /// <summary>The Shift+A align &amp; distribute palette overlay.</summary>
+    public AlignmentPickerViewModel AlignmentPicker { get; }
 
     /// <summary>Status-bar feedback for the keyboard-shortcut dispatcher (pending chord / messages).</summary>
     public KeymapStatusViewModel KeymapStatus { get; }
@@ -173,6 +181,9 @@ public sealed class ShellViewModel : ViewModelBase
     /// <summary>Opens the Shift+Y style picker for the selection.</summary>
     public RelayCommand ShowStylePickerCommand { get; }
 
+    /// <summary>Opens the Shift+A align &amp; distribute palette for the selection.</summary>
+    public RelayCommand ShowAlignmentPickerCommand { get; }
+
     /// <summary>Opens the Shift+H keyboard-shortcut help overlay.</summary>
     public RelayCommand ShowHelpCommand { get; }
 
@@ -182,6 +193,7 @@ public sealed class ShellViewModel : ViewModelBase
         : IconPalette.IsOpen ? IconPalette
         : StylePicker.IsOpen ? StylePicker
         : ShortcutHelp.IsOpen ? ShortcutHelp
+        : AlignmentPicker.IsOpen ? AlignmentPicker
         : null;
 
     public event EventHandler? ExportImageRequested;
@@ -265,6 +277,7 @@ public sealed class ShellViewModel : ViewModelBase
                 StylePalette.SetActiveDocument(field);
                 IconPalette.SetActiveDocument(field);
                 StylePicker.SetActiveDocument(field);
+                AlignmentPicker.SetActiveDocument(field);
                 ShortcutHints.Refresh(field, Toolbox);
                 OnPropertyChanged(nameof(HasActiveDocument));
                 OnPropertyChanged(nameof(Title));
@@ -531,6 +544,7 @@ public sealed class ShellViewModel : ViewModelBase
         DuplicateWithConnectorsCommand.NotifyCanExecuteChanged();
         ShowIconPaletteCommand.NotifyCanExecuteChanged();
         ShowStylePickerCommand.NotifyCanExecuteChanged();
+        ShowAlignmentPickerCommand.NotifyCanExecuteChanged();
         ShortcutHints.Refresh(ActiveDocument, Toolbox);
     }
 
@@ -588,6 +602,7 @@ public sealed class ShellViewModel : ViewModelBase
         ShowToolMenuCommand.NotifyCanExecuteChanged();
         ShowIconPaletteCommand.NotifyCanExecuteChanged();
         ShowStylePickerCommand.NotifyCanExecuteChanged();
+        ShowAlignmentPickerCommand.NotifyCanExecuteChanged();
     }
 
     private void RefreshRecentFiles()

@@ -44,6 +44,13 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
         private set => SetProperty(ref field, value);
     } = [];
 
+    /// <summary>The Shift+key palette entry-points, emphasized in a callout box at the top of the overlay.</summary>
+    public IReadOnlyList<ShortcutHelpRow> PaletteShortcuts
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    } = [];
+
     public bool IsOpen
     {
         get;
@@ -53,6 +60,7 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
     /// <summary>Opens the overlay, rebuilding the list from the live keymap.</summary>
     public void Open()
     {
+        PaletteShortcuts = BuildPaletteShortcuts();
         Groups = BuildGroups();
         IsOpen = true;
     }
@@ -78,13 +86,6 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
         ShortcutHelpGroup[] groups =
         [
             Group(
-                "Palettes",
-                Key("menu.shapes", "Shapes"),
-                Key("menu.connectors", "Connectors"),
-                Key("menu.icons", "Icons"),
-                Key("menu.styles", "Styles"),
-                Key("menu.help", "Help")),
-            Group(
                 "Edit",
                 Key("edit.undo", "Undo"),
                 Key("edit.redo", "Redo"),
@@ -109,7 +110,11 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
                 Key("align.left", "Align left"),
                 Key("align.centerHorizontal", "Align center"),
                 Key("align.right", "Align right"),
+                Key("align.top", "Align top"),
+                Key("align.centerVertical", "Align middle"),
+                Key("align.bottom", "Align bottom"),
                 Key("distribute.horizontal", "Distribute horizontally"),
+                Key("distribute.vertical", "Distribute vertically"),
                 Key("zorder.bringToFront", "Bring to front"),
                 Key("zorder.sendToBack", "Send to back")),
             Group(
@@ -129,6 +134,22 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
         ];
 
         return groups.Where(g => g.Rows.Count > 0).ToList();
+    }
+
+    /// <summary>The Shift+key palette entry-points for the top callout (an unbound one is dropped).</summary>
+    private IReadOnlyList<ShortcutHelpRow> BuildPaletteShortcuts()
+    {
+        ShortcutHelpRow?[] rows =
+        [
+            Key("menu.shapes", "Shapes"),
+            Key("menu.connectors", "Connectors"),
+            Key("menu.icons", "Icons"),
+            Key("menu.styles", "Styles"),
+            Key("menu.align", "Align & distribute"),
+            Key("menu.help", "Help"),
+        ];
+
+        return rows.Where(r => r is not null).Select(r => r!).ToList();
     }
 
     /// <summary>A keymap-backed row, or null when the action is unbound (so the row is dropped).</summary>
