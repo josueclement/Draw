@@ -3,7 +3,7 @@
 A cross-platform (Windows / Linux / macOS) desktop application for drawing schemas and
 UML / ER diagrams, built with **Avalonia 12** on **.NET 10**.
 
-> Status: **v1.2.0** — schema, UML class, use-case, ER and mind-map diagrams. See
+> Status: **v1.3.0** — schema, UML class, use-case, ER and mind-map diagrams. See
 > [`CHANGELOG.md`](CHANGELOG.md) and [`documentation/roadmap.md`](documentation/roadmap.md).
 
 ## Solution layout
