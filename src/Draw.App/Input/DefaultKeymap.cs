@@ -46,7 +46,7 @@ public static class DefaultKeymap
         { "keys": "Shift+S", "action": "menu.shapes" },
         { "keys": "Shift+C", "action": "menu.connectors" },
         { "keys": "Shift+I", "action": "menu.icons" },
-        { "keys": "Shift+Y", "action": "menu.styles" },
+        { "keys": "Shift+T", "action": "menu.styles" },
         { "keys": "Shift+A", "action": "menu.align" },
         { "keys": "Shift+H", "action": "menu.help" },
 
@@ -101,7 +101,7 @@ public static class DefaultKeymap
     //   tool.entity
     //   menu.shapes, menu.connectors   (open a category-grouped tool menu; default Shift+S / Shift+C)
     //   menu.icons                     (toggle status-marker icons on the selection; default Shift+I)
-    //   menu.styles                    (apply a style to the selection; default Shift+Y)
+    //   menu.styles                    (apply a style to the selection; default Shift+T)
     //   menu.align                     (align & distribute the selection; default Shift+A)
     //   menu.help                      (show the keyboard-shortcut help overlay; default Shift+H)
     //   file.{new|open|save|saveAs|close}

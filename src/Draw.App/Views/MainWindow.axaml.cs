@@ -62,6 +62,10 @@ public partial class MainWindow : Window
         shell.ExportImageRequested += OnExportImageRequested;
         shell.ExportSvgRequested += OnExportSvgRequested;
         shell.CopyImageRequested += OnCopyImageRequested;
+        // The ':' palette hosts a focused input, so it runs commands by handing the typed text back here
+        // (execution needs the window — :qa closes it); closing it returns keyboard focus to the canvas.
+        shell.CommandPalette.RunRequested += OnCommandPaletteRun;
+        shell.CommandPalette.PropertyChanged += OnCommandPalettePropertyChanged;
         WireToolDropdowns(shell.Toolbox);
         WireAlignmentDropdown(AlignDropDown, m => _shell?.ActiveDocument?.AlignSelected(m));
         WireAlignmentDropdown(AlignToReferenceDropDown, m => _shell?.ActiveDocument?.AlignSelectedToReference(m));
@@ -82,7 +86,6 @@ public partial class MainWindow : Window
         // since ':' sits on different keys across keyboard layouts.
         AddHandler(InputElement.TextInputEvent, OnGlobalTextInput, RoutingStrategies.Tunnel);
         Deactivated += OnWindowDeactivated;
-        CommandLineBox.KeyDown += OnCommandLineKeyDown;
 
         // Open on the Insert (tools) tab. This must be set here, not as a literal SelectedIndex in XAML:
         // the XAML attribute is applied while Ribbon.Tabs is still empty, so Ribbon never syncs SelectedTab
@@ -211,11 +214,11 @@ public partial class MainWindow : Window
 
     // --- Vim ':' command line ----------------------------------------------------------------------
 
-    // Opens the command line when ':' is typed outside any text field / overlay. Matching the character
+    // Opens the palette when ':' is typed outside any text field / overlay. Matching the character
     // (not a physical key) keeps it working regardless of where ':' sits on the user's keyboard layout.
     private void OnGlobalTextInput(object? sender, TextInputEventArgs e)
     {
-        if (_shell is null || IsTextEntryFocused() || _shell.CommandLine.IsActive)
+        if (_shell is null || IsTextEntryFocused() || _shell.CommandPalette.IsOpen)
         {
             return;
         }
@@ -234,40 +237,26 @@ public partial class MainWindow : Window
             return;
         }
 
-        _shell.CommandLine.Begin();
-        // The box was just made visible; defer focus until after the layout pass so it can take focus.
-        Dispatcher.UIThread.Post(() =>
-        {
-            CommandLineBox.Focus();
-            CommandLineBox.CaretIndex = CommandLineBox.Text?.Length ?? 0;
-        });
+        _shell.OpenCommandPalette();
+        // The overlay was just made visible; defer focus until after the layout pass so it can take focus.
+        Dispatcher.UIThread.Post(CommandPaletteOverlay.FocusInput);
     }
 
-    private void OnCommandLineKeyDown(object? sender, KeyEventArgs e)
+    // Enter / a row click in the palette hands the text here to run (the palette can't own execution
+    // because :qa closes the window). Close first so the text survives the clear, then execute.
+    private void OnCommandPaletteRun(string text)
     {
-        if (_shell is null || !_shell.CommandLine.IsActive)
-        {
-            return;
-        }
-
-        if (e.Key == Key.Enter)
-        {
-            string text = _shell.CommandLine.Text;
-            EndCommandLine();
-            e.Handled = true;
-            _ = ExecuteCommandLineAsync(text);
-        }
-        else if (e.Key == Key.Escape)
-        {
-            EndCommandLine();
-            e.Handled = true;
-        }
+        _shell?.CommandPalette.Close();
+        _ = ExecuteCommandLineAsync(text);
     }
 
-    private void EndCommandLine()
+    // When the palette closes (run / Esc / backdrop), return keyboard focus to the canvas.
+    private void OnCommandPalettePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        _shell?.CommandLine.End();
-        this.FindDescendantOfType<DiagramView>()?.Focus();
+        if (e.PropertyName == nameof(CommandPaletteViewModel.IsOpen) && _shell is { CommandPalette.IsOpen: false })
+        {
+            this.FindDescendantOfType<DiagramView>()?.Focus();
+        }
     }
 
     private async Task ExecuteCommandLineAsync(string text)

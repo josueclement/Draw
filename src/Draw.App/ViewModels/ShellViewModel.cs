@@ -46,7 +46,8 @@ public sealed class ShellViewModel : ViewModelBase
         IconPaletteViewModel iconPalette,
         StylePickerViewModel stylePicker,
         ShortcutHelpViewModel shortcutHelp,
-        AlignmentPickerViewModel alignmentPicker)
+        AlignmentPickerViewModel alignmentPicker,
+        CommandPaletteViewModel commandPalette)
     {
         _factory = factory;
         _files = files;
@@ -65,7 +66,8 @@ public sealed class ShellViewModel : ViewModelBase
         StylePicker = stylePicker;
         ShortcutHelp = shortcutHelp;
         AlignmentPicker = alignmentPicker;
-        _overlays = [ToolPalette, IconPalette, StylePicker, ShortcutHelp, AlignmentPicker];
+        CommandPalette = commandPalette;
+        _overlays = [ToolPalette, IconPalette, StylePicker, ShortcutHelp, AlignmentPicker, CommandPalette];
 
         // The armed-tool state lives on the toolbox; refresh the context hints when it changes.
         Toolbox.PropertyChanged += OnToolboxPropertyChanged;
@@ -157,8 +159,9 @@ public sealed class ShellViewModel : ViewModelBase
     /// <summary>Status-bar list of shortcuts relevant to the current selection / armed tool.</summary>
     public ShortcutHintsViewModel ShortcutHints { get; }
 
-    /// <summary>State for the vim <c>:</c> command line (open/close + typed text); driven by the window.</summary>
-    public CommandLineViewModel CommandLine { get; } = new();
+    /// <summary>The vim <c>:</c> command palette overlay (opened by typing <c>:</c>); the window executes its
+    /// commands via <see cref="CommandPaletteViewModel.RunRequested"/>.</summary>
+    public CommandPaletteViewModel CommandPalette { get; }
 
     public RelayCommand NewCommand { get; }
     public RelayCommand NewMindMapCommand { get; }
@@ -208,7 +211,11 @@ public sealed class ShellViewModel : ViewModelBase
         : StylePicker.IsOpen ? StylePicker
         : ShortcutHelp.IsOpen ? ShortcutHelp
         : AlignmentPicker.IsOpen ? AlignmentPicker
+        : CommandPalette.IsOpen ? CommandPalette
         : null;
+
+    /// <summary>Opens the vim <c>:</c> command palette, closing any other open overlay first.</summary>
+    public void OpenCommandPalette() => OpenExclusive(CommandPalette, CommandPalette.Open);
 
     public event EventHandler? ExportImageRequested;
 
