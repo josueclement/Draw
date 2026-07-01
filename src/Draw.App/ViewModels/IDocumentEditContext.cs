@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Draw.Model.Documents;
@@ -45,6 +46,13 @@ public interface IDocumentEditContext
 
     /// <summary>Rebuilds the connector view models from the document after a node-set change.</summary>
     void RebuildConnectors();
+
+    /// <summary>
+    /// Evenly re-spaces the connector ends touching the given shapes, honouring the auto-space editor
+    /// option (a no-op when it is off). Never captures its own undo snapshot — meant to fold into a
+    /// gesture (duplicate/paste) whose caller has already captured one, keeping it a single undo step.
+    /// </summary>
+    void AutoSpaceConnectorsForShapes(IReadOnlyCollection<Guid> shapeIds);
 
     /// <summary>Selects exactly the given nodes (clearing any other selection).</summary>
     void SelectNodes(IReadOnlyCollection<NodeViewModelBase> nodes);

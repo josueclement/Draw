@@ -210,12 +210,26 @@ public sealed class ClipboardCoordinator
             pasted.Add(vm);
         }
 
+        HashSet<Guid> connectedShapes = new();
         foreach (Connector clone in cloned.Connectors)
         {
             _context.Document.Connectors.Add(clone);
+            // Both endpoints: covers the cloned shapes and any non-selected neighbour a boundary
+            // connector now reconnects to (that neighbour gained an extra end).
+            connectedShapes.Add(clone.SourceNodeId);
+            connectedShapes.Add(clone.TargetNodeId);
         }
 
         _context.RebuildConnectors();
+
+        // Fan the just-cloned connectors out over the shapes they touch (a no-op when the auto-space
+        // option is off). The undo snapshot captured above already precedes these anchor changes, so the
+        // re-spacing folds into the same single undo step as the duplicate/paste.
+        if (connectedShapes.Count > 0)
+        {
+            _context.AutoSpaceConnectorsForShapes(connectedShapes);
+        }
+
         _context.SelectNodes(pasted);
         _context.MarkModified();
     }

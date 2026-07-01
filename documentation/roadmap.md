@@ -450,6 +450,20 @@ orders each side by the far shape's position so fanned-out connectors stop cross
 metadata only — no publish/CI machinery; Distribution & CI (below) remains the public-release blocker.
 See `documentation/plans/2026-06-30-release-1.2.0.md` and `CHANGELOG.md`.
 
+## Auto-space connectors ✅ (cross-cutting)
+
+Connectors now spread out by default instead of stacking on a side's midpoint, delivering the
+"automatic re-spacing as connectors are added" follow-up from the 2026-06-04 spacing design. A new
+`EditorOptions.AutoSpaceConnectors` (default on) drives two behaviours: creating a connector slots its
+new end into a **free position** on its side without moving the ends already there (pure
+`ConnectionDistributor.FreeSlotAnchor`, widest-gap midpoint), while **duplicate/paste** does a full even
+re-space of the shapes each cloned connector touches — the clones and any non-selected boundary
+neighbour — reusing the existing `PlanPinning` planner via a new `SpaceConnectionsForShapes`. The
+mind-map **"+" button** likewise re-spaces the parent's branches so children fan out evenly as they are
+added. No model/serialization change (existing `(u,v)` anchors only). Implemented on
+`feature/auto-space-connections` (build clean, 420 tests green); pending merge. See
+`documentation/plans/2026-07-01-auto-space-connections.md`.
+
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
 The remaining gap for a public release: a GitHub Actions workflow that publishes self-contained

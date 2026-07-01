@@ -26,7 +26,8 @@ public sealed class ConnectorSpacingCoordinator
     /// undo step): on each bounding-box side the ends keep their current order and are re-pinned at equal
     /// gaps, and a side with a single end is centred on that edge.
     /// </summary>
-    public void SpaceSelectedConnections() => PinSelectedConnectionEnds(ConnectionDistributor.EvenAnchor);
+    public void SpaceSelectedConnections()
+        => PinConnectionEnds(_context.SelectedNodes.Select(n => n.Id).ToHashSet(), ConnectionDistributor.EvenAnchor, captureUndo: true);
 
     /// <summary>
     /// Force-pins every connector end touching the selected shape(s) onto the centre of the side it lands
@@ -35,36 +36,45 @@ public sealed class ConnectorSpacingCoordinator
     /// out and regroup a shape's connectors.
     /// </summary>
     public void MergeSelectedConnections()
-        => PinSelectedConnectionEnds((side, _, _) => ConnectionDistributor.EvenAnchor(side, 0, 1));
+        => PinConnectionEnds(_context.SelectedNodes.Select(n => n.Id).ToHashSet(), (side, _, _) => ConnectionDistributor.EvenAnchor(side, 0, 1), captureUndo: true);
 
     /// <summary>
-    /// Re-pins every connector end touching the selected shape(s), using <paramref name="anchorFor"/> to
-    /// choose the relative (u,v) anchor for the <c>i</c>-th of <c>count</c> ends on a bounding-box side.
-    /// Reads the current routes before mutating, so each end is classified by where it lands now; captures
-    /// one undo entry on the first real change, and a no-op (nothing actually changes) adds no undo entry.
+    /// Evenly spaces every connector end touching the given shapes — <see cref="SpaceSelectedConnections"/>
+    /// for an explicit shape set rather than the current selection. Pass <paramref name="captureUndo"/> =
+    /// false to fold the change into an undo snapshot the caller already took (e.g. duplicate/paste), so
+    /// the whole gesture stays a single undo step.
     /// </summary>
-    private void PinSelectedConnectionEnds(Func<BoxSide, int, int, Point2D> anchorFor)
+    public void SpaceConnectionsForShapes(IReadOnlyCollection<Guid> shapeIds, bool captureUndo)
+        => PinConnectionEnds(shapeIds as HashSet<Guid> ?? shapeIds.ToHashSet(), ConnectionDistributor.EvenAnchor, captureUndo);
+
+    /// <summary>
+    /// Re-pins every connector end touching the shapes in <paramref name="nodeIds"/>, using
+    /// <paramref name="anchorFor"/> to choose the relative (u,v) anchor for the <c>i</c>-th of <c>count</c>
+    /// ends on a bounding-box side. Reads the current routes before mutating, so each end is classified by
+    /// where it lands now; when <paramref name="captureUndo"/> is true it captures one undo entry on the
+    /// first real change, and a no-op (nothing actually changes) never captures.
+    /// </summary>
+    private void PinConnectionEnds(HashSet<Guid> nodeIds, Func<BoxSide, int, int, Point2D> anchorFor, bool captureUndo)
     {
-        HashSet<Guid> selectedIds = _context.SelectedNodes.Select(n => n.Id).ToHashSet();
-        if (selectedIds.Count == 0)
+        if (nodeIds.Count == 0)
         {
             return;
         }
 
-        // Snapshot every end touching a selected shape (read the current routes up front — a connector's
+        // Snapshot every end touching one of these shapes (read the current routes up front — a connector's
         // route depends only on its own endpoints, so this is order-independent). Each end also carries the
         // far shape's centre so the planner can order a side by the connected shapes' positions (anti-cross).
         // The pure planner groups by side, orders by that, and returns only the ends whose anchor changes.
         List<ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>> ends = new();
         foreach (ConnectorViewModel connector in _context.Connectors)
         {
-            if (selectedIds.Contains(connector.Source.Id))
+            if (nodeIds.Contains(connector.Source.Id))
             {
                 ends.Add(new ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>(
                     (connector, true), connector.Source.Id, connector.Source.Bounds, connector.RouteStart, connector.Target.Bounds.Center, connector.SourceAnchor));
             }
 
-            if (selectedIds.Contains(connector.Target.Id))
+            if (nodeIds.Contains(connector.Target.Id))
             {
                 ends.Add(new ConnectionDistributor.PinningEnd<(ConnectorViewModel Connector, bool IsSource)>(
                     (connector, false), connector.Target.Id, connector.Target.Bounds, connector.RouteEnd, connector.Source.Bounds.Center, connector.TargetAnchor));
@@ -80,7 +90,10 @@ public sealed class ConnectorSpacingCoordinator
             return;
         }
 
-        _context.CaptureUndo();
+        if (captureUndo)
+        {
+            _context.CaptureUndo();
+        }
         foreach (((ConnectorViewModel Connector, bool IsSource) Token, Point2D Anchor) op in plan)
         {
             if (op.Token.IsSource)
