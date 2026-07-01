@@ -115,10 +115,11 @@ public sealed class ClipboardCoordinator
         }
     }
 
-    /// <summary>Clones the selection in place with a small offset (no clipboard). One undo step. Any
-    /// connector touching the selection is duplicated too: one between two selected shapes reconnects to
-    /// both clones, while a "boundary" connector to a non-selected shape keeps that original neighbour.</summary>
-    public void DuplicateSelection()
+    /// <summary>Clones the selection in place with a small offset (no clipboard). One undo step. When
+    /// <paramref name="includeConnectors"/> is true, any connector touching the selection is duplicated too:
+    /// one between two selected shapes reconnects to both clones, while a "boundary" connector to a
+    /// non-selected shape keeps that original neighbour. When false, only the shapes are cloned.</summary>
+    public void DuplicateSelection(bool includeConnectors)
     {
         List<NodeViewModelBase> selected = _context.SelectedNodes.ToList();
         if (selected.Count == 0)
@@ -126,11 +127,19 @@ public sealed class ClipboardCoordinator
             return;
         }
 
-        HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
         List<NodeBase> nodes = selected.Select(n => n.Model).ToList();
-        List<Connector> connectors = _context.Document.Connectors
-            .Where(c => ids.Contains(c.SourceNodeId) || ids.Contains(c.TargetNodeId))
-            .ToList();
+        List<Connector> connectors;
+        if (includeConnectors)
+        {
+            HashSet<Guid> ids = selected.Select(n => n.Id).ToHashSet();
+            connectors = _context.Document.Connectors
+                .Where(c => ids.Contains(c.SourceNodeId) || ids.Contains(c.TargetNodeId))
+                .ToList();
+        }
+        else
+        {
+            connectors = new List<Connector>();
+        }
 
         double offset = _context.GridSize > 0 ? _context.GridSize : 16d;
         PlaceClones(nodes, connectors, new Point2D(offset, offset));

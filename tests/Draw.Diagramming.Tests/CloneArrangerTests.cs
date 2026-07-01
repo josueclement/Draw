@@ -178,6 +178,22 @@ public class CloneArrangerTests
     }
 
     [Fact]
+    public void Clone_NoSourceConnectors_ClonesNodesOnly()
+    {
+        // The "duplicate without connectors" path (ClipboardCoordinator.DuplicateSelection(false)) hands
+        // no connectors even though the nodes are wired in the document. The clones must carry none.
+        ShapeNode a = Shape("A", 0);
+        ShapeNode b = Shape("B", 1, 100);
+
+        CloneArranger.ClonedGraph g = CloneArranger.Clone(
+            new NodeBase[] { a, b }, Array.Empty<Connector>(),
+            new NodeBase[] { a, b }, new Point2D(5, 5), null);
+
+        Assert.Equal(2, g.Nodes.Count);
+        Assert.Empty(g.Connectors);
+    }
+
+    [Fact]
     public void Clone_EmptySource_YieldsEmptyGraph()
     {
         CloneArranger.ClonedGraph g = CloneArranger.Clone(

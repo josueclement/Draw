@@ -99,6 +99,9 @@
                 <MenuItem Header="D_uplicate" Command="{Binding DuplicateCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy_simple}" Width="16" Height="16" /></MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="Duplicate _with connectors" Command="{Binding DuplicateWithConnectorsCommand}">
+                    <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=copy_simple}" Width="16" Height="16" /></MenuItem.Icon>
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="Insert _Image…" Command="{Binding InsertImageCommand}">
                     <MenuItem.Icon><PathIcon Data="{pia:IconGeometry Icon=image}" Width="16" Height="16" /></MenuItem.Icon>
@@ -141,6 +144,7 @@
                     <ribbon:RibbonButton Header="Copy" Command="{Binding CopyCommand}" IconData="{pia:IconGeometry Icon=copy}" />
                     <ribbon:RibbonButton Header="Paste" Command="{Binding PasteCommand}" IconData="{pia:IconGeometry Icon=clipboard}" />
                     <ribbon:RibbonButton Header="Duplicate" Command="{Binding DuplicateCommand}" IconData="{pia:IconGeometry Icon=copy_simple}" />
+                    <ribbon:RibbonButton Header="Duplicate with connectors" Command="{Binding DuplicateWithConnectorsCommand}" IconData="{pia:IconGeometry Icon=copy_simple}" />
                     <ribbon:RibbonButton Header="Delete" Command="{Binding DeleteCommand}" IconData="{pia:IconGeometry Icon=trash}" />
                 </ribbon:RibbonGroup>
             </ribbon:RibbonTab>

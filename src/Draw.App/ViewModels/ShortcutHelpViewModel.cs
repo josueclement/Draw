@@ -92,6 +92,7 @@ public sealed class ShortcutHelpViewModel : ViewModelBase, IOverlayPalette
                 Key("edit.copy", "Copy"),
                 Key("edit.paste", "Paste"),
                 Key("edit.duplicate", "Duplicate"),
+                Key("edit.duplicateWithConnectors", "Duplicate with connectors"),
                 Key("edit.selectAll", "Select all"),
                 Key("edit.delete", "Delete")),
             Group(
