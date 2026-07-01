@@ -27,8 +27,9 @@
                                Text="Press a letter to toggle · Esc to close" />
                 </StackPanel>
 
-                <!-- Marker tiles: letter chip + tinted glyph + label, with a check when the whole selection has it. -->
-                <ItemsControl ItemsSource="{Binding Entries}">
+                <!-- Marker tiles: letter chip + tinted glyph + label, with a check when the whole selection has it.
+                     Disabled as a block (IsEnabled inherits to every tile) when no node is selected. -->
+                <ItemsControl ItemsSource="{Binding Entries}" IsEnabled="{Binding CanToggle}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="3" />

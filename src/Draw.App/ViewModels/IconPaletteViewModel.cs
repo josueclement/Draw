@@ -91,6 +91,13 @@ public sealed class IconPaletteViewModel : ViewModelBase, IOverlayPalette
         private set => SetProperty(ref field, value);
     } = string.Empty;
 
+    /// <summary>False when no node is selected — the whole tile grid is disabled (nothing to toggle onto).</summary>
+    public bool CanToggle
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    }
+
     /// <summary>Points the palette at the active document (call when the active tab changes).</summary>
     public void SetActiveDocument(DiagramDocumentViewModel? document) => _activeDocument = document;
 
@@ -102,6 +109,7 @@ public sealed class IconPaletteViewModel : ViewModelBase, IOverlayPalette
             return;
         }
 
+        CanToggle = _activeDocument.HasNodeSelection;
         RefreshActive();
         UpdateTitle();
         IsOpen = true;
@@ -125,6 +133,13 @@ public sealed class IconPaletteViewModel : ViewModelBase, IOverlayPalette
         if (!IsOpen)
         {
             return false;
+        }
+
+        if (!CanToggle)
+        {
+            // Tiles are disabled (no node selected): swallow the key so it can't leak to the canvas,
+            // but do nothing — matches the greyed-out buttons.
+            return true;
         }
 
         char lower = char.ToLowerInvariant(letter);

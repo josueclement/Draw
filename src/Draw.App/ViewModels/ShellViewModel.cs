@@ -94,15 +94,18 @@ public sealed class ShellViewModel : ViewModelBase
         ShowToolMenuCommand = new RelayCommand<ToolMenuFamily>(
             family => OpenExclusive(ToolPalette, () => ToolPalette.Open(family)),
             _ => HasActiveDocument);
+        // These palettes open whenever a document is open, regardless of selection: each one greys out
+        // its own controls when the current selection doesn't qualify (see CanToggle / CanApply / the
+        // align tiles' IsEnabled), so opening them empty is a harmless, discoverable no-op.
         ShowIconPaletteCommand = new RelayCommand(
             () => OpenExclusive(IconPalette, IconPalette.Open),
-            () => ActiveDocument?.HasNodeSelection ?? false);
+            () => HasActiveDocument);
         ShowStylePickerCommand = new RelayCommand(
             () => OpenExclusive(StylePicker, StylePicker.Open),
-            () => ActiveDocument?.HasSelection ?? false);
+            () => HasActiveDocument);
         ShowAlignmentPickerCommand = new RelayCommand(
             () => OpenExclusive(AlignmentPicker, AlignmentPicker.Open),
-            () => ActiveDocument?.HasSelection ?? false);
+            () => HasActiveDocument);
         // No CanExecute guard: the help overlay is document-independent (it lists keymap bindings),
         // so Shift+H works even with no tab open — matching NewCommand / OpenCommand.
         ShowHelpCommand = new RelayCommand(
