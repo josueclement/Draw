@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Draw.App.ViewModels"
+             x:Class="Draw.App.Views.AlignmentPickerView"
+             x:DataType="vm:AlignmentPickerViewModel"
+             IsVisible="{Binding IsOpen}">
+
+    <UserControl.Resources>
+        <!-- One tile: mnemonic chip + glyph + label. Shared by the align grid, the distribute grid and
+             the single reference-action tile. Clicks route through the code-behind (see StylePickerView). -->
+        <DataTemplate x:Key="TileTemplate" x:DataType="vm:ArrangeTile">
+            <Button Click="OnTileClick" Margin="3" Padding="8" IsEnabled="{Binding IsEnabled}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Width="20" Height="20" CornerRadius="4" VerticalAlignment="Center"
+                            Background="{DynamicResource CarbonBackgroundBrush}">
+                        <TextBlock Text="{Binding LetterText}" FontWeight="Bold" FontSize="11"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <PathIcon Data="{Binding Glyph}" Width="16" Height="16" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- Full-window dim backdrop; a press anywhere on it dismisses the palette. Mirrors StylePickerView. -->
+    <Border Background="#80000000" PointerPressed="OnBackdropPressed">
+
+        <Border PointerPressed="OnPanelPressed"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MinWidth="440" MaxWidth="560" Padding="18"
+                CornerRadius="10" BorderThickness="1"
+                Background="{DynamicResource CarbonSurfaceBrush}"
+                BorderBrush="{DynamicResource CarbonBorderBrush}"
+                BoxShadow="0 12 32 0 #50000000">
+            <StackPanel Spacing="14">
+
+                <!-- Heading + usage hint. -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Opacity="0.6" FontSize="12"
+                               Text="Press a letter to apply · Esc to close" />
+                </StackPanel>
+
+                <!-- Reference banner: only while a reference is captured. -->
+                <Border IsVisible="{Binding HasReference}"
+                        Background="#22F2A93B" BorderBrush="#F2A93B" BorderThickness="1"
+                        CornerRadius="6" Padding="10,6">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse Width="8" Height="8" Fill="#F2A93B" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ReferenceBanner}" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Align. -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Align" FontWeight="SemiBold" Opacity="0.7" />
+                    <ItemsControl ItemsSource="{Binding AlignTiles}" ItemTemplate="{StaticResource TileTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Distribute. -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Distribute" FontWeight="SemiBold" Opacity="0.7" />
+                    <ItemsControl ItemsSource="{Binding DistributeTiles}" ItemTemplate="{StaticResource TileTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Reference action: Set as reference, or Clear reference while one is active. -->
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Reference" FontWeight="SemiBold" Opacity="0.7" />
+                    <ContentControl Content="{Binding ReferenceTile}" ContentTemplate="{StaticResource TileTemplate}"
+                                    HorizontalAlignment="Left" />
+                </StackPanel>
+
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>

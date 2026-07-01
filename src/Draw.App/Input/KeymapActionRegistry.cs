@@ -120,6 +120,7 @@ public sealed class KeymapActionRegistry
         Add("menu.connectors", false, () => (_shell.ShowToolMenuCommand, ToolMenuFamily.Connectors));
         Add("menu.icons", false, () => (_shell.ShowIconPaletteCommand, null));
         Add("menu.styles", false, () => (_shell.ShowStylePickerCommand, null));
+        Add("menu.align", false, () => (_shell.ShowAlignmentPickerCommand, null));
         Add("menu.help", false, () => (_shell.ShowHelpCommand, null));
     }
 

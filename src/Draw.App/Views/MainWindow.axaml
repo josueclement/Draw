@@ -886,6 +886,7 @@
         <v:ToolPaletteView DataContext="{Binding ToolPalette}" />
         <v:IconPaletteView DataContext="{Binding IconPalette}" />
         <v:StylePickerView DataContext="{Binding StylePicker}" />
+        <v:AlignmentPickerView DataContext="{Binding AlignmentPicker}" />
         <v:ShortcutHelpView DataContext="{Binding ShortcutHelp}" />
     </Grid>
 </Window>
