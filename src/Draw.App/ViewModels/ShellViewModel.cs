@@ -74,6 +74,7 @@ public sealed class ShellViewModel : ViewModelBase
         NewMindMapCommand = new RelayCommand(OnNewMindMap);
         OpenCommand = new AsyncRelayCommand(OnOpenAsync);
         OpenRecentCommand = new AsyncRelayCommand<string>(OnOpenRecentAsync);
+        RemoveRecentCommand = new RelayCommand<string>(OnRemoveRecent);
         SaveCommand = new AsyncRelayCommand(OnSaveAsync, () => HasActiveDocument);
         SaveAsCommand = new AsyncRelayCommand(OnSaveAsAsync, () => HasActiveDocument);
         CloseDocumentCommand = new AsyncRelayCommand<DiagramDocumentViewModel>(OnCloseDocumentAsync);
@@ -122,6 +123,13 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ObservableCollection<string> RecentFiles { get; } = new();
 
+    /// <summary>Rich view of <see cref="RecentFiles"/> for the empty-state list: each path split into
+    /// file name / directory with an on-disk existence flag. Rebuilt alongside <see cref="RecentFiles"/>.</summary>
+    public ObservableCollection<RecentFileViewModel> RecentDocuments { get; } = new();
+
+    /// <summary>True when there is at least one recent document — drives the empty-state "Recent" section.</summary>
+    public bool HasRecentDocuments => RecentDocuments.Count > 0;
+
     public ToolboxViewModel Toolbox { get; }
 
     /// <summary>The keyboard tool palette (Shift+S / Shift+C); opened via <see cref="ShowToolMenuCommand"/>.</summary>
@@ -156,6 +164,9 @@ public sealed class ShellViewModel : ViewModelBase
     public RelayCommand NewMindMapCommand { get; }
     public AsyncRelayCommand OpenCommand { get; }
     public AsyncRelayCommand<string> OpenRecentCommand { get; }
+
+    /// <summary>Drops a single path from the recent-documents list (the empty-state × button).</summary>
+    public RelayCommand<string> RemoveRecentCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
     public AsyncRelayCommand SaveAsCommand { get; }
     public AsyncRelayCommand<DiagramDocumentViewModel> CloseDocumentCommand { get; }
@@ -308,6 +319,14 @@ public sealed class ShellViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(path))
         {
             await OpenPathAsync(path);
+        }
+    }
+
+    private void OnRemoveRecent(string? path)
+    {
+        if (!string.IsNullOrEmpty(path))
+        {
+            _recent.Remove(path);
         }
     }
 
@@ -611,9 +630,13 @@ public sealed class ShellViewModel : ViewModelBase
     private void RefreshRecentFiles()
     {
         RecentFiles.Clear();
+        RecentDocuments.Clear();
         foreach (string path in _recent.Files)
         {
             RecentFiles.Add(path);
+            RecentDocuments.Add(new RecentFileViewModel(path, File.Exists(path)));
         }
+
+        OnPropertyChanged(nameof(HasRecentDocuments));
     }
 }

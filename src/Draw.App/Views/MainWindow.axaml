@@ -493,6 +493,38 @@
                    Background="{DynamicResource CarbonBackgroundBrush}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                             Spacing="16" MaxWidth="440">
+                    <StackPanel.Resources>
+                        <!-- Flat, full-width row button for the Recent list: transparent with a subtle
+                             hover fill; dims when disabled (a file that no longer exists on disk). -->
+                        <ControlTheme x:Key="RecentItemButton" TargetType="Button">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="0" />
+                            <Setter Property="Cursor" Value="Hand" />
+                            <Setter Property="Padding" Value="8,6" />
+                            <Setter Property="CornerRadius" Value="4" />
+                            <Setter Property="HorizontalAlignment" Value="Stretch" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Template">
+                                <ControlTemplate>
+                                    <ContentPresenter x:Name="PART_ContentPresenter"
+                                                      Background="{TemplateBinding Background}"
+                                                      CornerRadius="{TemplateBinding CornerRadius}"
+                                                      Padding="{TemplateBinding Padding}"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      HorizontalContentAlignment="Stretch"
+                                                      VerticalContentAlignment="Center" />
+                                </ControlTemplate>
+                            </Setter>
+                            <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                <Setter Property="Background" Value="#1A808080" />
+                            </Style>
+                            <Style Selector="^:disabled">
+                                <Setter Property="Opacity" Value="0.4" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Style>
+                        </ControlTheme>
+                    </StackPanel.Resources>
                     <TextBlock Text="No document open"
                                FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
                     <TextBlock Text="Create a new document or open an existing file to get started."
@@ -512,6 +544,61 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+
+                    <!-- Recent documents: surfaces ShellViewModel.RecentDocuments (a rich view of the
+                         RecentFiles list). Click a row to open (reuses OpenRecentCommand); the × on hover
+                         removes just that entry. Missing files stay listed but greyed/disabled. The whole
+                         section is hidden when there are no recents. -->
+                    <StackPanel Spacing="6" IsVisible="{Binding HasRecentDocuments}">
+                        <TextBlock Text="Recent" FontWeight="SemiBold" Opacity="0.6" Margin="4,0" />
+                        <ScrollViewer MaxHeight="220"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding RecentDocuments}">
+                                <ItemsControl.Styles>
+                                    <!-- Reveal the remove button only while its row is hovered. -->
+                                    <Style Selector="Grid.recentRow:pointerover Button.recentRemove">
+                                        <Setter Property="Opacity" Value="1" />
+                                    </Style>
+                                </ItemsControl.Styles>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RecentFileViewModel">
+                                        <Grid Classes="recentRow" ColumnDefinitions="*,Auto">
+                                            <Button Grid.Column="0"
+                                                    Theme="{StaticResource RecentItemButton}"
+                                                    IsEnabled="{Binding Exists}"
+                                                    ToolTip.Tip="{Binding Path}"
+                                                    Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).OpenRecentCommand}"
+                                                    CommandParameter="{Binding Path}">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <PathIcon Grid.Column="0"
+                                                              Data="{pia:IconGeometry Icon=file}"
+                                                              Width="14" Height="14"
+                                                              VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding FileName}" FontWeight="SemiBold"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding Directory}" Opacity="0.6"
+                                                                   FontSize="11" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Button>
+                                            <Button Grid.Column="1" Classes="recentRemove"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    Padding="6,0" Opacity="0"
+                                                    VerticalAlignment="Center"
+                                                    ToolTip.Tip="Remove from recent"
+                                                    Command="{Binding $parent[Window].((vm:ShellViewModel)DataContext).RemoveRecentCommand}"
+                                                    CommandParameter="{Binding Path}">
+                                                <PathIcon Data="{pia:IconGeometry Icon=x}" Width="9" Height="9" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+
                     <TextBlock TextAlignment="Center" Opacity="0.6" HorizontalAlignment="Center">
                         <Run Text="Press" />
                         <Run Text="Shift+H" FontWeight="SemiBold" />
