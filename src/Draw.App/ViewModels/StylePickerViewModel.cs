@@ -105,6 +105,13 @@ public sealed class StylePickerViewModel : ViewModelBase, IOverlayPalette
         private set => SetProperty(ref field, value);
     } = string.Empty;
 
+    /// <summary>False when nothing is selected — all style controls (swatches, Reset, No-fill) are disabled.</summary>
+    public bool CanApply
+    {
+        get;
+        private set => SetProperty(ref field, value);
+    }
+
     /// <summary>Points the picker at the active document (call when the active tab changes).</summary>
     public void SetActiveDocument(DiagramDocumentViewModel? document) => _activeDocument = document;
 
@@ -116,6 +123,7 @@ public sealed class StylePickerViewModel : ViewModelBase, IOverlayPalette
             return;
         }
 
+        CanApply = _activeDocument.HasSelection;
         UpdateTitle();
         IsOpen = true;
     }
@@ -138,6 +146,14 @@ public sealed class StylePickerViewModel : ViewModelBase, IOverlayPalette
         if (!IsOpen)
         {
             return false;
+        }
+
+        if (!CanApply)
+        {
+            // Controls are disabled (nothing selected): swallow the key so it can't leak to the canvas.
+            // Required here (not just cosmetic): the apply handlers close the picker unconditionally,
+            // so without this guard a keypress would dismiss it while doing nothing.
+            return true;
         }
 
         char lower = char.ToLowerInvariant(letter);

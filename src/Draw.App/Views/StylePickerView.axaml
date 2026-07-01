@@ -24,8 +24,8 @@
                                Text="Press a letter to apply · Esc to close" />
                 </StackPanel>
 
-                <!-- Swatch tiles: letter chip + colour face + name. -->
-                <ItemsControl ItemsSource="{Binding Swatches}">
+                <!-- Swatch tiles: letter chip + colour face + name. Disabled as a block when nothing is selected. -->
+                <ItemsControl ItemsSource="{Binding Swatches}" IsEnabled="{Binding CanApply}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="4" />
@@ -53,8 +53,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- Non-swatch actions: Reset and No-fill. -->
-                <StackPanel Orientation="Horizontal" Spacing="8">
+                <!-- Non-swatch actions: Reset and No-fill. Disabled as a block when nothing is selected. -->
+                <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanApply}">
                     <Button Click="OnResetClick" Padding="8" HorizontalContentAlignment="Left">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Border Width="20" Height="20" CornerRadius="4" VerticalAlignment="Center"
