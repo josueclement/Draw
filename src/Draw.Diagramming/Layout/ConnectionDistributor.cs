@@ -74,14 +74,72 @@ public static class ConnectionDistributor
     public static Point2D EvenAnchor(BoxSide side, int index, int count)
     {
         double t = (index + 1d) / (count + 1d);
-        return side switch
-        {
-            BoxSide.Left => new Point2D(0d, t),
-            BoxSide.Right => new Point2D(1d, t),
-            BoxSide.Top => new Point2D(t, 0d),
-            _ => new Point2D(t, 1d),
-        };
+        return AnchorAt(side, t);
     }
+
+    /// <summary>
+    /// The relative (u,v) anchor for a <em>new</em> end placed on <paramref name="side"/> without
+    /// disturbing the ends already there: it lands at the midpoint of the widest gap between the
+    /// <paramref name="occupied"/> along-side fractions, with the two corners (0 and 1) acting as walls.
+    /// An empty <paramref name="occupied"/> yields the side midpoint (0.5), so the first connector on a
+    /// side still centres (and a rounded route still bows). Ties favour the gap nearer the 0 corner,
+    /// deterministically. <paramref name="occupied"/> values are clamped to [0,1]; the list is not mutated.
+    /// </summary>
+    public static Point2D FreeSlotAnchor(BoxSide side, IReadOnlyList<double> occupied)
+    {
+        ArgumentNullException.ThrowIfNull(occupied);
+        return AnchorAt(side, WidestGapMidpoint(occupied));
+    }
+
+    // The along-side fraction at the middle of the widest gap between the occupied fractions, treating
+    // 0 and 1 as walls. Empty -> 0.5. Strict '>' keeps the earliest (nearest-to-0) widest gap on ties.
+    private static double WidestGapMidpoint(IReadOnlyList<double> occupied)
+    {
+        if (occupied.Count == 0)
+        {
+            return 0.5d;
+        }
+
+        List<double> sorted = new(occupied.Count);
+        foreach (double fraction in occupied)
+        {
+            sorted.Add(Math.Clamp(fraction, 0d, 1d));
+        }
+
+        sorted.Sort();
+
+        double bestMid = 0.5d;
+        double bestGap = -1d;
+        double prev = 0d; // left wall
+        foreach (double fraction in sorted)
+        {
+            double gap = fraction - prev;
+            if (gap > bestGap)
+            {
+                bestGap = gap;
+                bestMid = (prev + fraction) / 2d;
+            }
+
+            prev = fraction;
+        }
+
+        double lastGap = 1d - prev; // right wall
+        if (lastGap > bestGap)
+        {
+            bestMid = (prev + 1d) / 2d;
+        }
+
+        return bestMid;
+    }
+
+    // The relative (u,v) anchor for the along-side fraction <paramref name="t"/> on <paramref name="side"/>.
+    private static Point2D AnchorAt(BoxSide side, double t) => side switch
+    {
+        BoxSide.Left => new Point2D(0d, t),
+        BoxSide.Right => new Point2D(1d, t),
+        BoxSide.Top => new Point2D(t, 0d),
+        _ => new Point2D(t, 1d),
+    };
 
     /// <summary>
     /// A connector end to be (re)pinned. <typeparamref name="TEnd"/> <paramref name="Token"/> identifies

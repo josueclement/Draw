@@ -51,6 +51,47 @@ public class ConnectionDistributorTests
         Assert.Equal(new Point2D(1, 0.5), ConnectionDistributor.EvenAnchor(BoxSide.Right, 0, 1));
     }
 
+    [Theory]
+    [InlineData(BoxSide.Left, 0, 0.5)]
+    [InlineData(BoxSide.Right, 1, 0.5)]
+    [InlineData(BoxSide.Top, 0.5, 0)]
+    [InlineData(BoxSide.Bottom, 0.5, 1)]
+    public void FreeSlotAnchor_Empty_CentresOnSide(BoxSide side, double expectedX, double expectedY)
+    {
+        // No occupants -> the whole edge is one gap, midpoint 0.5 (a lone connector still centres/bows).
+        Assert.Equal(new Point2D(expectedX, expectedY), ConnectionDistributor.FreeSlotAnchor(side, Array.Empty<double>()));
+    }
+
+    [Fact]
+    public void FreeSlotAnchor_SingleMidpointOccupant_TakesNearZeroHalf()
+    {
+        // One end at the side centre (0.5) splits it into two equal halves; the tie favours the gap nearer
+        // the 0 corner, so the new end lands at 0.25 (and the existing end is left untouched).
+        Assert.Equal(new Point2D(0, 0.25), ConnectionDistributor.FreeSlotAnchor(BoxSide.Left, new[] { 0.5 }));
+    }
+
+    [Fact]
+    public void FreeSlotAnchor_TwoSymmetricOccupants_TakesTheGapBetween()
+    {
+        // Ends at 0.25 and 0.75: the widest gap is the middle one, so the new end centres at 0.5.
+        Assert.Equal(new Point2D(1, 0.5), ConnectionDistributor.FreeSlotAnchor(BoxSide.Right, new[] { 0.25, 0.75 }));
+    }
+
+    [Fact]
+    public void FreeSlotAnchor_PicksWidestGap_NotInputOrder()
+    {
+        // Occupied {0.25, 0.5}: gaps [0,.25]=.25, [.25,.5]=.25, [.5,1]=.5 -> the widest is on the right,
+        // regardless of the order the fractions arrive in.
+        Assert.Equal(new Point2D(0.75, 0), ConnectionDistributor.FreeSlotAnchor(BoxSide.Top, new[] { 0.5, 0.25 }));
+    }
+
+    [Fact]
+    public void FreeSlotAnchor_ClampsOccupantsToEdge()
+    {
+        // An out-of-[0,1] occupant is clamped to the wall (1.0), leaving the rest of the edge free -> 0.5.
+        Assert.Equal(new Point2D(0, 0.5), ConnectionDistributor.FreeSlotAnchor(BoxSide.Left, new[] { 1.5 }));
+    }
+
     [Fact]
     public void PlanPinning_OrdersEndsByFarShapePosition_NotCurrentPosition()
     {

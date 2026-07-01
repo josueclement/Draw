@@ -487,32 +487,85 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         if (sourceAnchor is { } sa && targetAnchor is { } ta)
         {
             // Mind-map branch: pin to the explicit side centres (facing → opposite) the '+' implied.
+            // CreateChildNode re-spaces the parent's branches evenly right after, so there is nothing to
+            // free-slot here (doing so would only compute anchors that the re-space immediately discards).
             vm.SetSourceAnchor(sa);
             vm.SetTargetAnchor(ta);
         }
         else
         {
-            // Curve-on-connect: pin each end to the centre of the side it naturally attaches to. An
-            // unpinned rounded connector aims dead-on at the other shape and renders straight; a
-            // side-centre anchor gives the cardinal outward normal that makes the rounded route bow
-            // into a curve immediately. Classify both sides from the initial auto-route before pinning,
-            // since pinning the source recomputes the route (and would move the target attachment).
-            Point2D autoStart = vm.RouteStart;
-            Point2D autoEnd = vm.RouteEnd;
-            BoxSide sourceSide = ConnectionDistributor.ClassifySide(source.Bounds, autoStart);
-            BoxSide targetSide = ConnectionDistributor.ClassifySide(target.Bounds, autoEnd);
-            vm.SetSourceAnchor(ConnectionDistributor.EvenAnchor(sourceSide, 0, 1));
-            vm.SetTargetAnchor(ConnectionDistributor.EvenAnchor(targetSide, 0, 1));
+            // Classify both ends from the initial auto-route before any pinning moves them (pinning the
+            // source recomputes the route, which would shift the target's automatic attachment).
+            BoxSide sourceSide = ConnectionDistributor.ClassifySide(source.Bounds, vm.RouteStart);
+            BoxSide targetSide = ConnectionDistributor.ClassifySide(target.Bounds, vm.RouteEnd);
+
+            if (_options.AutoSpaceConnectors)
+            {
+                // Non-destructive auto-space: slot each end into the widest free gap on its side so it does
+                // not stack on the siblings already there, without moving them (duplicate/paste and the
+                // mind-map '+' button do a full even re-space instead). Read the occupied fractions before
+                // pinning either end — a sibling's fraction is unaffected by the new end, and reading first
+                // keeps the source and target re-pins independent. An empty side yields the midpoint, so a
+                // lone rounded connector still bows into a curve.
+                List<double> srcOccupied = OccupiedFractions(vm, source, sourceSide);
+                List<double> tgtOccupied = OccupiedFractions(vm, target, targetSide);
+                vm.SetSourceAnchor(ConnectionDistributor.FreeSlotAnchor(sourceSide, srcOccupied));
+                vm.SetTargetAnchor(ConnectionDistributor.FreeSlotAnchor(targetSide, tgtOccupied));
+            }
+            else
+            {
+                // Curve-on-connect: pin each end to its side centre so the rounded route bows immediately
+                // instead of aiming dead-on at the other shape and rendering straight.
+                vm.SetSourceAnchor(ConnectionDistributor.EvenAnchor(sourceSide, 0, 1));
+                vm.SetTargetAnchor(ConnectionDistributor.EvenAnchor(targetSide, 0, 1));
+            }
         }
 
         return vm;
     }
 
+    // The along-side fractions of every connector end (other than <paramref name="exclude"/>) that
+    // currently touches <paramref name="node"/> on <paramref name="side"/> — the occupied slots a new
+    // end must avoid. Both a source and a target end can touch the same shape, so each connector is
+    // checked on both ends.
+    private List<double> OccupiedFractions(ConnectorViewModel exclude, NodeViewModelBase node, BoxSide side)
+    {
+        List<double> fractions = new();
+        foreach (ConnectorViewModel connector in Connectors)
+        {
+            if (ReferenceEquals(connector, exclude))
+            {
+                continue;
+            }
+
+            if (connector.Source.Id == node.Id)
+            {
+                AddFractionIfOnSide(fractions, node.Bounds, side, connector.RouteStart);
+            }
+
+            if (connector.Target.Id == node.Id)
+            {
+                AddFractionIfOnSide(fractions, node.Bounds, side, connector.RouteEnd);
+            }
+        }
+
+        return fractions;
+    }
+
+    private static void AddFractionIfOnSide(List<double> fractions, Rect2D bounds, BoxSide side, Point2D routePoint)
+    {
+        if (ConnectionDistributor.ClassifySide(bounds, routePoint) == side)
+        {
+            fractions.Add(ConnectionDistributor.FractionAlong(side, bounds, routePoint));
+        }
+    }
+
     /// <summary>
     /// Spawns a mind-map child of <paramref name="parent"/> on the given <paramref name="side"/>: a topic
     /// that inherits the parent's shape kind and style, placed a gap out on that side (nudged clear of
-    /// existing nodes), joined by a tapered mind-map branch (parent → child). One undo step; the child is
-    /// left selected for immediate inline editing. Returns null if <paramref name="parent"/> is not placed.
+    /// existing nodes), joined by a tapered mind-map branch (parent → child). When auto-spacing is on the
+    /// parent's branches are then re-spaced evenly across the side. One undo step; the child is left
+    /// selected for immediate inline editing. Returns null if <paramref name="parent"/> is not placed.
     /// </summary>
     public ShapeNodeViewModel? CreateChildNode(ShapeNodeViewModel parent, BoxSide side)
     {
@@ -538,6 +591,14 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
         LinkNodesCore(parent, child, RelationshipKind.MindMapBranch, sourceAnchor, targetAnchor);
 
         RefreshMindMapBranches();
+
+        // The '+' button owns the mind-map layout, so fan every one of the parent's branches out evenly
+        // rather than only slotting the new child in (the non-destructive default for hand-drawn
+        // connectors). The child so far has just this one branch, so only the parent side redistributes;
+        // ordering follows the children's positions (anti-cross), matching how they were nudged out. Folds
+        // into the CaptureUndo above (single undo step); a no-op when auto-spacing is off.
+        AutoSpaceConnectorsForShapes(new[] { parent.Id, child.Id });
+
         MarkModified();
         return child; // PlaceNodeCore already selected it.
     }
@@ -792,6 +853,17 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
 
     /// <summary>Regroups selected shapes' connector ends onto their edge midpoints. See <see cref="ConnectorSpacingCoordinator"/>.</summary>
     public void MergeSelectedConnections() => _connectorSpacingCoordinator.MergeSelectedConnections();
+
+    /// <inheritdoc />
+    public void AutoSpaceConnectorsForShapes(IReadOnlyCollection<Guid> shapeIds)
+    {
+        if (!_options.AutoSpaceConnectors)
+        {
+            return;
+        }
+
+        _connectorSpacingCoordinator.SpaceConnectionsForShapes(shapeIds, captureUndo: false);
+    }
 
     /// <summary>True when every selected node carries <paramref name="marker"/> (and at least one node is
     /// selected) — drives the checked state of the markers context menu and inspector toggles.</summary>

@@ -20,4 +20,11 @@ public sealed class EditorOptions
     public double MinZoom { get; set; } = 0.1d;
 
     public double MaxZoom { get; set; } = 8d;
+
+    /// <summary>
+    /// When on (the default), connectors spread out automatically instead of stacking on a side's
+    /// midpoint: a new connector's end takes a free slot on its side, and duplicating/pasting shapes
+    /// re-spaces the connectors on the affected shapes. Turn off to keep every end on the side centre.
+    /// </summary>
+    public bool AutoSpaceConnectors { get; set; } = true;
 }
