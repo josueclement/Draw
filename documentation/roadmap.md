@@ -204,11 +204,13 @@ access goes through `IClipboardService` (Avalonia 12 typed `DataFormat`); keyboa
 in `DiagramView` so they don't hijack text editing. See
 `documentation/plans/2026-06-04-copy-paste-and-images.md`.
 
-**Duplicate** now goes further than copy/paste: it carries any connector with **either** end touching
-the selection (not just both-ends), so duplicating a shape also reproduces its links. `CloneArranger`
-resolves each end — ends on duplicated nodes map to their clones, ends on shapes left in place stay on
-the originals, and a connector with no resolvable end is dropped; copy/paste keeps the stricter
-both-ends rule. (Shipped without a separate plan doc.)
+**Duplicate** is now split across two shortcuts: **`Ctrl+D`** duplicates the selected nodes **without**
+their connectors, while **`Ctrl+Shift+D`** also carries any connector with **either** end touching the
+selection. `CloneArranger` resolves each carried end — ends on duplicated nodes map to their clones,
+ends on shapes left in place stay on the originals, and a connector with no resolvable end is dropped;
+copy/paste keeps the stricter both-ends rule. (Earlier a plain `Ctrl+D` carried the either-end
+connectors; the split makes a connector-free duplicate the default. `ClipboardCoordinator.
+DuplicateSelection` gained an `includeConnectors` flag. Shipped without a separate plan doc.)
 
 ## Shape stacking order (Z-order) ✅ (cross-cutting)
 
@@ -460,9 +462,8 @@ new end into a **free position** on its side without moving the ends already the
 re-space of the shapes each cloned connector touches — the clones and any non-selected boundary
 neighbour — reusing the existing `PlanPinning` planner via a new `SpaceConnectionsForShapes`. The
 mind-map **"+" button** likewise re-spaces the parent's branches so children fan out evenly as they are
-added. No model/serialization change (existing `(u,v)` anchors only). Implemented on
-`feature/auto-space-connections` (build clean, 420 tests green); pending merge. See
-`documentation/plans/2026-07-01-auto-space-connections.md`.
+added. No model/serialization change (existing `(u,v)` anchors only). Merged to `main` and shipping in
+**1.3.0**. See `documentation/plans/2026-07-01-auto-space-connections.md`.
 
 ## `:` command palette + style-picker rebind ✅ (cross-cutting)
 
@@ -473,8 +474,62 @@ close. A new `CommandPaletteViewModel : IOverlayPalette` (replacing `CommandLine
 exclusive-open overlay set; execution stays in `MainWindow` (via a `RunRequested` event) because `:qa`
 must close the window. The `VimExCommand` parser and the four commands are unchanged. Also **rebinds the
 style picker from Shift+Y to Shift+T** (`DefaultKeymap`; the Shift+H help overlay reflects it via the live
-keymap). Implemented on `feature/command-palette-and-shift-t` (build clean, 421 tests green); pending
-merge. See `documentation/plans/2026-07-01-command-palette-colon.md`.
+keymap). Merged to `main` and shipping in **1.3.0**. See
+`documentation/plans/2026-07-01-command-palette-colon.md`.
+
+## Recent documents on the welcome screen ✅
+
+The empty-state screen (no tab open) now lists recent `.draw` files as clickable rows
+(`RecentFileViewModel`: filename / directory / exists), reusing `OpenRecentCommand`; a hover **×**
+removes an entry (`RemoveRecentCommand`), missing files are greyed out, and the section hides when
+empty. The existing `RecentFiles` collection and the File ▸ Open Recent menu are untouched. (Shipped
+without a separate plan doc.)
+
+## Selection palettes open with no selection ✅
+
+The icon (**Shift+I**), style (**Shift+T**) and align/distribute (**Shift+A**) palettes now open
+whenever a document is open, rather than requiring a selection first — they still no-op with no document
+tab. Controls that act on a selection are shown disabled until something is selected (the icon grid
+gated on `HasNodeSelection`, the style swatches/Reset/No-fill on `HasSelection`; the align tiles already
+self-disabled at zero selection). (Shipped without a separate plan doc.)
+
+## Align & distribute palette (Shift+A) ✅ (cross-cutting)
+
+A centered **Shift+A** overlay (`AlignmentPickerViewModel`/`View`) surfacing the existing align /
+distribute / align-to-reference commands as a discoverable palette alongside the other Shift+key
+surfaces, with a mode-aware align-to-reference flow. Shares an extracted `IconGeometry` helper (Phosphor
++ tool icons) with `DiagramView`; wired via a `menu.align` action + Shift+A binding. The Shift+H help
+gained an emphasized "Palettes (Shift + key)" callout and a completed Arrange group (align
+top/middle/bottom, distribute vertically). (Shipped without a separate plan doc.)
+
+## Empty-state guidance + global Shift+H ✅
+
+With no document open, the canvas region shows a "No document open" call-to-action — **New document** /
+**Open…** buttons (reusing `NewCommand` / `OpenCommand`) and a "press Shift+H" hint — via a
+`!HasActiveDocument`-bound panel in `MainWindow` that collapses when a tab is active. The **Shift+H**
+shortcut-help overlay also drops its active-document `CanExecute` guard, so it opens with no tab (its
+list builds purely from the keymap, independent of `ActiveDocument`). See
+`documentation/plans/2026-06-30-empty-state-message.md`.
+
+## Mind-map branch dash styles ✅
+
+Mind-map branch ribbons now honour the connector's **Dash / Dot / DashDot** style instead of always
+drawing solid: `TaperedStroke.BuildDashedOutlines` slices the tapered ribbon into per-dash filled
+segments (arc-length runs of the solid outline), with `BranchDashPattern` mapping `DashStyle` →
+world-unit on/off lengths. `ConnectorViewModel` emits a multi-figure branch geometry and SVG export
+emits one polygon per segment (PNG follows via raster). Headless-tested. (Shipped without a separate
+plan doc.)
+
+## Release 1.3.0 ✅ (cross-cutting)
+
+Fourth release. Bumps the solution version to **1.3.0** (`Directory.Build.props` + `app.manifest`),
+surfaced in-app via the **Shift+H** overlay (read from the assembly, no duplicated literal). Ships the
+eight features merged since `1.2.0`: the `:` command palette overlay + style-picker rebind (Shift+Y →
+Shift+T), the recent-documents welcome list, selection palettes that open with no selection, the Shift+A
+align/distribute palette, the Ctrl+D / Ctrl+Shift+D duplicate split, automatic connector spacing,
+mind-map branch dash styles, and the empty-state guidance + global Shift+H. Documentation + metadata
+only — no publish/CI machinery; Distribution & CI (below) remains the public-release blocker. See
+`documentation/plans/2026-07-01-release-1.3.0.md` and `CHANGELOG.md`.
 
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
