@@ -436,19 +436,6 @@
             </StackPanel>
         </Border>
 
-        <!-- Vim ':' command line. Hidden until ':' opens it (see MainWindow.OnGlobalKeyDown); the TextBox
-             then edits natively and the focused-TextBox guard suppresses the chord dispatcher while typing. -->
-        <Border x:Name="CommandLineBar" DockPanel.Dock="Bottom"
-                IsVisible="{Binding CommandLine.IsActive}"
-                Background="{DynamicResource CarbonSurfaceBrush}"
-                BorderBrush="{DynamicResource CarbonBorderBrush}" BorderThickness="0,1,0,0" Padding="8,3">
-            <TextBox x:Name="CommandLineBox"
-                     Text="{Binding CommandLine.Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     AcceptsReturn="False" AcceptsTab="False"
-                     BorderThickness="0" Padding="0" Background="Transparent"
-                     FontFamily="Cascadia Code,Consolas,monospace" />
-        </Border>
-
         <Grid x:Name="EditorGrid">
             <Grid.ColumnDefinitions>
                 <!-- Canvas: MinWidth keeps the splitter from dragging it down to nothing. -->
@@ -975,5 +962,6 @@
         <v:StylePickerView DataContext="{Binding StylePicker}" />
         <v:AlignmentPickerView DataContext="{Binding AlignmentPicker}" />
         <v:ShortcutHelpView DataContext="{Binding ShortcutHelp}" />
+        <v:CommandPaletteView x:Name="CommandPaletteOverlay" DataContext="{Binding CommandPalette}" />
     </Grid>
 </Window>

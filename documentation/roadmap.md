@@ -464,6 +464,18 @@ added. No model/serialization change (existing `(u,v)` anchors only). Implemente
 `feature/auto-space-connections` (build clean, 420 tests green); pending merge. See
 `documentation/plans/2026-07-01-auto-space-connections.md`.
 
+## `:` command palette + style-picker rebind ✅ (cross-cutting)
+
+The vim `:` command line (`:w` / `:q` / `:wq` / `:qa`, `!` = force) is now a **centered overlay palette**
+matching the Shift+S/C/I/Y/A/H surfaces instead of a thin bottom bar: a focused input prefilled `:` with
+a live-filtered list of the commands and their descriptions, Enter or a row click to run, Esc/backdrop to
+close. A new `CommandPaletteViewModel : IOverlayPalette` (replacing `CommandLineViewModel`) joins the
+exclusive-open overlay set; execution stays in `MainWindow` (via a `RunRequested` event) because `:qa`
+must close the window. The `VimExCommand` parser and the four commands are unchanged. Also **rebinds the
+style picker from Shift+Y to Shift+T** (`DefaultKeymap`; the Shift+H help overlay reflects it via the live
+keymap). Implemented on `feature/command-palette-and-shift-t` (build clean, 421 tests green); pending
+merge. See `documentation/plans/2026-07-01-command-palette-colon.md`.
+
 ## Distribution & CI 🚧 (planned, public-release blocker)
 
 The remaining gap for a public release: a GitHub Actions workflow that publishes self-contained

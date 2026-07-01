@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Draw.App.ViewModels"
+             x:Class="Draw.App.Views.CommandPaletteView"
+             x:DataType="vm:CommandPaletteViewModel"
+             IsVisible="{Binding IsOpen}">
+
+    <!-- Full-window dim backdrop; a press anywhere on it dismisses the palette. Mirrors StylePickerView. -->
+    <Border Background="#80000000" PointerPressed="OnBackdropPressed">
+
+        <Border PointerPressed="OnPanelPressed"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MinWidth="520" MaxWidth="760" Padding="18"
+                CornerRadius="10" BorderThickness="1"
+                Background="{DynamicResource CarbonSurfaceBrush}"
+                BorderBrush="{DynamicResource CarbonBorderBrush}"
+                BoxShadow="0 12 32 0 #50000000">
+            <StackPanel Spacing="14">
+
+                <!-- Heading + usage hint. -->
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Command" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Opacity="0.6" FontSize="12"
+                               Text="Type a command · Enter to run · Esc to close" />
+                </StackPanel>
+
+                <!-- The typed command line. KeyDown handles Enter (run) / Esc (close); focus is set by the
+                     window on open. Monospace to match the old command bar. -->
+                <TextBox x:Name="CommandInput"
+                         Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="OnInputKeyDown"
+                         AcceptsReturn="False" AcceptsTab="False"
+                         FontFamily="Cascadia Code,Consolas,monospace" />
+
+                <!-- Live-filtered command list. Each row runs its command on click. -->
+                <ItemsControl ItemsSource="{Binding FilteredEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CommandPaletteEntry">
+                            <Button Click="OnRowClick" Margin="0,2" Padding="10,6"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <TextBlock Text="{Binding Syntax}" FontWeight="Bold" MinWidth="48"
+                                               FontFamily="Cascadia Code,Consolas,monospace"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Description}" Opacity="0.8"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>
