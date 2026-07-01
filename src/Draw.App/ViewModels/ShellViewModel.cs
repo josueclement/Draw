@@ -82,6 +82,7 @@ public sealed class ShellViewModel : ViewModelBase
         CutCommand = new AsyncRelayCommand(OnCutAsync, () => ActiveDocument?.HasNodeSelection ?? false);
         PasteCommand = new AsyncRelayCommand(OnPasteAsync, () => HasActiveDocument);
         DuplicateCommand = new RelayCommand(OnDuplicate, () => ActiveDocument?.HasNodeSelection ?? false);
+        DuplicateWithConnectorsCommand = new RelayCommand(OnDuplicateWithConnectors, () => ActiveDocument?.HasNodeSelection ?? false);
         InsertImageCommand = new AsyncRelayCommand(OnInsertImageAsync, () => HasActiveDocument);
         ExportImageCommand = new RelayCommand(OnExportImage, () => HasActiveDocument);
         ExportSvgCommand = new RelayCommand(OnExportSvg, () => HasActiveDocument);
@@ -154,6 +155,7 @@ public sealed class ShellViewModel : ViewModelBase
     public AsyncRelayCommand CutCommand { get; }
     public AsyncRelayCommand PasteCommand { get; }
     public RelayCommand DuplicateCommand { get; }
+    public RelayCommand DuplicateWithConnectorsCommand { get; }
     public AsyncRelayCommand InsertImageCommand { get; }
     public RelayCommand ExportImageCommand { get; }
     public RelayCommand ExportSvgCommand { get; }
@@ -466,7 +468,9 @@ public sealed class ShellViewModel : ViewModelBase
 
     private Task OnPasteAsync() => ActiveDocument?.PasteAsync() ?? Task.CompletedTask;
 
-    private void OnDuplicate() => ActiveDocument?.DuplicateSelection();
+    private void OnDuplicate() => ActiveDocument?.DuplicateSelection(includeConnectors: false);
+
+    private void OnDuplicateWithConnectors() => ActiveDocument?.DuplicateSelection(includeConnectors: true);
 
     private async Task OnInsertImageAsync()
     {
@@ -524,6 +528,7 @@ public sealed class ShellViewModel : ViewModelBase
         CopyCommand.NotifyCanExecuteChanged();
         CutCommand.NotifyCanExecuteChanged();
         DuplicateCommand.NotifyCanExecuteChanged();
+        DuplicateWithConnectorsCommand.NotifyCanExecuteChanged();
         ShowIconPaletteCommand.NotifyCanExecuteChanged();
         ShowStylePickerCommand.NotifyCanExecuteChanged();
         ShortcutHints.Refresh(ActiveDocument, Toolbox);
@@ -575,6 +580,7 @@ public sealed class ShellViewModel : ViewModelBase
         CutCommand.NotifyCanExecuteChanged();
         PasteCommand.NotifyCanExecuteChanged();
         DuplicateCommand.NotifyCanExecuteChanged();
+        DuplicateWithConnectorsCommand.NotifyCanExecuteChanged();
         InsertImageCommand.NotifyCanExecuteChanged();
         ExportImageCommand.NotifyCanExecuteChanged();
         ExportSvgCommand.NotifyCanExecuteChanged();

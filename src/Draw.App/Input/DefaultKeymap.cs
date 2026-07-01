@@ -23,6 +23,7 @@ public static class DefaultKeymap
         { "keys": "Ctrl+X", "action": "edit.cut" },
         { "keys": "Ctrl+V", "action": "edit.paste" },
         { "keys": "Ctrl+D", "action": "edit.duplicate" },
+        { "keys": "Ctrl+Shift+D", "action": "edit.duplicateWithConnectors" },
         { "keys": "Ctrl+A", "action": "edit.selectAll" },
         { "keys": "Delete", "action": "edit.delete" },
 

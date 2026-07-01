@@ -697,7 +697,7 @@ public sealed class DiagramDocumentViewModel : ViewModelBase, INodeEditContext, 
     public Task PasteAsync() => _clipboardCoordinator.PasteAsync();
 
     /// <summary>Clones the selection in place with a small offset. See <see cref="ClipboardCoordinator"/>.</summary>
-    public void DuplicateSelection() => _clipboardCoordinator.DuplicateSelection();
+    public void DuplicateSelection(bool includeConnectors) => _clipboardCoordinator.DuplicateSelection(includeConnectors);
 
     /// <summary>Inserts an image node centred on <paramref name="centre"/> (one undo step). Used by paste,
     /// file insert and drag-drop. See <see cref="ClipboardCoordinator"/>.</summary>

@@ -77,6 +77,7 @@ public sealed class KeymapActionRegistry
         Add("edit.cut", false, () => (_shell.CutCommand, null));
         Add("edit.paste", false, () => (_shell.PasteCommand, null));
         Add("edit.duplicate", false, () => (_shell.DuplicateCommand, null));
+        Add("edit.duplicateWithConnectors", false, () => (_shell.DuplicateWithConnectorsCommand, null));
         Add("edit.delete", false, () => (_shell.DeleteCommand, null));
         Add("edit.insertImage", false, () => (_shell.InsertImageCommand, null));
         AddDoc("edit.selectAll", d => (d.SelectAllCommand, null));
